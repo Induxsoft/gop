@@ -1,0 +1,15 @@
+#include "dkli.dkh"
+#!
+module "error"
+{
+	#include "functions.dkh"
+	#include "serialize.dkh"
+
+	#$
+	p{"#<@@(@crud_context,'$error/message')>"}
+	br{}
+	br{}
+	br{}
+	br{}
+	p{"#<to.json(@crud_context)>"}
+}

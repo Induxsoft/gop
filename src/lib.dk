@@ -1,0 +1,32 @@
+#include "dkli.dkh"
+#pattern function "function '$name' ()"
+#!
+program
+{
+    function get_rh_unidad_org()
+    {
+        ref head = get_header_json()
+        endpoint = @@(@services, "$rh_unidad")
+
+        return from.json(http.request(endpoint, "GET", head, ""))
+    }
+    function get_gop_presupuesto()
+    {
+        ref head = get_header_json()
+        endpoint = @@(@services, "$gop_presupuesto")
+
+        return from.json(http.request(endpoint, "GET", head, ""))
+    }
+    function get_gop_partida()
+    {
+        ref head = get_header_json()
+        endpoint = @@(@services, "$gop_partida")
+
+        return from.json(http.request(endpoint, "GET", head, ""))
+    }
+    function get_header_json()
+    {
+        new h { @"Content-Type": "application/json; charset=utf-8;" }
+        return h
+    }
+}

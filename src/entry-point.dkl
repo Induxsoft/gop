@@ -1,0 +1,44 @@
+﻿#include "dkli.dkh"
+#!
+
+module "Controller configs"
+{
+	#include "functions.dkh"
+	#include "serialize.dkh"
+	#include "dbr.dkh"
+	#include "website.dkl"
+
+	@base_path = "_services"
+	@path_root=@path_web
+	
+	//No modifique a menos que sepa lo que está haciendo
+	@dbmvc_path="crudl/"
+	
+	
+	@auto_crud=@true
+
+	@db_engine="MY_SQL"	
+
+	@list_view="list.dk"
+
+	@form_view="form.dk"
+
+	@error_view="last_error.dk"
+
+	@entity_id_blank="_new"
+
+	@dkl_view_ext=".dk"
+	@websencia_ext=".jsnwm"
+
+    @crudl.user="" // usuario para autenticación a la BD
+    @crudl.pwd="" // contraseña
+
+    @path_template_protected=@path_root+"/_protected/default.htt"
+
+    @crudl.enable_idreplacement=@true
+
+    @crudl.qname="" // Nombre de la conexión: conexión@app
+
+	@crudl.access_privilege=''
+	#include "crudl/controller.dkl"
+}

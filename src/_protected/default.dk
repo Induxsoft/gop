@@ -1,0 +1,27 @@
+#include "dkli.dkh"
+#!
+program
+{
+	#include "dbr.dkh"
+	
+	current_url::hst
+	{
+		host=@@(@http_context,"request/headers/HTTP_HOST")
+		protocol=ifstr(parse.bool(@@(@http_context,"request/headers/HTTPS")),"https","http")
+		path=replace(field.dstr(@http_context,"request/headers/request_uri","/"),"\\","/")
+		path=list.str(split(path,"?"),0)
+		return protocol+"://"+path.concat(host,path)
+	}
+
+    @http_context<"response/headers/Content-Type">:"text/html;charset=utf-8"
+	@http_context<"response/text">:@@(@http_context,"response/text")
+    @http_context<"response/text">:ftext(file.rtext(@template))
+
+	exception
+	{
+		@http_context<"response/text">:last_error()
+		##
+		div{$"#<last_error()>"}
+		##
+	}
+}

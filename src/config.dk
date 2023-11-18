@@ -1,0 +1,20 @@
+#include "dkli.dkh"
+#!
+program
+{
+    @scheme = @@(@http_context, "request/headers/REQUEST_SCHEME")
+    @host = @@(@http_context, "request/headers/HTTP_HOST")
+    @url_base = @scheme + "://" + @host
+    @path_web = "web/"
+    @default_render_template = @path_web + "_protected/default.dk"
+    @template = @path_web + "_protected/default.htt"
+    @__getParameterOutputType = "_output"
+    @path_modals = "web/_resources/modal"
+
+    new @services
+    {
+        @"gop_partida": @url_base + "/gop_partida"
+        @"gop_presupuesto": @url_base + "/gop_presupuesto"
+        @"rh_unidad": @url_base + "/rh_unidad_org"
+    }
+}

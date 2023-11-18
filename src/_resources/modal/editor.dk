@@ -1,0 +1,52 @@
+#include "dkli.dkh"
+#!
+module "Editor Modals"
+{
+    #$
+    // Modal add unidades
+    div(class="modal fade" id="modal_add_unidades" tabindex="-1" "aria-labelledby"="exampleModalLabel" "aria-hidden"="true" "data-bs-backdrop"="false")
+    {
+        div(class="modal-dialog modal-dialog-centered modal-dialog-scrollable")
+        {
+            div(class="modal-content rounded-0 p-0 border-0 shadow")
+            {
+                div(class="modal-header p-3")
+                {
+                    h6(class="modal-title"){$"Agregar unidad"}
+                    button(type="button" class="btn-close btn-sm" "data-bs-dismiss"="modal" "aria-label"="Close"){$""}
+                }
+                div(class="modal-body p-4 bg-white" id="mdl_au_controls")
+                {
+                    small(class="text-dark fw-5"){$"Código:"}
+                    input(type="text" class="induxsoft-form-control" name="codigo")
+                    small(class="text-dark fw-5"){$"Descripción:"}
+                    input(type="text" class="induxsoft-form-control" name="descripcion")
+                    small(class="text-secondary"){$"Depende de:"}
+                   "input-key"(
+                        id="mdl_au_ik_unidad"
+                        name="superior"
+                        "data-key"="sys_pk"
+                        "data-search"="codigo"
+                        "data-text"="descripcion"
+                        "data-source"="/rh_unidad_org/?s=@search"
+                        "box-title-text"="Seleccione una unidad organizacional"
+                        "box-placeholder-text"="Buscar unidad organizacional"
+                        "box-nodata-text"="No se encontraron unidades organizacionales"
+                        columns="codigo,descripcion"
+                        colcaptions="Codigo,Nombre"
+                        "control-styles"="#search_container{ padding: 0 !important;} #description_container{ padding: 0 !important; padding-left: 6px !important; }"
+                    ){$""}
+                    small(class="text-secondary"){$"Notas:"}
+                    textarea(rows="2" class="induxsoft-form-control" name="notas"){$""}
+                    small(class="text-secondary"){$"Enlace (URL con documentación adicional):"}
+                    input(type="text" class="induxsoft-form-control" name="link")
+                }
+                div(class="modal-footer")
+                {
+                    button(type="button" class="btn btn-sm btn-primary" onclick="editor.addUnidad()"){$"Aceptar"}
+                    button(type="button" class="btn btn-sm btn-light" "data-bs-dismiss"="modal"){$"Cancelar"}
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,2 @@
+*: /_resources/js/* > /_resources/js/*
+*: /_resources/css/* > /_resources/css/*
