@@ -17,11 +17,11 @@ module "Editor Modals"
                 }
                 div(class="modal-body p-4 bg-white" id="mdl_au_controls")
                 {
-                    small(class="text-dark fw-5"){$"Código:"}
+                    label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Código:"}
                     input(type="text" class="induxsoft-form-control" name="codigo")
-                    small(class="text-dark fw-5"){$"Descripción:"}
+                    label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Descripción:"}
                     input(type="text" class="induxsoft-form-control" name="descripcion")
-                    small(class="text-secondary"){$"Depende de:"}
+                    label(class="text-secondary fz-8 mt-2 mb-1"){$"Depende de:"}
                    "input-key"(
                         id="mdl_au_ik_unidad"
                         name="superior"
@@ -36,14 +36,74 @@ module "Editor Modals"
                         colcaptions="Codigo,Nombre"
                         "control-styles"="#search_container{ padding: 0 !important;} #description_container{ padding: 0 !important; padding-left: 6px !important; }"
                     ){$""}
-                    small(class="text-secondary"){$"Notas:"}
+                    label(class="text-secondary fz-8 mt-2 mb-1"){$"Notas:"}
                     textarea(rows="2" class="induxsoft-form-control" name="notas"){$""}
-                    small(class="text-secondary"){$"Enlace (URL con documentación adicional):"}
+                    label(class="text-secondary fz-8 mt-2 mb-1"){$"Enlace (URL con documentación adicional):"}
                     input(type="text" class="induxsoft-form-control" name="link")
                 }
                 div(class="modal-footer")
                 {
                     button(type="button" class="btn btn-sm btn-primary" onclick="editor.addUnidad()"){$"Aceptar"}
+                    button(type="button" class="btn btn-sm btn-light" "data-bs-dismiss"="modal"){$"Cancelar"}
+                }
+            }
+        }
+    }
+
+    // Modal add presupuesto
+    div(class="modal fade" id="modal_add_presupuesto" tabindex="-1" "aria-labelledby"="exampleModalLabel" "aria-hidden"="true" "data-bs-backdrop"="false")
+    {
+        div(class="modal-dialog modal-dialog-centered modal-dialog-scrollable")
+        {
+            div(class="modal-content rounded-0 p-0 border-0 shadow")
+            {
+                div(class="modal-header p-3")
+                {
+                    h6(class="modal-title"){$"Agregar presupuesto"}
+                    button(type="button" class="btn-close btn-sm" "data-bs-dismiss"="modal" "aria-label"="Close"){$""}
+                }
+                div(class="modal-body p-4 bg-white" id="mdl_ap_controls")
+                {
+                    label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Título:"}
+                    input(type="text" class="induxsoft-form-control" name="titulo" required="true")
+
+                    #! 
+                    ref head = get_header_json()
+                    endpoint = @@(@services, "$gop_presupuesto_status")
+                    ref stts = from.json(http.request(endpoint, "GET", head, ""))
+                    endpoint = @@(@services, "$divisa")
+                    ref dvss = from.json(http.request(endpoint, "GET", head, ""))
+
+                    #$
+                    label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Estado:"}
+                    select(class="induxsoft-form-select" name="status" required="true" type="number")
+                    { $""
+                        #! if not(isnull(stts)) && list.count(stts) > 0 {
+                            for i = 0; i < list.count(stts) {
+                                ref status = list.obj(stts, i)
+                                #$ option(value="#<@@(status,'id')>"){$"#<@@(status,'const')>"}
+                            }
+                        }
+                    }
+
+                    #$
+                    label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Moneda:"}
+                    select(class="induxsoft-form-select" name="divisa" required="true" type="number")
+                    { $""
+                        #! if not(isnull(dvss)) && list.count(dvss) > 0 {
+                            for i = 0; i < list.count(dvss) {
+                                ref divisa = list.obj(dvss, i)
+                                #$ option(value="#<@@(divisa,'sys_pk')>"){$"#<@@(divisa,'codigo')> - #<@@(divisa,'descripcion')>"}
+                            }
+                        }
+                    }
+
+                    label(class="text-secondary fz-8 mt-2 mb-1"){$"Notas:"}
+                    textarea(rows="2" class="induxsoft-form-control" name="notas"){$""}
+                }
+                div(class="modal-footer")
+                {
+                    button(type="button" class="btn btn-sm btn-primary" onclick="editor.addPresupuesto()"){$"Agregar"}
                     button(type="button" class="btn btn-sm btn-light" "data-bs-dismiss"="modal"){$"Cancelar"}
                 }
             }

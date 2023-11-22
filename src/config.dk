@@ -16,5 +16,8 @@ program
         @"gop_partida": @url_base + "/gop_partida"
         @"gop_presupuesto": @url_base + "/gop_presupuesto"
         @"rh_unidad": @url_base + "/rh_unidad_org"
+
+        @"divisa": @url_base + "/divisa"
+        @"gop_presupuesto_status": @url_base + "/gop_presupuesto_status"
     }
 }

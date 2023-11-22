@@ -9,6 +9,7 @@ module "web_page"
 	#include "webcl.dkh"
 	#include "website.dkl"
 
+	current_year = get_current_year()
 	ref unidades = get_rh_unidad_org()
 
     #$ div
@@ -20,17 +21,17 @@ module "web_page"
 		{
 			div(id="unidades_container" class="section-container")
 			{
-				div(style="background-color:var(--color-gray);")
+				div
 				{
 					div(class="d-flex flex-wrap justify-content-end")
 					{
-						button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades"){
+						button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades"){
 							svg(xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#888" class="bi bi-plus-lg" viewBox="0 0 16 16"){
 								path("fill-rule"="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z")
 							}
 							small{$"Agregar"}
 						}
-						button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2" onclick="editor.deleteUnidadSelected()"){
+						button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" onclick="editor.deleteUnidadSelected()"){
 							svg(xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#aaa" class="bi bi-trash-fill" viewBox="0 0 16 16"){
 								path(d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z")
 							}
@@ -42,7 +43,7 @@ module "web_page"
 				{
 					div(style="max-height: 90vh;display: flex;")
 					{
-						"edit-table"(id="treeUnidades" "show-tree"="true" parentkey="superior" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem;}" data='#<to.json(unidades)>')
+						"edit-table"(id="treeUnidades" "show-tree"="true" parentkey="superior" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;}" data='#<to.json(unidades)>')
 						{
 							"edit-thead"
 							{
@@ -57,18 +58,135 @@ module "web_page"
 			}
 			div(id="hader_container" class="section-container")
 			{
-				$"Presupuesto"
+				div(class="d-flex gap-1 justify-content-end align-items-center")
+				{
+					button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_presupuesto"){
+						svg(xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#888" class="bi bi-floppy2" viewBox="0 0 16 16"){
+							path(d="M1.5 0h11.586a1.5 1.5 0 0 1 1.06.44l1.415 1.414A1.5 1.5 0 0 1 16 2.914V14.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13A1.5 1.5 0 0 1 1.5 0M1 1.5v13a.5.5 0 0 0 .5.5H2v-4.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5V15h.5a.5.5 0 0 0 .5-.5V2.914a.5.5 0 0 0-.146-.353l-1.415-1.415A.5.5 0 0 0 13.086 1H13v3.5A1.5 1.5 0 0 1 11.5 6h-7A1.5 1.5 0 0 1 3 4.5V1H1.5a.5.5 0 0 0-.5.5m9.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5z")
+						}
+						small{$"Guardar"}
+					}
+					button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_presupuesto"){
+						svg(xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#888" class="bi bi-plus-lg" viewBox="0 0 16 16"){
+							path("fill-rule"="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z")
+						}
+						small{$"Agregar"}
+					}
+					button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" onclick="editor.deletePresupuesto()"){
+						svg(xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#aaa" class="bi bi-trash-fill" viewBox="0 0 16 16"){
+							path(d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z")
+						}
+						small{$"Eliminar"}
+					}
+					div(class="d-flex align-items-center gap-1")
+					{
+						small(class="fz-8 text-secondary"){$"Ejercicio:"}
+						select(class="induxsoft-form-select fz-7" id="ejercicio_select")
+						{
+							option(value="2023"){$"2023"}
+							option(value="2022"){$"2022"}
+							option(value="2021"){$"2021"}
+						}
+					}
+				}
+				div(class="p-2 border-top d-flex gap-2" id="presupuesto_container")
+				{
+					div(class="presupuesto-box-info"){
+						small(class="fw-5"){$"Título"}
+						p(class="m-0"){$""}
+					}
+				}
 			}
 			div(id="details_container" class="section-container")
 			{
-				$"Partidas"
+				div(class="d-flex gap-1 justify-content-end align-items-center")
+				{
+					button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" onclick="document.querySelector('#treePartidas').AddRow();"){
+						svg(xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#888" class="bi bi-plus-lg" viewBox="0 0 16 16"){
+							path("fill-rule"="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z")
+						}
+						small{$"Agregar"}
+					}
+					button(class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" onclick="editor.deletePresupuesto()"){
+						svg(xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#aaa" class="bi bi-trash-fill" viewBox="0 0 16 16"){
+							path(d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z")
+						}
+						small{$"Eliminar"}
+					}
+				}
+				div(class="border-top" id="partidas_container")
+				{
+					div(style="max-height: 80vh;display: flex;")
+					{
+						"edit-table"(id="treePartidas" "show-tree"="true" parentkey="padre" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;}")
+						{
+							"edit-thead"
+							{
+								"edit-tr"
+								{
+									"edit-th"(type="Text" field="partida"){$"Partida"}
+
+									"edit-th"(type="Number" field="autorizado" "default"="0" "textalign"="end" format="true" decs="2" prefix="$ " sufix=" MXN" thousandssep="true"){$"Autorizado"}
+									"edit-th"(type="Number" field="reserva" "default"="0" "textalign"="end"){$"Reserva"}
+									
+									"edit-th"(type="Number" field="p01" "default"="0" textalign="end"){$"P01"}
+									"edit-th"(type="Number" field="p02" "default"="0" textalign="end"){$"P02"}
+									"edit-th"(type="Number" field="p03" "default"="0" textalign="end"){$"P03"}
+									"edit-th"(type="Number" field="p04" "default"="0" textalign="end"){$"P04"}
+									"edit-th"(type="Number" field="p05" "default"="0" textalign="end"){$"P05"}
+									"edit-th"(type="Number" field="p06" "default"="0" textalign="end"){$"P06"}
+									"edit-th"(type="Number" field="p07" "default"="0" textalign="end"){$"P07"}
+									"edit-th"(type="Number" field="p08" "default"="0" textalign="end"){$"P08"}
+									"edit-th"(type="Number" field="p09" "default"="0" textalign="end"){$"P09"}
+									"edit-th"(type="Number" field="p10" "default"="0" textalign="end"){$"P10"}
+									"edit-th"(type="Number" field="p11" "default"="0" textalign="end"){$"P11"}
+									"edit-th"(type="Number" field="p12" "default"="0" textalign="end"){$"P12"}
+
+									"edit-th"(type="Number" field="rc" "default"="0" textalign="end"){$"Comprometido"}
+
+									"edit-th"(type="Number" field="c01" "default"="0" textalign="end"){$"C01"}
+									"edit-th"(type="Number" field="c02" "default"="0" textalign="end"){$"C02"}
+									"edit-th"(type="Number" field="c03" "default"="0" textalign="end"){$"C03"}
+									"edit-th"(type="Number" field="c04" "default"="0" textalign="end"){$"C04"}
+									"edit-th"(type="Number" field="c05" "default"="0" textalign="end"){$"C05"}
+									"edit-th"(type="Number" field="c06" "default"="0" textalign="end"){$"C06"}
+									"edit-th"(type="Number" field="c07" "default"="0" textalign="end"){$"C07"}
+									"edit-th"(type="Number" field="c08" "default"="0" textalign="end"){$"C08"}
+									"edit-th"(type="Number" field="c09" "default"="0" textalign="end"){$"C09"}
+									"edit-th"(type="Number" field="c10" "default"="0" textalign="end"){$"C10"}
+									"edit-th"(type="Number" field="c11" "default"="0" textalign="end"){$"C11"}
+									"edit-th"(type="Number" field="c12" "default"="0" textalign="end"){$"C12"}
+
+									"edit-th"(type="Number" field="re" "default"="0" textalign="end"){$"Ejercido"}
+
+									"edit-th"(type="Number" field="e01" "default"="0" textalign="end"){$"E01"}
+									"edit-th"(type="Number" field="e02" "default"="0" textalign="end"){$"E02"}
+									"edit-th"(type="Number" field="e03" "default"="0" textalign="end"){$"E03"}
+									"edit-th"(type="Number" field="e04" "default"="0" textalign="end"){$"E04"}
+									"edit-th"(type="Number" field="e05" "default"="0" textalign="end"){$"E05"}
+									"edit-th"(type="Number" field="e06" "default"="0" textalign="end"){$"E06"}
+									"edit-th"(type="Number" field="e07" "default"="0" textalign="end"){$"E07"}
+									"edit-th"(type="Number" field="e08" "default"="0" textalign="end"){$"E08"}
+									"edit-th"(type="Number" field="e09" "default"="0" textalign="end"){$"E09"}
+									"edit-th"(type="Number" field="e10" "default"="0" textalign="end"){$"E10"}
+									"edit-th"(type="Number" field="e11" "default"="0" textalign="end"){$"E11"}
+									"edit-th"(type="Number" field="e12" "default"="0" textalign="end"){$"E12"}
+
+									"edit-th"(type="Memo" field="notas"){$"Notas"}
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 
+		script(src="/_resources/js/presupuestos.js"){$""}
 		script(src="/_resources/js/editor.js"){$""}
 		script{$'
 			editor.services = #<to.json(@services)>;
 			editor.unidades = #<to.json(unidades)>;
+			editor.currenty = #<current_year>;
 		'}
 	}
 }

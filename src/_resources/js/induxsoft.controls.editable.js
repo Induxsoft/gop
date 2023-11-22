@@ -332,10 +332,11 @@ class EditTable extends HTMLElement
     {
         var pageX,curCol,nxtCol,curColWidth,nxtColWidth;
 
-        element.onclick = (e) => { e.stopPropagation(); }
+        element.onclick = (e) => { e.stopPropagation(); e.preventDefault(); }
 
         element.addEventListener('mousedown', (e) => {
             e.stopPropagation();
+            e.preventDefault();
             curCol = e.target.parentElement;
             nxtCol = curCol.nextElementSibling;
             pageX = e.pageX;
@@ -1009,10 +1010,10 @@ class EditTable extends HTMLElement
     {
         let tds = this._shadow.querySelectorAll(this.EdiTable.Const.HTML.TABLE+"#"+tableId+" "+this.EdiTable.Const.HTML.TD);
         tds.forEach(td => {
-            td.addEventListener('click', (e) => {
+            td.onclick = e => {
                 e.stopPropagation();
                 this.CellFocus(td);
-            });
+            }
         });
         this["tableId"]=tableId;
     }

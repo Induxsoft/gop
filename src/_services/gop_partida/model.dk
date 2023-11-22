@@ -2,6 +2,8 @@
 #!
 module
 {   
-    @list_query="SELECT * FROM #<@table_name>;"
+    @list_query="SELECT * FROM #<@table_name> p 
+        WHERE IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto );"
+        
     @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"
 }

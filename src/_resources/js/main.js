@@ -1,7 +1,7 @@
 var main = {
     init()
     {
-        console.log('main loaded');
+        
     },
     request(url, method="GET", data=null, success, fail)
     {
@@ -20,22 +20,38 @@ var main = {
                 const isJson = response.headers.get('content-type')?.includes('application/json');
                 if (isJson)
                 {
-                    response.json().then(json => {
-                        success(json);
-                    });
+                    try
+                    {
+                        response.json().then(json => {
+                            success(json);
+                        }).catch(error=>success(error));
+                    }
+                    catch
+                    {
+                        success(response.message ?? response.status);
+                    }
                 }
                 else
                 {
                     success(response.message ?? response.status);
                 }
             }
-            else{
-                console.log(4);
-                fail("El servicio respondió con un estado unválido");
+            else {
+                const isJson = response.headers.get('content-type')?.includes('application/json');
+                if (isJson)
+                {
+                    response.json().then(json => {
+                        fail(json);
+                    });
+                }
+                else
+                {
+                    fail((response.message ?? JSON.stringify(response)));
+                }
             }
         })
         .catch(error => {
-            fail(error.message ? error.message : JSON.stringify(error));
+            fail(error.message ?? JSON.stringify(error));
         })
     },
     getValues(containerId='')
@@ -44,7 +60,9 @@ var main = {
         const controls = document.querySelectorAll(`#${containerId} input, #${containerId} select, #${containerId} textarea`);
         
         controls.forEach(control => {
-            if (control.value.trim()) values[control.name] = control.value;
+            let v = control.value;
+            if ((control.getAttribute('type')??'').toLowerCase() == 'number') v = Number(v);
+            if (control.value.trim() != '') values[control.name] = v;
         });
 
         return values;
@@ -74,7 +92,7 @@ var main = {
         if (modal)
         {
             modal.style.display = "none";
-            modal.className="modal fade";
+            modal.classList.remove('show');
             return true;
         }
         return false;
