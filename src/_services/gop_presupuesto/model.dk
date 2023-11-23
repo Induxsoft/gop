@@ -3,5 +3,34 @@
 module
 {   
     @list_query="SELECT * FROM #<@table_name>;"
-    @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"
+    @read_query="
+        SELECT p.sys_pk, p.titulo, p.notas, s.const status, d.codigo divisa, p.monto_autorizado, p.monto_planeado, p.monto_comprometido, p.monto_ejercido
+        FROM gop_presupuesto p
+            INNER JOIN gop_presupuesto_status s ON p.status = s.id
+            INNER JOIN divisa d ON p.divisa = d.sys_pk
+        WHERE #<@keyfield>=@_entity_id 
+            AND IF(IFNULL(@e,'')='', true, p.ejercicio=@e)
+        LIMIT 1;"
+
+    function presupuesto.update(&db,&params,&data)
+    {
+        ref new_data = record.create();
+
+        if field.exists(data, "sys_pk"){ new_data<"sys_pk">: @@(data, "#sys_pk") }
+        if field.exists(data, "titulo"){ new_data<"titulo">: @@(data, "$titulo") }
+        if field.exists(data, "notas"){ new_data<"notas">: @@(data, "$notas") }
+        if field.exists(data, "status"){ new_data<"status">: @@(data, "#status") }
+        if field.exists(data, "divisa"){ new_data<"divisa">: @@(data, "#divisa") }
+
+        if field.exists(data, "partidas")
+        {
+            ref partidas = @@(data, "&partidas")
+            do rise_error(0, to.json(partidas))
+        }
+
+        ref res = entity.create(db,params,new_data)
+        return res
+    }
+
+    point @update to presupuesto.update
 }

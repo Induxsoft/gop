@@ -2,12 +2,14 @@ var presupuesto =
 {
     table: null,
     sumFields: [],
+    excludeAnualFields: [],
     events : null,
 
     init()
     {
         // this.table = document.querySelector('#tablaPresupuestos');
         // this.sumFields = ['autorizado','anual','reserva','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+        // this.excludeAnualFields = ['anual','autorizado'];
         // this.events = this.table.EdiTable.Const.Events;
         // this.setTableEvents();
     },
@@ -40,6 +42,27 @@ var presupuesto =
             this.recalculeBranch(e.target, this.table.DataArray);
         }
 
+        // Antes de actualizar una celda
+        this.table.Events[this.events.BeforeUpdateCell] = (e) =>
+        {
+            /**
+             * Si se va a actualizar una celda sumable y la fila de la celda a editar tiene hijos se cancela
+             */
+            const isSumable = this.sumFields.includes(e.coldef.field);
+            if (isSumable)
+            {
+                let obj=e.sender.DataArray[e.sender.RowIndexOfTd(e.td)];
+                if (obj)
+                {
+                    const options = this.table._getTreeOptions();
+                    const hasChilds = e.sender.DataArray.find(data => (obj[options.key]??'___') == data[options.parentkey]);
+                    if (hasChilds) {
+                        e.cancel = true;
+                    }
+                }
+            }
+        }
+
         // Después de modificar el valor de una cela
         this.table.Events[this.events.FieldUpdated] = (e) =>
         {
@@ -58,7 +81,7 @@ var presupuesto =
                     let anual = 0;
 
                     Object.keys(obj).forEach(key => {
-                        if (key != 'anual' && key != 'autorizado' && this.sumFields.find(f => f == key)) 
+                        if (!this.excludeAnualFields.find(f => f == key) && this.sumFields.find(f => f == key)) 
                             anual += Number(obj[key]??0);
                     });
 

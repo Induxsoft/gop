@@ -20,9 +20,9 @@
 .fz-7{font-size: .7rem !important;}
 .fz-8{font-size: .8rem !important;}
 .fz-9{font-size: .9rem !important;}
-.fz-10{font-size: .10rem !important;}
-.fz-11{font-size: .11rem !important;}
-.fz-12{font-size: .12rem !important;}
+.fz-10{font-size: 1rem !important;}
+.fz-11{font-size: 1.1rem !important;}
+.fz-12{font-size: 1.2rem !important;}
 
 .modal-content{ background-color: var(--color-light-gray) !important; }
 

@@ -135,11 +135,11 @@ class EditTable extends HTMLElement
                         font-size: .8rem;
                         font-weight: 500;
                         color: #888; */
-                        background-color: inherit !important;
+                        background-color: #F5F5F5 !important;
                         z-index:1000000; 
                         position: absolute; 
                         left: 2px;
-                        top: 4px;
+                        top: 0;
                         bottom: 0;
                         padding: 2px 4px 0 4px;
                         display:flex;
@@ -2222,7 +2222,6 @@ class EditTable extends HTMLElement
     {
         if (!row) return;
         if (!treeOptions) treeOptions = this._getTreeOptions();
-
         const indexRow = this._getRowIndex(row);
         let sourceData = this.DataArray[indexRow];
         let targetData = null;

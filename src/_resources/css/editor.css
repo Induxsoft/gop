@@ -7,31 +7,50 @@
 #main_container {
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: min-content;
 }
 #unidades_container {
-    grid-column: 1 / 2;
-    grid-row: 1 / 3;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    width: auto;
+    outline: 1px solid var(--color-borders);
+    transition: .5s;
 }
-#hader_container {
-    grid-column: 2 / 3;
-    grid-row: 1 / 2;
+#content_container {
+    background-color: var(--color-light-gray);
 }
-#details_container {
-    grid-column: 2 / 3;
-    grid-row: 2 / 3;
+#ajust_panel_unidad {
+    height: 100%;
+    background-color: var(--color-gray);
+    width: 5px;
+}
+#ajust_panel_unidad:hover {
+    cursor: col-resize;
+    background-color: var(--color-borders);
+}
+#btn_hidde_unidad_panel {
+    display: none;
+}
+#unidad_selected {
+    text-align: start;
+    max-width: 50vw;
+    text-wrap: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .section-container {
     width: 100%;
     height: 100%;
-    border: 3px solid var(--color-gray);
     overflow: auto;
 }
 .presupuesto-box-info{
     border-right: 1px solid var(--color-borders);
     padding: 8px 12px;
 }
+.hidde-unidad {
+    width: 0 !important;
+}
 /* ========== UNIDADES ========== */
+
 .unit {
     cursor: pointer;
 }
@@ -42,4 +61,38 @@
 .unit-selected {
     background-color: var(--color-blue) !important;
     color: var(--color-white) !important;
+}
+
+/* ========== MEDIA QUERIES ========== */
+
+@media screen and (max-width: 768px)
+{
+    #main_container {
+        grid-template-columns: 100%;
+    }
+    #unidades_container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 10000;
+    }
+    #ajust_panel_unidad {
+        display: none !important;
+    }
+    #btn_hidde_unidad_panel {
+        display: initial;
+    }
+    #unidad_selected {
+        max-width: 90vw;
+    }
+    .hidde-unidad{
+        left: -100vw !important;
+        width: auto !important;
+    }
+    .presupuesto-box-info {
+        font-size: .9rem;
+        padding: 4px;
+        border: none;
+    }
 }
