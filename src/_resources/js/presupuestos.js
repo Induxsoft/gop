@@ -3,7 +3,8 @@ var presupuesto =
     table: null,
     sumFields: [],
     excludeAnualFields: [],
-    events : null,
+    events: null,
+    onCalculeBranch: null,
 
     init()
     {
@@ -40,6 +41,7 @@ var presupuesto =
             let sparent = this.getParentNode(e.source, this.table.DataArray);
             this.recalculeBranch(sparent, this.table.DataArray);
             this.recalculeBranch(e.target, this.table.DataArray);
+            if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
         }
 
         // Antes de actualizar una celda
@@ -82,7 +84,7 @@ var presupuesto =
 
                     Object.keys(obj).forEach(key => {
                         if (!this.excludeAnualFields.find(f => f == key) && this.sumFields.find(f => f == key)) 
-                            anual += Number(obj[key]??0);
+                            anual = Math.add(anual, Number(obj[key]??0));
                     });
 
                     obj['anual'] = Number(anual);
@@ -90,6 +92,7 @@ var presupuesto =
                     this.table.GetTree();
                     let parent = this.getParentNode(obj, this.table.DataArray);
                     if (parent) this.recalculeBranch(parent, this.table.DataArray);
+                    if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
                     this.table.SetTree(this.table.DataArray);
 
                     this.table._refreshTable();
@@ -99,6 +102,34 @@ var presupuesto =
                 }
             }
         }
+
+        // Después de agregar una nueva fila
+        this.table.Events[this.events.RowAdded] = (e) =>
+        {
+            this.table.GetTree();
+            if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
+            this.table.SetTree(this.table.DataArray);
+        };
+
+        // Después de eliminar una fila
+        this.table.Events[this.events.RowDeleted] = (e) =>
+        {
+            /**
+             * Recalculamos la rama de la fila superior a partir del índice de la fila eliminada
+             */
+
+            let obj = this.table.DataArray[e.row];
+            this.table.GetTree();
+
+            if (obj)
+            {
+                let parent = this.getParentNode(obj, this.table.DataArray);
+                if (parent) this.recalculeBranch(parent, this.table.DataArray);
+            }
+            
+            if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
+            this.table.SetTree(this.table.DataArray);
+        };
 
         // Definir la función que obtiene los Tds para validar el saldo autorizado
         this.table.onTdPaint = (td, row, col, field) => 
@@ -156,7 +187,7 @@ var presupuesto =
             {
                 this.sumFields.forEach(field => {
                     if (node[field] != undefined)
-                        node[field] += Number((child[field]??0));
+                        node[field] = Math.add(Number(node[field]), Number((child[field]??0)));
                 });
             });
 

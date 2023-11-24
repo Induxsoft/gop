@@ -3,13 +3,14 @@ var editor =
     tableUnidades: null, 
     tablePartidas: null,
     unidades: [], 
-    unidadSelected:null, 
-    presupuesto:null, 
-    partidas:null,
+    unidadSelected: null, 
+    presupuesto: null, 
+    partidas: [],
+    partidasBackup: [],
     headerFields: { 
         titulo:'Título:', 
-        status:'Estado:', 
-        divisa:'Moneda', 
+        status_text:'Estado:', 
+        divisa_text:'Moneda', 
         monto_autorizado:'Autorizado:', 
         monto_planeado:'Planeado:', 
         monto_comprometido:'Comprometido:', 
@@ -26,7 +27,9 @@ var editor =
         this.setAjustPanelUnidadEvent();
 
         const ejercicio_select = document.querySelector('#ejercicio_select');
+        const modal_presupuesto = document.querySelector('#modal_presupuesto');
         if (ejercicio_select) ejercicio_select.addEventListener('change', e => { this.getPresupuesto(this.unidadSelected?.sys_pk??null) });
+        if (modal_presupuesto) modal_presupuesto.addEventListener('show.bs.modal', e => { this.load_presupuesto_modal(); });
     },
     setConfigTables()
     {
@@ -35,6 +38,13 @@ var editor =
             this.tableUnidades.AutoAddRow = false;
             this.tableUnidades.AutoDelRow = false;
             this.tableUnidades.EverMove = false;
+        }
+        if (this.tablePartidas && presupuesto)
+        {
+            presupuesto.table = this.tablePartidas;
+            presupuesto.sumFields = ['autorizado','reserva','anual','p01','p02','p03','p04','p05','p06','p07','p08','p09','p10','p11','p12'];
+            presupuesto.excludeAnualFields = ['autorizado', 'anual'];
+            presupuesto.onCalculeBranch = dataArray => this.updatePresupuestoData(dataArray);
         }
     },
     setEventTables()
@@ -49,16 +59,10 @@ var editor =
                 this.getPresupuesto(this.unidadSelected.sys_pk);
             };
         }
-        if (this.tablePartidas)
+        if (this.tablePartidas && presupuesto)
         {
-            if (presupuesto)
-            {
-                presupuesto.table = this.tablePartidas;
-                presupuesto.sumFields = ['autorizado','reserva','anual','p01','p02','p03','p04','p05','p06','p07','p08','p09','p10','p11','p12'];
-                presupuesto.excludeAnualFields = ['autorizado', 'reserva', 'anual'];
-                presupuesto.events = this.tablePartidas.EdiTable.Const.Events;
-                presupuesto.setTableEvents();
-            }
+            presupuesto.events = this.tablePartidas.EdiTable.Const.Events;
+            presupuesto.setTableEvents();
         }
     },
     setAjustPanelUnidadEvent()
@@ -106,8 +110,23 @@ var editor =
     indentPartidaRow(add=true)
     {
         const row = this.tablePartidas.GetTrByIndex(this.tablePartidas.CurrentRowIndex());
-        console.log(row);
         if (row) this.tablePartidas.RowIndent(row, add);
+    },
+    showControls(listIds=[], containerId)
+    {
+        const container = document.querySelector('#'+containerId);
+
+        if (container)
+        {
+            container.querySelectorAll('.control').forEach(control =>{
+                control.classList.add('hidde-control');
+            });
+
+            listIds.forEach(id => {
+                const control = container.querySelector('#'+id);
+                if (control) control.classList.remove('hidde-control');
+            });
+        }
     },
 
     // =============== UNIDADES
@@ -158,7 +177,7 @@ var editor =
     },
 
     // =============== PRESUPUESTO
-    addPresupuesto()
+    addOrEditPresupuesto()
     {
         let values = main.getValues('mdl_ap_controls');
 
@@ -169,21 +188,28 @@ var editor =
 
         const ejercicio_select = document.querySelector('#ejercicio_select');
 
-        values['ref_unidad'] = this.unidadSelected.sys_pk;
-        values['ejercicio'] = Number(ejercicio_select.value);
-
         let endpoint = editor.services['gop_presupuesto'];
-        endpoint += '/_new';
 
+        if (!this.presupuesto)
+        {
+            values['ref_unidad'] = this.unidadSelected.sys_pk;
+            values['ejercicio'] = Number(ejercicio_select.value);
+            endpoint += '/_new';
+        }
+        else
+        {
+            endpoint += '/' + this.presupuesto.sys_pk;
+        }
+        console.log(values);
         main.request(endpoint, 'POST', values,
             success => { 
                 this.presupuesto = success;
                 this.printPresupuesto(this.presupuesto);
                 this.getPartidas(this.presupuesto.sys_pk);
                 main.clearValues('mdl_ap_controls'); 
-                main.closeModal('modal_add_presupuesto');
+                main.closeModal('modal_presupuesto');
             },
-            failure => { alert('No fue posible agregar la unidad.\n\n' + failure); }
+            failure => { alert('No se pudo completar el proceso.\n\n' + failure); }
         );
     },
     getPresupuesto(unidadPK)
@@ -194,11 +220,19 @@ var editor =
         endpoint += '&e=' + ejercicio_select.value;
 
         main.request(endpoint, 'GET', null,
-            success => { this.presupuesto = success; this.printPresupuesto(); },
+            success => { 
+                this.showControls(['edit_pre','delete_pre'], 'presupuesto_controls');
+                this.presupuesto = success;
+                this.printPresupuesto();
+                this.getPartidas(this.presupuesto.sys_pk);
+            },
             failure => {
                 if (failure?.message?.includes('Elemento no encontrado')) {
+                    this.showControls([], 'presupuesto_controls');
                     this.presupuesto = null;
                     this.printPresupuesto();
+                    this.tablePartidas.DataArray = [];
+                    this.printPartidas();
                 }
                 else alert('No fue posible obtener el presupuesto.\n\n' + failure); 
             }
@@ -222,20 +256,18 @@ var editor =
                 `;
             });
             container.innerHTML = template;
-            this.getPartidas();
         }
         else
         {
             container.innerHTML = `
                 <small class="text-secondary w-100">La unidad aún no cuenta con presupuesto</small>
-                <button class="btn btn-sm btn-white py-1 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modal_add_presupuesto">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2Z" />
+                <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
                     </svg>
-                    Agregar un presupuesto
+                    Agregar presupuesto
                 </button>
             `;
-            this.printPartidas({});
         }
     },
     deletePresupuesto(presupuesto)
@@ -250,7 +282,12 @@ var editor =
         let endpoint = editor.services['gop_presupuesto'] + `/${presupuesto.sys_pk}/`;
 
         main.request(endpoint, 'DELETE', null,
-            success => { this.presupuesto = null; this.printPresupuesto(null); },
+            success => { 
+                this.presupuesto = null; 
+                this.printPresupuesto();
+                this.tablePartidas.DataArray = [];
+                this.printPartidas();
+            },
             failure => { alert('No fue posible eliminar el presupuesto.\n\n' + failure); }
         );
     },
@@ -270,27 +307,102 @@ var editor =
         //     failure => { alert('No fue posible actualizar el presupuesto.\n\n' + failure); }
         // );
     },
+    updatePresupuestoData(dataArray)
+    {
+        let dataCopy = JSON.parse(JSON.stringify(dataArray));
+
+        if (this.presupuesto && dataCopy)
+        {
+            let autorzad = 0;
+            let planeado = 0;
+
+            dataCopy.forEach(data => {
+                autorzad = Math.add(autorzad, Number(data.autorizado??0));
+                planeado = Math.add(planeado, Number(data.anual??0));
+            });
+
+            this.presupuesto['monto_autorizado'] = autorzad;
+            this.presupuesto['monto_planeado'] = planeado;
+
+            this.printPresupuesto();
+        }
+
+        const isDirty = this.isDirtyPresupuesto();
+        this.showDirtyControls(isDirty);
+    },
+    isDirtyPresupuesto()
+    {
+        let isDirty = false;
+
+        if (!isDirty && this.tablePartidas.DataArray && this.partidasBackup) {
+            isDirty = (JSON.stringify(this.tablePartidas.DataArray) !== JSON.stringify(this.partidasBackup));
+        }
+
+        return isDirty;
+    },
+    showDirtyControls(isDirty=true)
+    {
+        let showControls = [];
+        if (isDirty) {
+            showControls = ['disc_pre','save_pre'];
+        }
+        this.showControls(showControls, 'partidas_control');
+    },
+    discardPresupuesto()
+    {
+        if (!confirm('¿Está seguro de descartar todos los cambios del presupuesto realizados en la tabla de partidas?'))
+            return;
+
+        if (this.partidasBackup)
+        {
+            this.tablePartidas.DataArray = this.partidasBackup;
+            this.printPartidas();
+        }
+        this.showDirtyControls(false);
+    },
+    load_presupuesto_modal()
+    {
+        let presupuesto = (this.presupuesto ?? {});
+        main.setValues('modal_presupuesto', presupuesto);
+    },
 
     // =============== PARTIDAS
-
     getPartidas(presupuestoPK)
     {
         let endpoint = editor.services['gop_partida'] + `/?presupuesto=${presupuestoPK}`;
         main.request(endpoint, 'GET', null,
-            success => { this.partidas = success; this.printPartidas(); },
-            failure => { alert('No fue posible obtener las partidas.\n\n' + failure); this.printPartidas({}) }
+            success => { 
+                this.tablePartidas.DataArray = success;
+                this.partidasBackup = JSON.parse(JSON.stringify(success));
+                this.printPartidas(); 
+            },
+            failure => { 
+                alert('No fue posible obtener las partidas.\n\n' + failure); 
+                this.tablePartidas.DataArray = [];
+                this.partidasBackup = [];
+                this.printPartidas();
+            }
         );
     },
-    printPartidas(partidas)
+    printPartidas()
     {
-        if (!partidas) partidas = this.partidas;
-        console.log('Partidas:');
-        console.log(partidas);
+        this.tablePartidas._printRows();
+
+        const partidas_main_container = document.querySelector('#partidas_main_container');
+        partidas_main_container.classList.toggle('d-none', (this.presupuesto ? false : true));
     },
-    deletePartidaRow()
+    addRowPartida()
+    {
+        this.tablePartidas.AddRow();
+    },
+    insertRowPartida()
+    {
+        console.log('insertar');
+    },
+    deleteRowPartida()
     {
         this.tablePartidas.DeleteCurrentRow();
-    }
+    },
 }
 
 document.addEventListener('DOMContentLoaded', () => {

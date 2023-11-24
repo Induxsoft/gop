@@ -51,7 +51,7 @@ module "Editor Modals"
     }
 
     // Modal add presupuesto
-    div(class="modal fade" id="modal_add_presupuesto" tabindex="-1" "aria-labelledby"="exampleModalLabel" "aria-hidden"="true" "data-bs-backdrop"="false")
+    div(class="modal fade" id="modal_presupuesto" tabindex="-1" "aria-labelledby"="exampleModalLabel" "aria-hidden"="true" "data-bs-backdrop"="false")
     {
         div(class="modal-dialog modal-dialog-centered modal-dialog-scrollable")
         {
@@ -67,12 +67,12 @@ module "Editor Modals"
                     label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Título:"}
                     input(type="text" class="induxsoft-form-control" name="titulo" required="true")
 
-                    #! 
+                    #!
                     ref head = get_header_json()
                     endpoint = @@(@services, "$gop_presupuesto_status")
-                    ref stts = from.json(http.request(endpoint, "GET", head, ""))
+                    if isnull(stts) { ref stts = from.json(http.request(endpoint, "GET", head, "")) }
                     endpoint = @@(@services, "$divisa")
-                    ref dvss = from.json(http.request(endpoint, "GET", head, ""))
+                    if isnull(dvss) { ref dvss = from.json(http.request(endpoint, "GET", head, "")) }
 
                     #$
                     label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Estado:"}
@@ -100,10 +100,13 @@ module "Editor Modals"
 
                     label(class="text-secondary fz-8 mt-2 mb-1"){$"Notas:"}
                     textarea(rows="2" class="induxsoft-form-control" name="notas"){$""}
+
+                    input(type="hidden" name="sys_pk" "hidden-type"="number")
+                    input(type="hidden" name="sys_recver" "hidden-type"="number")
                 }
                 div(class="modal-footer")
                 {
-                    button(type="button" class="btn btn-sm btn-primary" onclick="editor.addPresupuesto()"){$"Agregar"}
+                    button(type="button" class="btn btn-sm btn-primary" onclick="editor.addOrEditPresupuesto()"){$"Agregar"}
                     button(type="button" class="btn btn-sm btn-light" "data-bs-dismiss"="modal"){$"Cancelar"}
                 }
             }

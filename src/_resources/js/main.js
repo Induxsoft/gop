@@ -61,11 +61,19 @@ var main = {
         
         controls.forEach(control => {
             let v = control.value;
-            if ((control.getAttribute('type')??'').toLowerCase() == 'number') v = Number(v);
+            if ((control.getAttribute('type')??'').toLowerCase() == 'number' || ((control.getAttribute('hidden-type')??'') == 'number')) 
+                v = Number(v);
             if (control.value.trim() != '') values[control.name] = v;
         });
 
         return values;
+    },
+    setValues(containerId='', obj)
+    {
+        const controls = document.querySelectorAll(`#${containerId} input, #${containerId} select, #${containerId} textarea`);
+        controls.forEach(control => {
+            control.value = (obj[control.name]??'');
+        });
     },
     clearValues(containerId)
     {

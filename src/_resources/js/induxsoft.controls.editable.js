@@ -679,6 +679,7 @@ class EditTable extends HTMLElement
                 BeforeSetInput:"beforesetinput",
                 FieldUpdated:"fieldupdated",
                 RowAdded:"rowadded",
+                RowDeleted:"rowdeleted",
                 BeforeMoveRow:"beforemoverow",
                 RowMoved:"rowmoved"
             },
@@ -1142,6 +1143,15 @@ class EditTable extends HTMLElement
 
         this.GetTrByIndex(row).remove();
         this.DataArray.splice(row, 1);
+
+        var eventArgs={
+            sender:this._getCurren(),
+            rowIndex:row,
+        };
+
+        if (this._getCurren().Events[this.EdiTable.Const.Events.RowDeleted]!=undefined)
+            this._getCurren().Events[this.EdiTable.Const.Events.RowDeleted](eventArgs);
+
         return true;
     }
     /**
