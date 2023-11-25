@@ -39,13 +39,17 @@ module "web_page"
 								small{$"Ocultar"}
 							}
 						}
-						div(class="d-flex flex-wrap justify-content-end flex-grow-1")
+						div(class="d-flex flex-wrap justify-content-end flex-grow-1" id="unidad_controls")
 						{
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_edit_unidad"){
+								$"#<@@(@icons,'edit')>"
+								small{$"Editar"}
+							}
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_add_unidad"){
 								$"#<@@(@icons,'add')>"
 								small{$"Agregar"}
 							}
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" onclick="editor.deleteUnidadSelected()"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" onclick="editor.deleteUnidadSelected()" id="btn_delete_unidad"){
 								$"#<@@(@icons,'delete')>"
 								small{$"Eliminar"}
 							}
@@ -62,7 +66,7 @@ module "web_page"
 								{
 									"edit-tr"
 									{
-										"edit-th"(type="Text" field="descripcion" style="text-align:start;"){$"Unidades organizacionales"}
+										"edit-th"(type="NoEditable" field="descripcion" style="text-align:start;"){$"Unidades organizacionales"}
 									}
 								}
 							}
@@ -127,17 +131,17 @@ module "web_page"
 						div(class="d-flex")
 						{
 							button(class="btn btn-sm rounded-0 d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar identación" onclick="editor.indentPartidaRow(true)"){
-								svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#888" class="bi bi-text-indent-left" viewBox="0 0 16 16"){
+								svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-left" viewBox="0 0 16 16"){
 									path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m.646 2.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L4.293 8 2.646 6.354a.5.5 0 0 1 0-.708M7 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m-5 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
 								}
 							}
 							button(class="btn btn-sm rounded-0 d-flex align-items-center justify-content-center gap-2 no-shadow" title="Disminuir identación" onclick="editor.indentPartidaRow(false)"){
-								svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#888" class="bi bi-text-indent-right" viewBox="0 0 16 16"){
+								svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-right" viewBox="0 0 16 16"){
 									path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m10.646 2.146a.5.5 0 0 1 .708.708L11.707 8l1.647 1.646a.5.5 0 0 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2zM2 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
 								}
 							}
 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar fila" onclick="editor.addRowPartida()"){
-								$"#<@@(@icons,'add')>"
+								$"#<@@(@icons,'add_row')>"
 							}
 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Eliminar fila" onclick="editor.deleteRowPartida()"){
 								$"#<@@(@icons,'remove_row')>"
@@ -148,11 +152,11 @@ module "web_page"
 						}
 						div(class="d-flex align-items-center" id="partidas_control")
 						{
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="save_pre" onclick="editor.savePresupuesto()"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
 								$"#<@@(@icons,'save')>"
 								small{$"Guardar cambios"}
 							}
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="disc_pre" onclick="editor.discardPresupuesto()"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
 								$"#<@@(@icons,'discard')>"
 								small{$"Descartar cambios"}
 							}

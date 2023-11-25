@@ -28,8 +28,13 @@ var editor =
 
         const ejercicio_select = document.querySelector('#ejercicio_select');
         const modal_presupuesto = document.querySelector('#modal_presupuesto');
-        if (ejercicio_select) ejercicio_select.addEventListener('change', e => { this.getPresupuesto(this.unidadSelected?.sys_pk??null) });
-        if (modal_presupuesto) modal_presupuesto.addEventListener('show.bs.modal', e => { this.load_presupuesto_modal(); });
+        const btn_add_unidad = document.querySelector('#btn_add_unidad');
+        const btn_edit_unidad = document.querySelector('#btn_edit_unidad');
+
+        if (ejercicio_select) ejercicio_select.addEventListener('change', () => { this.getPresupuesto(this.unidadSelected?.sys_pk??null) });
+        if (modal_presupuesto) modal_presupuesto.addEventListener('show.bs.modal', () => { this.load_presupuesto_modal(); });
+        if (btn_add_unidad) btn_add_unidad.addEventListener('click', () => { this.load_unidad_modal(true) });
+        if (btn_edit_unidad) btn_edit_unidad.addEventListener('click', () => { this.load_unidad_modal(false) });
     },
     setConfigTables()
     {
@@ -57,6 +62,7 @@ var editor =
                 this.unidadSelected = this.tableUnidades.DataArray[e.sender.CurrentRowIndex()];
                 if (textSelected) textSelected.textContent = (this.unidadSelected?.descripcion ?? '');
                 this.getPresupuesto(this.unidadSelected.sys_pk);
+                this.showControls(['btn_add_unidad', 'btn_edit_unidad', 'btn_delete_unidad'], 'unidad_controls');
             };
         }
         if (this.tablePartidas && presupuesto)
@@ -136,9 +142,15 @@ var editor =
         let values = main.getValues('mdl_au_controls');
 
         let endpoint = editor.services['rh_unidad'];
-        endpoint += '/_new';
+        let method = 'POST';
 
-        main.request(endpoint, 'POST', values,
+        if (values.sys_pk) {
+            method = 'PUT';
+            endpoint += 'values.sys_pk';
+        }
+        else endpoint += '/_new';
+
+        main.request(endpoint, method, values,
             success => { 
                 this.getUnidades(); 
                 main.clearValues('mdl_au_controls'); 
@@ -164,16 +176,37 @@ var editor =
     },
     deleteUnidadSelected()
     {
-        if (!this.unidadSelected || !confirm('¿Está seguro de eliminar la unidad seleccionada?'))
+        if (!this.unidadSelected || !confirm('¿Está seguro de eliminar la unidad seleccionada? Se eliminarán también sus presupuestos.'))
             return;
 
         let endpoint = editor.services['rh_unidad'];
         endpoint += "/" + this.unidadSelected.sys_pk;
 
         main.request(endpoint, 'DELETE', null,
-            success => { this.getUnidades(); },
+            success => { /*this.getUnidades();*/ window.location.reload(); },
             failure => { alert('No fue posible eliminar la unidad.\n\n' + failure); }
         );
+    },
+    load_unidad_modal(empty=false)
+    {
+        let data = {}
+        const ik_unidad = document.querySelector('#mdl_au_ik_unidad');
+        ik_unidad.setValue(null);
+
+        if (!empty && this.unidadSelected)
+        {
+            data = this.unidadSelected;
+            if (this.unidadSelected.superior)
+            {
+                let endpoint = editor.services['rh_unidad'] + "/" + this.unidadSelected.superior;
+
+                main.request(endpoint, 'GET', null,
+                    success => { ik_unidad.setValue(success); },
+                    failure => { console.log(failure); }
+                );
+            }
+        }
+        main.setValues('mdl_au_controls', data);
     },
 
     // =============== PRESUPUESTO
@@ -189,6 +222,7 @@ var editor =
         const ejercicio_select = document.querySelector('#ejercicio_select');
 
         let endpoint = editor.services['gop_presupuesto'];
+        let method = 'POST';
 
         if (!this.presupuesto)
         {
@@ -199,9 +233,10 @@ var editor =
         else
         {
             endpoint += '/' + this.presupuesto.sys_pk;
+            method = 'PUT';
         }
-        console.log(values);
-        main.request(endpoint, 'POST', values,
+
+        main.request(endpoint, method, values,
             success => { 
                 this.presupuesto = success;
                 this.printPresupuesto(this.presupuesto);
@@ -243,10 +278,11 @@ var editor =
         if (!presupuesto) presupuesto = this.presupuesto;
 
         const container = document.querySelector('#presupuesto_container');
+        container.style.opacity = 0;
+        let template = '';
 
         if (presupuesto)
         {
-            let template = '';
             Object.keys(this.headerFields).forEach(field => {
                 template += `
                     <div class="presupuesto-box-info">
@@ -255,11 +291,11 @@ var editor =
                     </div>
                 `;
             });
-            container.innerHTML = template;
+            
         }
         else
         {
-            container.innerHTML = `
+            template = `
                 <small class="text-secondary w-100">La unidad aún no cuenta con presupuesto</small>
                 <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
@@ -269,6 +305,11 @@ var editor =
                 </button>
             `;
         }
+
+        setTimeout(()=>{
+            container.innerHTML = template;
+            container.style.opacity = 1;
+        },300);
     },
     deletePresupuesto(presupuesto)
     {
@@ -277,7 +318,7 @@ var editor =
             alert('No hay presupuesto para eliminar');
             return;
         }
-        if (!confirm('Está seguro de eliminar el presupuesto de la unidad organizacional seleccionada?')) return;
+        if (!confirm('Está seguro de eliminar el presupuesto y todas sus partidas de la unidad organizacional seleccionada?')) return;
 
         let endpoint = editor.services['gop_presupuesto'] + `/${presupuesto.sys_pk}/`;
 
@@ -290,22 +331,6 @@ var editor =
             },
             failure => { alert('No fue posible eliminar el presupuesto.\n\n' + failure); }
         );
-    },
-    savePresupuesto()
-    {
-        if (!this.presupuesto) {
-            alert('No hay presupuesto para guardar');
-            return;
-        }
-
-        this.presupuesto['partidas'] = this.tablePartidas.DataArray;
-
-        let endpoint = editor.services['gop_presupuesto'] + `/${this.presupuesto.sys_pk}/`;
-        console.log(this.presupuesto);
-        // main.request(endpoint, 'POST', this.presupuesto,
-        //     success => { this.presupuesto = success; },
-        //     failure => { alert('No fue posible actualizar el presupuesto.\n\n' + failure); }
-        // );
     },
     updatePresupuestoData(dataArray)
     {
@@ -348,18 +373,6 @@ var editor =
         }
         this.showControls(showControls, 'partidas_control');
     },
-    discardPresupuesto()
-    {
-        if (!confirm('¿Está seguro de descartar todos los cambios del presupuesto realizados en la tabla de partidas?'))
-            return;
-
-        if (this.partidasBackup)
-        {
-            this.tablePartidas.DataArray = this.partidasBackup;
-            this.printPartidas();
-        }
-        this.showDirtyControls(false);
-    },
     load_presupuesto_modal()
     {
         let presupuesto = (this.presupuesto ?? {});
@@ -371,8 +384,9 @@ var editor =
     {
         let endpoint = editor.services['gop_partida'] + `/?presupuesto=${presupuestoPK}`;
         main.request(endpoint, 'GET', null,
-            success => { 
-                this.tablePartidas.DataArray = success;
+            success => {
+                this.tablePartidas.DataArray = JSON.parse(JSON.stringify(success));
+                this.showDirtyControls(false);
                 this.partidasBackup = JSON.parse(JSON.stringify(success));
                 this.printPartidas(); 
             },
@@ -386,7 +400,20 @@ var editor =
     },
     printPartidas()
     {
-        this.tablePartidas._printRows();
+        const container = document.querySelector('#partidas_main_container');
+        container.style.opacity = 0;
+
+        if (this.tablePartidas.DataArray && this.tablePartidas.DataArray.length > 0)
+        {
+            this.tablePartidas.DataArray.forEach(data => {
+                presupuesto.calculeAnualFromDataRow(data);
+            });
+        }
+
+        setTimeout(()=>{
+            this.tablePartidas._printRows();
+            container.style.opacity = 1;
+        },200);
 
         const partidas_main_container = document.querySelector('#partidas_main_container');
         partidas_main_container.classList.toggle('d-none', (this.presupuesto ? false : true));
@@ -397,11 +424,77 @@ var editor =
     },
     insertRowPartida()
     {
-        console.log('insertar');
+        if (this.tablePartidas.DataArray && this.tablePartidas.DataArray.length > 0)
+        {
+            this.tablePartidas.InsertRow(undefined, true);
+            let newRow = this.tablePartidas.DataArray[this.tablePartidas.DataArray.length-1];
+            let curRow = this.tablePartidas.DataArray[this.tablePartidas.CurrentRowIndex()];
+
+            if (newRow && curRow)
+            {
+                let options = this.tablePartidas._getTreeOptions();
+                if(this.tablePartidas._moveData(newRow, curRow, false, options, true))
+                {
+                    this.tablePartidas._printRows();
+                    let newRowIdx = this.tablePartidas.DataArray.findIndex(data => data[options.key] == (newRow[options.key]??'_-_'));
+                    if (newRowIdx >= 0) {
+                        let nr = this.tablePartidas.GetTrByIndex(newRowIdx);
+                        this.tablePartidas.CellFocus(nr.cells[0]);
+                    }
+                }
+            }
+        }
+        else
+        {
+            this.addRowPartida();
+        }
     },
     deleteRowPartida()
     {
         this.tablePartidas.DeleteCurrentRow();
+    },
+    savePartidasPresupuesto()
+    {
+        if (!this.presupuesto) {
+            alert('No hay presupuesto para guardar');
+            return;
+        }
+
+        let data = {
+            sys_pk: this.presupuesto.sys_pk,
+            sys_recver: this.presupuesto.sys_recver
+        }
+
+        if (this.presupuesto['monto_autorizado'] != undefined) data['monto_autorizado'] = Number(this.presupuesto['monto_autorizado']);
+        if (this.presupuesto['monto_planeado'] != undefined) data['monto_planeado'] = Number(this.presupuesto['monto_planeado']);
+
+        data['partidas'] = this.tablePartidas.DataArray;
+
+        let endpoint = editor.services['gop_presupuesto'] + `/${this.presupuesto.sys_pk}/`;
+        
+        main.request(endpoint, 'PUT', data,
+            success => { 
+                this.presupuesto = success;
+                this.partidasBackup = JSON.parse(JSON.stringify(success));
+                this.showDirtyControls(false);
+            },
+            failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + failure); }
+        );
+    },
+    discardPartidasPresupuesto()
+    {
+        if (!confirm('¿Está seguro de descartar todos los cambios del presupuesto realizados en la tabla de partidas?'))
+            return;
+
+        if (this.partidasBackup)
+        {
+            this.tablePartidas.DataArray = JSON.parse(JSON.stringify(this.partidasBackup));
+            let temp = JSON.parse(JSON.stringify(this.tablePartidas.DataArray));
+            let tree = this.tablePartidas.TreeArray(temp);
+            this.updatePresupuestoData(tree);
+            this.printPartidas();
+        }
+        this.showDirtyControls(false);
     },
 }
 

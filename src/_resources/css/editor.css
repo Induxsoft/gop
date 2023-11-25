@@ -69,7 +69,9 @@
 }
 
 /* ========== PRESUPUESTO ========== */
-
+#presupuesto_container, #partidas_main_container{
+    transition: .3s;
+}
 .presupuesto-box-info{
     border-right: 1px solid var(--color-borders);
     padding: 8px 12px;

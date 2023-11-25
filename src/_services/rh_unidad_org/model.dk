@@ -4,4 +4,50 @@ module
 {   
     @list_query="SELECT * FROM #<@table_name>;"
     @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"
+
+    function unidad.delete(&db, &params)
+    {
+        @use_transaction = @false
+        ref presupuestos = list.create()
+
+        do dbr.begin(db)
+
+        if field.exist(params, "_entity_id")
+        {
+            new prm { @"pk_unidad": @@(params, "#_entity_id") }
+
+            // Eliminar relaciones y registros de todas las partidas de todos los presupuestos de la unidad
+            do dbr.execute(db, "
+                UPDATE gop_partida par
+                    INNER JOIN gop_presupuesto pre ON par.ref_presupuesto = pre.sys_pk
+                    INNER JOIN rh_unidad_org uni ON pre.ref_unidad = uni.sys_pk
+                SET par.padre=NULL WHERE uni.sys_pk=@pk_unidad", prm)
+
+            do dbr.execute(db, "
+                DELETE par FROM gop_partida par
+                    INNER JOIN gop_presupuesto pre ON par.ref_presupuesto = pre.sys_pk
+                    INNER JOIN rh_unidad_org uni ON pre.ref_unidad = uni.sys_pk
+                WHERE uni.sys_pk=@pk_unidad;", prm)
+
+            // Eliminar todos los presupuestos de la unidad
+            do dbr.execute(db, "
+                DELETE pre FROM gop_presupuesto pre
+                    INNER JOIN rh_unidad_org uni ON pre.ref_unidad = uni.sys_pk
+                WHERE uni.sys_pk=@pk_unidad;", prm)
+        }
+        
+        // Eliminar la unidad
+        do entity.delete(db, params)
+        
+        do dbr.commit(db)
+        return @null
+        
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+
+    point @delete to unidad.delete
 }

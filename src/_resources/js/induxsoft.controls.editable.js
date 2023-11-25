@@ -405,7 +405,7 @@ class EditTable extends HTMLElement
             };
         });
     }
-    _moveData(sourceData, targetData, moveAsChild=false, treeOptions=null)
+    _moveData(sourceData, targetData, moveAsChild=false, treeOptions=null, onTopIfNotAsChild=false)
     {
         let success = false;
 
@@ -467,7 +467,7 @@ class EditTable extends HTMLElement
                 {
                     let data = source.l.splice(source.idx, 1)[0];
                     data[treeOptions.parentkey] = target.obj[treeOptions.parentkey];
-                    target.l.splice(target.idx + (notaddidx ? 0 : 1), 0, data);
+                    target.l.splice((target.idx + (notaddidx ? 0 : 1) - (onTopIfNotAsChild ? 1 : 0)), 0, data);
                 }
                 else
                 {

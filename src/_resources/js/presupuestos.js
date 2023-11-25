@@ -80,15 +80,7 @@ var presupuesto =
 
                 if (obj)
                 {
-                    let anual = 0;
-
-                    Object.keys(obj).forEach(key => {
-                        if (!this.excludeAnualFields.find(f => f == key) && this.sumFields.find(f => f == key)) 
-                            anual = Math.add(anual, Number(obj[key]??0));
-                    });
-
-                    obj['anual'] = Number(anual);
-
+                    this.calculeAnualFromDataRow(obj);
                     this.table.GetTree();
                     let parent = this.getParentNode(obj, this.table.DataArray);
                     if (parent) this.recalculeBranch(parent, this.table.DataArray);
@@ -106,6 +98,15 @@ var presupuesto =
         // Después de agregar una nueva fila
         this.table.Events[this.events.RowAdded] = (e) =>
         {
+            /**
+             * Primero agregamos un identificador si no lo tiene para el correcto funcionamiento
+             * de las funciones de arbol (agregar hijos, mover de posición, etc), después llamamos a la
+             * función personalizada onCalculeBranch para indicar un nuevo cambio en el DataArray 
+             */
+            
+            let data = this.table.DataArray[e.rowIndex];
+            if (data) this.table._resolveKey(data);
+
             this.table.GetTree();
             if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
             this.table.SetTree(this.table.DataArray);
@@ -142,6 +143,17 @@ var presupuesto =
         }
 
         this.valideAuthBalance();
+    },
+    calculeAnualFromDataRow(data)
+    {
+        let anual = 0;
+
+        Object.keys(data).forEach(key => {
+            if (!this.excludeAnualFields.find(f => f == key) && this.sumFields.find(f => f == key)) 
+                anual = Math.add(anual, Number(data[key]??0));
+        });
+
+        data['anual'] = Number(anual);
     },
     getCellIndexByField(field='')
     {

@@ -2,7 +2,12 @@
 #!
 module
 {   
-    @list_query="SELECT * FROM #<@table_name> p 
+    @list_query="
+        SELECT p.sys_pk, p.ref_presupuesto, IFNULL(p.id,'') id, p.padre, p.partida, IFNULL(p.autorizado,0) autorizado,
+            IFNULL(p.reserva,0) reserva, IFNULL(p.p01,0) p01, IFNULL(p.p02,0) p02, IFNULL(p.p03,0) p03, IFNULL(p.p04,0) p04,
+            IFNULL(p.p05,0) p05, IFNULL(p.p06,0) p06, IFNULL(p.p07,0) p07, IFNULL(p.p08,0) p08, IFNULL(p.p09,0) p09,
+            IFNULL(p.p10,0) p10, IFNULL(p.p11,0) p11, IFNULL(p.p12,0) p12, IFNULL(notas,'') notas
+        FROM #<@table_name> p 
         WHERE IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto );"
         
     @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"

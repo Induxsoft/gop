@@ -12,7 +12,7 @@ module "Editor Modals"
             {
                 div(class="modal-header p-3")
                 {
-                    h6(class="modal-title"){$"Agregar unidad"}
+                    h6(class="modal-title"){$"Unidad"}
                     button(type="button" class="btn-close btn-sm" "data-bs-dismiss"="modal" "aria-label"="Close"){$""}
                 }
                 div(class="modal-body p-4 bg-white" id="mdl_au_controls")
@@ -40,6 +40,9 @@ module "Editor Modals"
                     textarea(rows="2" class="induxsoft-form-control" name="notas"){$""}
                     label(class="text-secondary fz-8 mt-2 mb-1"){$"Enlace (URL con documentación adicional):"}
                     input(type="text" class="induxsoft-form-control" name="link")
+
+                    input(type="hidden" name="sys_pk" "hidden-type"="number")
+                    input(type="hidden" name="sys_recver" "hidden-type"="number")
                 }
                 div(class="modal-footer")
                 {

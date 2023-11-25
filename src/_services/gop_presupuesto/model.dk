@@ -16,24 +16,161 @@ module
 
     function presupuesto.update(&db,&params,&data)
     {
-        ref new_data = record.create();
-        if field.exists(data, "sys_pk"){ new_data<"sys_pk">: @@(data, "#sys_pk") }
-        if field.exists(data, "sys_recver"){ new_data<"sys_recver">: @@(data, "#sys_recver") }
-        if field.exists(data, "titulo"){ new_data<"titulo">: @@(data, "$titulo") }
-        if field.exists(data, "notas"){ new_data<"notas">: @@(data, "$notas") }
-        if field.exists(data, "status"){ new_data<"status">: @@(data, "#status") }
-        if field.exists(data, "divisa"){ new_data<"divisa">: @@(data, "#divisa") }
+        ref new_data = record.create()
+        @use_transaction = @false
 
-        if field.exists(data, "partidas")
+        if field.exist(data, "sys_pk"){ new_data<"sys_pk">: @@(data, "#sys_pk") }
+        if field.exist(data, "sys_recver"){ new_data<"sys_recver">: @@(data, "#sys_recver") }
+        if field.exist(data, "titulo"){ new_data<"titulo">: @@(data, "$titulo") }
+        if field.exist(data, "notas"){ new_data<"notas">: @@(data, "$notas") }
+        if field.exist(data, "status"){ new_data<"status">: @@(data, "#status") }
+        if field.exist(data, "divisa"){ new_data<"divisa">: @@(data, "#divisa") }
+
+        if field.exist(data, "monto_autorizado"){ new_data<"monto_autorizado">: @@(data, "#monto_autorizado") }
+        if field.exist(data, "monto_planeado"){ new_data<"monto_planeado">: @@(data, "#monto_planeado") }
+        if field.exist(data, "monto_comprometido"){ new_data<"monto_comprometido">: @@(data, "#monto_comprometido") }
+        if field.exist(data, "monto_ejercido"){ new_data<"monto_ejercido">: @@(data, "#monto_ejercido") }
+
+        ref partidas = @null
+
+        if field.exist(data, "partidas")
         {
-            ref partidas = @@(data, "&partidas")
+            ref partidas = from.json(to.json(@@(data, "&partidas")))
             do field.remove(data, "partidas")
-            //do rise_error(0, to.json(partidas))
+            do changePkParentToGuid(partidas)
         }
 
+        do dbr.begin(db)
+
         ref res = entity.create(db,params,new_data)
+        if not(isnull(partidas))
+        {
+            pk_presupuesto = @@(res, "#sys_pk")
+            do removeAllPartidas(db, pk_presupuesto)
+            do insertPartidas(db, partidas, pk_presupuesto)
+        }
+
+        do dbr.commit(db)
+
         return res
+
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+
+    function presupuesto.delete(&db, &params)
+    {
+        @use_transaction = @false
+        do dbr.begin(db)
+        
+        if field.exist(params, "_entity_id")
+        {
+            new prm { @"pk_presupuesto": @@(params, "#_entity_id") }
+            do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk_presupuesto", prm)
+            do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk_presupuesto;", prm)
+        }
+        do entity.delete(db, params)
+        
+        do dbr.commit(db)
+        return @null
+        
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+
+    function removeAllPartidas(&db, pk_presupuesto)
+    {
+        new prm { @"pk": pk_presupuesto }
+        do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk", prm)
+        do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk", prm)
+    }
+
+    function insertPartidas(&db, &partidas, pk_presupuesto)
+    {
+        if not(isnull(partidas)) && list.count(partidas) > 0
+        {
+            for i = 0; i < list.count(partidas)
+            {
+                ref partida = list.obj(partidas, i)
+                /*
+                 * Si tiene padre lo guardamos temporalmente en el campo info para
+                 * asignarselo a todos en una sola consulta
+                 */
+                partida<"sys_info">: @@(partida, "padre")
+                partida<"padre*">: @null
+
+                do field.remove(partida, "anual")
+                do field.remove(partida, "sys_pk")
+                partida<"sys_recver">:0
+                partida<"sys_dtcreated*">: dbr.sql("NOW()")
+                partida<"sys_timestamp*">: dbr.sql("NOW()")
+                partida<"ref_presupuesto">: pk_presupuesto
+                partida<"id">: @@(partida, "$id")
+                partida<"partida">: @@(partida, "$partida")
+
+                do parseNumbersPartida(partida)
+
+                do dbr.insert(db, "gop_partida", partida)
+            }
+
+            new prm { @"presupuesto": pk_presupuesto }
+            //do dbr.execute(db, "UPDATE gop_partida p SET p.padre=(SELECT p2.sys_pk FROM gop_partida p2 WHERE p2.sys_guid=p.sys_info LIMIT 1) WHERE p.ref_presupuesto=@presupuesto", prm)
+            do dbr.execute(db, "
+                UPDATE gop_partida p
+                    INNER JOIN gop_partida p2 ON p2.sys_guid=p.sys_info 
+                SET p.padre=p2.sys_pk
+                WHERE p.ref_presupuesto=@presupuesto", prm)
+            do dbr.execute(db, "UPDATE gop_partida p SET p.sys_info=NULL WHERE p.ref_presupuesto=@presupuesto", prm)
+        }
+    }
+
+    function changePkParentToGuid(&partidas)
+    {
+        if not(isnull(partidas)) && list.count(partidas) > 0
+        {
+            for i = 0; i < list.count(partidas)
+            {
+                ref p = list.obj(partidas, i)
+                p<"sys_guid">: uuid()
+                
+                if field.exist(p, "padre") && trim(@@(p, "$padre")) != ""
+                {
+                    guid_padre = ""
+                    for j = 0; j < list.count(partidas)
+                    {
+                        ref p2 = list.obj(partidas, j)
+                        if @@(p, "$padre") == @@(p2, "$sys_pk") { guid_padre = @@(p2 ,"sys_guid") }
+                    }
+                    p<"padre">: guid_padre
+                }
+            }
+        }
+    }
+
+    function parseNumbersPartida(&partida)
+    {
+        if trim(@@(partida, "$autorizado")) != "" { partida<"autorizado">: @@(partida, "#autorizado") }
+        if trim(@@(partida, "$reserva")) != "" { partida<"reserva">: @@(partida, "#reserva") }
+        if trim(@@(partida, "$p01")) != "" { partida<"p01">: @@(partida, "#p01") }
+        if trim(@@(partida, "$p02")) != "" { partida<"p02">: @@(partida, "#p02") }
+        if trim(@@(partida, "$p03")) != "" { partida<"p03">: @@(partida, "#p03") }
+        if trim(@@(partida, "$p04")) != "" { partida<"p04">: @@(partida, "#p04") }
+        if trim(@@(partida, "$p05")) != "" { partida<"p05">: @@(partida, "#p05") }
+        if trim(@@(partida, "$p06")) != "" { partida<"p06">: @@(partida, "#p06") }
+        if trim(@@(partida, "$p07")) != "" { partida<"p07">: @@(partida, "#p07") }
+        if trim(@@(partida, "$p08")) != "" { partida<"p08">: @@(partida, "#p08") }
+        if trim(@@(partida, "$p09")) != "" { partida<"p09">: @@(partida, "#p09") }
+        if trim(@@(partida, "$p10")) != "" { partida<"p10">: @@(partida, "#p10") }
+        if trim(@@(partida, "$p11")) != "" { partida<"p11">: @@(partida, "#p11") }
+        if trim(@@(partida, "$p12")) != "" { partida<"p12">: @@(partida, "#p12") }
     }
 
     point @update to presupuesto.update
+    point @delete to presupuesto.delete
 }

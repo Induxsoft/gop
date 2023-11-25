@@ -60,10 +60,12 @@ var main = {
         const controls = document.querySelectorAll(`#${containerId} input, #${containerId} select, #${containerId} textarea`);
         
         controls.forEach(control => {
-            let v = control.value;
+            let v = '';
+            if (control.id != 'inputv') v = control.value;
+            else v = control.getAttribute('value');
             if ((control.getAttribute('type')??'').toLowerCase() == 'number' || ((control.getAttribute('hidden-type')??'') == 'number')) 
                 v = Number(v);
-            if (control.value.trim() != '') values[control.name] = v;
+            if (v.toString().trim() != '') values[control.name] = v;
         });
 
         return values;
