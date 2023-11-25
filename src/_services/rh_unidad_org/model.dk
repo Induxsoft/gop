@@ -5,6 +5,32 @@ module
     @list_query="SELECT * FROM #<@table_name>;"
     @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"
 
+    function unidad.read(&db, &params)
+    {
+        ref res = entity.read(db, params)
+
+        if @@(params,"$details") == "true"
+        {
+            new prm {
+                @"unidad_padre": @@(res, "#sys_pk")
+                @"ejercicio": @@(params, "$ejercicio")
+            }
+
+            query = "SELECT u.sys_pk unidad_pk, u.descripcion unidad_desc, p.titulo pres_title, s.const STATUS, d.codigo divisa, 
+            IFNULL(p.monto_autorizado,0) monto_autorizado, IFNULL(p.monto_planeado,0) monto_planeado, 
+            IFNULL(p.monto_comprometido,0) monto_comprometido, IFNULL(p.monto_ejercido,0) monto_ejercido
+            FROM gop_presupuesto p
+                INNER JOIN gop_presupuesto_status s ON p.`status` = s.id
+                INNER JOIN divisa d ON p.divisa = d.sys_pk
+                INNER JOIN rh_unidad_org u ON p.ref_unidad = u.sys_pk
+            WHERE u.superior = @unidad_padre
+                AND IF(IFNULL(@ejercicio,'')='', TRUE, p.ejercicio = @ejercicio);"
+            
+            res<"subunidades*">: dbr.list(db, query, prm)
+        }
+        return res
+    }
+
     function unidad.delete(&db, &params)
     {
         @use_transaction = @false
@@ -49,5 +75,19 @@ module
     	}
     }
 
-    point @delete to unidad.delete
+    function unidad.update(&db,&params,&data)
+    {
+        
+        if field.exist(data, "superior") && @@(data, "$superior") == "null" {
+            data<"superior*">: @null
+        }
+        do dbr.update(db, "rh_unidad_org", data, "sys_pk=@sys_pk", data)
+        //ref res = entity.create(db,params,data)
+        ref res = entity.read(db,params)
+        return res
+    }
+
+    point @delete   to unidad.delete
+    point @update   to unidad.update
+    point @read     to unidad.read
 }

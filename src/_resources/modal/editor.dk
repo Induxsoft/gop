@@ -46,7 +46,7 @@ module "Editor Modals"
                 }
                 div(class="modal-footer")
                 {
-                    button(type="button" class="btn btn-sm btn-primary" onclick="editor.addUnidad()"){$"Aceptar"}
+                    button(type="button" class="btn btn-sm btn-primary" onclick="editor.addAndUpdateUnidad()"){$"Aceptar"}
                     button(type="button" class="btn btn-sm btn-light" "data-bs-dismiss"="modal"){$"Cancelar"}
                 }
             }

@@ -31,6 +31,9 @@
     opacity: 0 !important;
     pointer-events: none !important;
 }
+.t-table, .btn-tab{
+    transition: .2s;
+}
 
 /* ========== UNIDADES ========== */
 

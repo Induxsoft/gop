@@ -11,4 +11,18 @@ module
         WHERE IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto );"
         
     @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"
+
+    // function partida.update(&db,&params,&data)
+    // {
+    //     new prm 
+    //     {
+    //         @"sys_pk": @@(data, "#sys_pk")
+
+    //     }
+
+    //     ref updateAsc = dbr.rec(db, "SELECT * FROM gop_partida WHERE sys_pk=sys_pk", prm)
+    //     ref res = entity.create(db,params,new_data)
+    // }
+
+    // point @update to partida.update
 }

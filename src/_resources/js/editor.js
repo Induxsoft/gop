@@ -2,11 +2,13 @@ var editor =
 {
     tableUnidades: null, 
     tablePartidas: null,
+    tableSubUnids: null,
     unidades: [], 
     unidadSelected: null, 
     presupuesto: null, 
     partidas: [],
     partidasBackup: [],
+    ejercicio_select: null,
     headerFields: { 
         titulo:'Título:', 
         status_text:'Estado:', 
@@ -22,19 +24,28 @@ var editor =
     {
         this.tableUnidades = document.querySelector('#treeUnidades');
         this.tablePartidas = document.querySelector('#treePartidas');
+        this.tableSubUnids = document.querySelector('#tableSubUnids');
+
         this.setConfigTables();
         this.setEventTables();
         this.setAjustPanelUnidadEvent();
 
-        const ejercicio_select = document.querySelector('#ejercicio_select');
+        this.ejercicio_select = document.querySelector('#ejercicio_select');
         const modal_presupuesto = document.querySelector('#modal_presupuesto');
         const btn_add_unidad = document.querySelector('#btn_add_unidad');
         const btn_edit_unidad = document.querySelector('#btn_edit_unidad');
+        const btn_tab_subunidades = document.querySelector('#btn_tab_subunidades');
+        const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
 
-        if (ejercicio_select) ejercicio_select.addEventListener('change', () => { this.getPresupuesto(this.unidadSelected?.sys_pk??null) });
+        if (this.ejercicio_select) this.ejercicio_select.addEventListener('change', () => {
+            this.getUnidad(this.unidadSelected?.sys_pk??null, true);
+            this.getPresupuesto(this.unidadSelected?.sys_pk??null) 
+        });
         if (modal_presupuesto) modal_presupuesto.addEventListener('show.bs.modal', () => { this.load_presupuesto_modal(); });
         if (btn_add_unidad) btn_add_unidad.addEventListener('click', () => { this.load_unidad_modal(true) });
         if (btn_edit_unidad) btn_edit_unidad.addEventListener('click', () => { this.load_unidad_modal(false) });
+        if (btn_tab_subunidades) btn_tab_subunidades.addEventListener('click', () => this.selectTabTable(btn_tab_subunidades));
+        if (btn_tab_presupuesto) btn_tab_presupuesto.addEventListener('click', () => this.selectTabTable(btn_tab_presupuesto));
     },
     setConfigTables()
     {
@@ -51,6 +62,12 @@ var editor =
             presupuesto.excludeAnualFields = ['autorizado', 'anual'];
             presupuesto.onCalculeBranch = dataArray => this.updatePresupuestoData(dataArray);
         }
+        if (this.tableSubUnids)
+        {
+            this.tableSubUnids.AutoAddRow = false;
+            this.tableSubUnids.AutoDelRow = false;
+            this.tableSubUnids.EverMove = false;
+        }
     },
     setEventTables()
     {
@@ -61,8 +78,19 @@ var editor =
             {
                 this.unidadSelected = this.tableUnidades.DataArray[e.sender.CurrentRowIndex()];
                 if (textSelected) textSelected.textContent = (this.unidadSelected?.descripcion ?? '');
+                this.getUnidad(this.unidadSelected.sys_pk, true);
                 this.getPresupuesto(this.unidadSelected.sys_pk);
                 this.showControls(['btn_add_unidad', 'btn_edit_unidad', 'btn_delete_unidad'], 'unidad_controls');
+            };
+            this.tableUnidades.Events[this.tableUnidades.EdiTable.Const.Events.BeforeMoveRow] = (e) =>
+            {
+                let data = {
+                    sys_pk: e.source.sys_pk,
+                    sys_recver: e.source.sys_recver,
+                    superior: (e.child ? e.target.sys_pk : e.target.parentKey ?? 'null')
+                }
+                console.log(data);
+                this.updateUnidad(data);
             };
         }
         if (this.tablePartidas && presupuesto)
@@ -134,29 +162,59 @@ var editor =
             });
         }
     },
+    selectTabTable(btnTab)
+    {
+        const tables = document.querySelectorAll('#tables .t-table');
+        const btntabs = document.querySelectorAll('#table_tabs .btn-tab');
+        tables.forEach(table => table.classList.add('d-none'));
+        btntabs.forEach(btn => btn.style.backgroundColor = 'transparent');
+        btnTab.style.backgroundColor = '#FFF';
+        const showTable = document.querySelector('#'+(btnTab.getAttribute('table')??'___'));
+        
+        if (showTable) {
+            showTable.classList.remove('d-none');
+        }
+    },
 
     // =============== UNIDADES
 
-    addUnidad()
+    addAndUpdateUnidad()
     {
         let values = main.getValues('mdl_au_controls');
 
-        let endpoint = editor.services['rh_unidad'];
-        let method = 'POST';
+        let endpoint = editor.services['rh_unidad'] + "/_new";
 
-        if (values.sys_pk) {
-            method = 'PUT';
-            endpoint += 'values.sys_pk';
+        if (values.sys_pk) 
+        {
+            // Actualizar
+            this.updateUnidad(values);
         }
-        else endpoint += '/_new';
+        else
+        {
+            // Agregar
+            main.request(endpoint, "POST", values,
+                success => { 
+                    this.getUnidades(); 
+                    main.clearValues('mdl_au_controls'); 
+                    main.closeModal('modal_add_unidades');
+                },
+                failure => { alert('No fue posible agregar la unidad.\n\n' + failure); }
+            );
+        }
+    },
+    updateUnidad(unidad)
+    {
+        let endpoint = editor.services['rh_unidad'];
+        endpoint += '/' + unidad.sys_pk;
 
-        main.request(endpoint, method, values,
+        main.request(endpoint, 'PUT', unidad,
             success => { 
-                this.getUnidades(); 
+                console.log(success);
+                this.getUnidades();
                 main.clearValues('mdl_au_controls'); 
-                main.closeModal('modal_add_unidades')
+                main.closeModal('modal_add_unidades');
             },
-            failure => { alert('No fue posible agregar la unidad.\n\n' + failure); }
+            failure => { alert('No fue posible actualizar la unidad.\n\n' + failure); }
         );
     },
     getUnidades()
@@ -164,8 +222,24 @@ var editor =
         let endpoint = editor.services['rh_unidad'];
 
         main.request(endpoint, 'GET', null,
-            success => { this.unidades = success; this.printUnidades(); },
+            success => { 
+                this.unidades = success;
+                this.tableUnidades.DataArray = success;
+                this.printUnidades(); 
+            },
             failure => { alert('No fue posible obtener la unidades.\n\n' + failure); }
+        );
+    },
+    getUnidad(unidad_pk, withSubUnidades=false)
+    {
+        let endpoint = editor.services['rh_unidad'];
+        endpoint += '/' + unidad_pk;
+
+        if (withSubUnidades) endpoint += '?details=true&ejercicio=' + this.ejercicio_select.value;
+
+        main.request(endpoint, 'GET', null,
+            success => { this.prepareSubUnidadesView(success); },
+            failure => { console.log(failure); this.prepareSubUnidadesView(null); }
         );
     },
     printUnidades(listUnidades)
@@ -173,6 +247,33 @@ var editor =
         if (!listUnidades) listUnidades = this.unidades;
         this.tableUnidades.DataArray = listUnidades;
         this.tableUnidades._printRows();
+    },
+    prepareSubUnidadesView(data)
+    {
+        const table_tabs = document.querySelector('#table_tabs');
+        const btn_tab_subunidades = document.querySelector('#btn_tab_subunidades');
+        const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
+        const unidades_main_container = document.querySelector('#unidades_main_container');
+        const partidas_main_container = document.querySelector('#partidas_main_container');
+
+        table_tabs.classList.add('d-none');
+        unidades_main_container.classList.add('d-none');
+        partidas_main_container.classList.add('d-none');
+        btn_tab_subunidades.style.backgroundColor = 'transparent';
+        btn_tab_presupuesto.style.backgroundColor = '#FFF';
+
+        if (!data) return;
+        let subunidades = (data?.subunidades??[]);
+
+        if (subunidades.length > 0) {
+            table_tabs.classList.remove('d-none');
+        }
+        this.printSubUnidades(subunidades);
+    },
+    printSubUnidades(subunidades)
+    {
+        this.tableSubUnids.DataArray = subunidades;
+        this.tableSubUnids._printRows();
     },
     deleteUnidadSelected()
     {
@@ -219,15 +320,13 @@ var editor =
             return;
         }
 
-        const ejercicio_select = document.querySelector('#ejercicio_select');
-
         let endpoint = editor.services['gop_presupuesto'];
         let method = 'POST';
 
         if (!this.presupuesto)
         {
             values['ref_unidad'] = this.unidadSelected.sys_pk;
-            values['ejercicio'] = Number(ejercicio_select.value);
+            values['ejercicio'] = Number(this.ejercicio_select.value);
             endpoint += '/_new';
         }
         else
@@ -252,7 +351,7 @@ var editor =
         if (!unidadPK) return;
 
         let endpoint = editor.services['gop_presupuesto'] + `/${unidadPK}/?_key=ref_unidad`;
-        endpoint += '&e=' + ejercicio_select.value;
+        endpoint += '&e=' + this.ejercicio_select.value;
 
         main.request(endpoint, 'GET', null,
             success => { 
@@ -297,7 +396,7 @@ var editor =
         {
             template = `
                 <small class="text-secondary w-100">La unidad aún no cuenta con presupuesto</small>
-                <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
+                <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2 my-3" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
                         <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
                     </svg>
@@ -416,7 +515,10 @@ var editor =
         },200);
 
         const partidas_main_container = document.querySelector('#partidas_main_container');
+        const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
+
         partidas_main_container.classList.toggle('d-none', (this.presupuesto ? false : true));
+        btn_tab_presupuesto.classList.toggle('d-none', (this.presupuesto ? false : true));
     },
     addRowPartida()
     {
