@@ -12,17 +12,110 @@ module
         
     @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"
 
-    // function partida.update(&db,&params,&data)
-    // {
-    //     new prm 
-    //     {
-    //         @"sys_pk": @@(data, "#sys_pk")
+    function partida.update(&db,&params,&data)
+    {
+        ref updateAsc = dbr.rec(db, "SELECT * FROM gop_partida p WHERE p.sys_pk=@sys_pk AND 
+            (IF(IFNULL(@padre,'_')='_', false, @padre!=p.padre)
+            OR IF(IFNULL(@autorizado,'_')='_', false, @autorizado!=p.autorizado)
+            OR IF(IFNULL(@reserva,'_')='_', false, @reserva!=p.reserva)
+            OR IF(IFNULL(@p01,'_')='_', false, @p01!=p.p01)
+            OR IF(IFNULL(@p02,'_')='_', false, @p02!=p.p02)
+            OR IF(IFNULL(@p03,'_')='_', false, @p03!=p.p03)
+            OR IF(IFNULL(@p04,'_')='_', false, @p04!=p.p04)
+            OR IF(IFNULL(@p05,'_')='_', false, @p05!=p.p05)
+            OR IF(IFNULL(@p06,'_')='_', false, @p06!=p.p06)
+            OR IF(IFNULL(@p07,'_')='_', false, @p07!=p.p07)
+            OR IF(IFNULL(@p08,'_')='_', false, @p08!=p.p08)
+            OR IF(IFNULL(@p09,'_')='_', false, @p09!=p.p09)
+            OR IF(IFNULL(@p10,'_')='_', false, @p10!=p.p10)
+            OR IF(IFNULL(@p11,'_')='_', false, @p11!=p.p11)
+            OR IF(IFNULL(@p12,'_')='_', false, @p12!=p.p12)) LIMIT 1;", data)
 
-    //     }
+        @use_transaction = @false
+        do dbr.begin(db)
 
-    //     ref updateAsc = dbr.rec(db, "SELECT * FROM gop_partida WHERE sys_pk=sys_pk", prm)
-    //     ref res = entity.create(db,params,new_data)
-    // }
+        ref res = entity.create(db,params,data)
 
-    // point @update to partida.update
+        if not(isnull(updateAsc)) {
+            do updateParent(db, @@(res, "#sys_pk"))
+        }
+
+        do dbr.commit(db)
+        return res
+
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+
+    function updateParent(&db,childPK)
+    {
+        new prm { @"child": childPK }
+
+        ref parent = dbr.rec(db ,"
+            SELECT p1.sys_pk 
+            FROM gop_partida p1 
+                INNER JOIN gop_partida p2 ON p2.padre=p1.sys_pk 
+            WHERE p2.sys_pk=@child LIMIT 1;", prm)
+
+        if not(isnull(parent))
+        {
+            do dbr.execute(db, "
+                UPDATE gop_partida parent
+                    INNER JOIN (
+                        SELECT p.padre, SUM(IFNULL(p.autorizado,0)) autorizado, SUM(IFNULL(p.reserva,0)) reserva,
+                            SUM(IFNULL(p.p01,0)) p01, SUM(IFNULL(p.p02,0)) p02, SUM(IFNULL(p.p03,0)) p03, SUM(IFNULL(p.p04,0)) p04,
+                            SUM(IFNULL(p.p05,0)) p05, SUM(IFNULL(p.p06,0)) p06, SUM(IFNULL(p.p07,0)) p07, SUM(IFNULL(p.p08,0)) p08,
+                            SUM(IFNULL(p.p09,0)) p09, SUM(IFNULL(p.p10,0)) p10, SUM(IFNULL(p.p11,0)) p11, SUM(IFNULL(p.p12,0)) p12
+                        FROM gop_partida p 
+                        WHERE p.padre=@sys_pk GROUP BY p.padre)
+                    childs ON parent.sys_pk=childs.padre
+                SET parent.autorizado = childs.autorizado, parent.reserva = childs.reserva, 
+                    parent.p01 = childs.p01, parent.p02 = childs.p02, parent.p03 = childs.p03, 
+                    parent.p04 = childs.p04, parent.p05 = childs.p05, parent.p06 = childs.p06, 
+                    parent.p07 = childs.p07, parent.p08 = childs.p08, parent.p09 = childs.p09, 
+                    parent.p10 = childs.p10, parent.p11 = childs.p11, parent.p12 = childs.p12
+                WHERE parent.sys_pk=@sys_pk", parent)
+            
+            do updateParent(db, @@(parent, "#sys_pk"))
+        }
+    }
+
+    function partida.delete(&db, &params)
+    {
+        @use_transaction = @false
+        do dbr.begin(db)
+
+        do deleteChilds(db, @@(params,"_entity_id"))
+        do entity.delete(db, params)
+        do dbr.commit(db)
+
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+
+    function deleteChilds(&db, parentPK)
+    {
+        new prm { @"pk": parentPK }
+
+        ref childs = dbr.list(db, "SELECT sys_pk FROM gop_partida WHERE padre=@pk;", prm)
+        
+        if not(isnull(childs)) && list.count(childs) > 0
+        {
+            for i=0; i<list.count(childs)
+            {
+                ref child = list.obj(childs, i)
+                do deleteChilds(db, @@(child, "#sys_pk"))
+                do dbr.delete(db, "gop_partida", "sys_pk=@sys_pk", child)
+            }
+        }
+    }
+
+    point @update to partida.update
+    point @delete to partida.delete
 }

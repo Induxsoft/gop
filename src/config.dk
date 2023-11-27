@@ -5,11 +5,11 @@ program
     @scheme = @@(@http_context, "request/headers/REQUEST_SCHEME")
     @host = @@(@http_context, "request/headers/HTTP_HOST")
     @url_base = @scheme + "://" + @host
-    @path_web = "web/"
+    @path_web = "web/host_name/"
     @default_render_template = @path_web + "_protected/default.dk"
     @template = @path_web + "_protected/default.htt"
     @__getParameterOutputType = "_output"
-    @path_modals = "web/_resources/modal"
+    @path_modals = @path_web + "_resources/modal"
 
     new @services
     {

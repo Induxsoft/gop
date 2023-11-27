@@ -40,7 +40,15 @@ var presupuesto =
              */
             let sparent = this.getParentNode(e.source, this.table.DataArray);
             this.recalculeBranch(sparent, this.table.DataArray);
-            this.recalculeBranch(e.target, this.table.DataArray);
+            if (e.child)
+            {
+                this.recalculeBranch(e.target, this.table.DataArray);
+            }
+            else
+            {
+                let tparent = this.getParentNode(e.target, this.table.DataArray);
+                this.recalculeBranch(tparent, this.table.DataArray);
+            }
             if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
         }
 
