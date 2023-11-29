@@ -41,17 +41,17 @@ module "web_page"
 						}
 						div(class="d-flex flex-wrap justify-content-end flex-grow-1" id="unidad_controls")
 						{
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_edit_unidad"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Editar unidad" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_edit_unidad"){
 								$"#<@@(@icons,'edit')>"
-								small{$"Editar"}
+								small{$""}
 							}
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_add_unidad"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar unidad" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_add_unidad"){
 								$"#<@@(@icons,'add')>"
-								small{$"Agregar"}
+								small{$""}
 							}
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" onclick="editor.deleteUnidadSelected()" id="btn_delete_unidad"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Eliminar unidad" onclick="editor.deleteUnidadSelected()" id="btn_delete_unidad"){
 								$"#<@@(@icons,'delete')>"
-								small{$"Eliminar"}
+								small{$""}
 							}
 						}
 					}
@@ -96,13 +96,13 @@ module "web_page"
 						}
 						div(class="d-flex flex-wrap align-items-center" id="presupuesto_controls")
 						{
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="edit_pre" "data-bs-toggle"="modal" "data-bs-target"="#modal_presupuesto"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Editar presupuesto" id="edit_pre" "data-bs-toggle"="modal" "data-bs-target"="#modal_presupuesto"){
 								$"#<@@(@icons,'edit')>"
-								small{$"Editar"}
+								small{$""}
 							}
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="delete_pre" onclick="editor.deletePresupuesto()"){
+							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Eliminar presupuesto" id="delete_pre" onclick="editor.deletePresupuesto()"){
 								$"#<@@(@icons,'delete')>"
-								small{$"Eliminar"}
+								small{$""}
 							}
 							div(class="d-flex align-items-center gap-1")
 							{
@@ -122,15 +122,16 @@ module "web_page"
 						small(class="text-secondary"){$"Selecciona una Unidad Organizacional."}
 					}
 				}
+				// Partidas
 				div
 				{
 					// table tabs
-					div(class="d-flex justify-content-end align-items-center d-none" id="table_tabs")
+					div(class="d-flex justify-content-end m-2 align-items-center d-none" id="table_tabs")
 					{
 						div(style="background-color:var(--color-gray); padding: 4px;")
 						{
-							button(class="btn btn-sm text-secondary no-shadow btn-tab" id="btn_tab_subunidades" table="unidades_main_container"){$"Sub unidades"}
-							button(class="btn btn-sm text-secondary no-shadow btn-tab" id="btn_tab_presupuesto" table="partidas_main_container"){$"Presupuesto"}
+							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="unidades_main_container"){$"Sub unidades"}
+							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_presupuesto" table="partidas_main_container"){$"Presupuesto"}
 						}
 					}
 					// Tables
@@ -166,11 +167,11 @@ module "web_page"
 								}
 								div(class="d-flex align-items-center" id="partidas_control")
 								{
-									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
+									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Guardar cambios" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
 										$"#<@@(@icons,'save')>"
-										small{$"Guardar"}
+										small{$""}
 									}
-									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
+									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Descartar cambios" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
 										$"#<@@(@icons,'discard')>"
 										small{$"Descartar"}
 									}
@@ -181,7 +182,7 @@ module "web_page"
 							{
 								div(style="max-height: 80vh;display: flex;")
 								{
-									"edit-table"(id="treePartidas" "show-tree"="true" parentkey="padre" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }")
+									"edit-table"(id="treePartidas" "show-tree"="true" parentkey="padre" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
 									{
 										"edit-thead"
 										{
@@ -189,8 +190,8 @@ module "web_page"
 											{
 												"edit-th"(type="Text" field="partida"){$"Partida"}
 
-												"edit-th"(type="Number" field="autorizado" "default"="0" "textalign"="end" format="true" decs="2" prefix="$ " thousandssep="true"){$"Autorizado"}
-												"edit-th"(type="Number" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$ " thousandssep="true"){$"Anual"}
+												"edit-th"(type="Number" field="autorizado" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
+												"edit-th"(type="Number" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
 												
 												"edit-th"(type="Number" field="reserva" "default"="0" "textalign"="end"){$"Reserva"}
 												"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
@@ -221,12 +222,12 @@ module "web_page"
 							{
 								small(class="fw-5"){$"Resumen"}
 							}
-							// Tabla de partidas
+							// Tabla de sub unidades
 							div
 							{
 								div(style="max-height: 80vh;display: flex;")
 								{
-									"edit-table"(id="tableSubUnids" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }")
+									"edit-table"(id="tableSubUnids" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}")
 									{
 										"edit-thead"
 										{

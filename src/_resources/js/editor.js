@@ -9,16 +9,16 @@ var editor =
     partidas: [],
     partidasBackup: [],
     ejercicio_select: null,
-    headerFields: { 
-        titulo:'Título:', 
-        status_text:'Estado:', 
-        divisa_text:'Moneda', 
-        monto_autorizado:'Autorizado:', 
-        monto_planeado:'Planeado:', 
-        monto_comprometido:'Comprometido:', 
-        monto_ejercido:'Ejercido:',
-        notas:'Notas:'
-    },
+    fieldsPresupuesto: [
+        {id:'titulo', caption:'Título'},
+        {id:'status_text', caption:'Estado'},
+        {id:'divisa_text', caption:'Divisa'},
+        {id:'monto_autorizado', caption:'Autorizado', format:true},
+        {id:'monto_planeado', caption:'Planeado', format:true},
+        {id:'monto_comprometido', caption:'Comprometido', format:true},
+        {id:'monto_ejercido', caption:'Ejercido', format:true},
+        {id:'notas', caption:'Notas'}
+    ],
 
     init()
     {
@@ -74,6 +74,13 @@ var editor =
         if (this.tableUnidades)
         {
             const textSelected = document.querySelector('#unidad_selected');
+            this.tableUnidades.Events[this.tableUnidades.EdiTable.Const.Events.BeforeCellFocus] = (e) =>
+            {
+                if (this.isDirtyPresupuesto()) {
+                    if (!confirm('Se han realizado modificaciones en las partidas. ¿Desea descartar los cambios?'))
+                        e.cancel = true;
+                }
+            };
             this.tableUnidades.Events[this.tableUnidades.EdiTable.Const.Events.EnterCell] = (e) =>
             {
                 this.unidadSelected = this.tableUnidades.DataArray[e.sender.CurrentRowIndex()];
@@ -87,9 +94,8 @@ var editor =
                 let data = {
                     sys_pk: e.source.sys_pk,
                     sys_recver: e.source.sys_recver,
-                    superior: (e.child ? e.target.sys_pk : e.target.parentKey ?? 'null')
+                    superior: (e.child ? e.target.sys_pk : e.target.parentKey ?? '')
                 }
-                console.log(data);
                 this.updateUnidad(data);
             };
         }
@@ -181,6 +187,8 @@ var editor =
     addAndUpdateUnidad()
     {
         let values = main.getValues('mdl_au_controls');
+
+        if (values == null) return;
 
         let endpoint = editor.services['rh_unidad'] + "/_new";
 
@@ -314,6 +322,7 @@ var editor =
     addOrEditPresupuesto()
     {
         let values = main.getValues('mdl_ap_controls');
+        if (values == null) return;
 
         if (!this.unidadSelected) {
             alert('Debe seleccionar una unidad organizacional para continuar.');
@@ -366,6 +375,7 @@ var editor =
                     this.presupuesto = null;
                     this.printPresupuesto();
                     this.tablePartidas.DataArray = [];
+                    this.partidasBackup = [];
                     this.printPartidas();
                 }
                 else alert('No fue posible obtener el presupuesto.\n\n' + failure); 
@@ -382,15 +392,18 @@ var editor =
 
         if (presupuesto)
         {
-            Object.keys(this.headerFields).forEach(field => {
+            this.fieldsPresupuesto.forEach(field => {
+                let title = field.caption;
+                let value = (presupuesto[field.id]??0);
+                if (field.format) value = '$'+this.tablePartidas._format(Number(value), 2, true);
+
                 template += `
                     <div class="presupuesto-box-info">
-                        <small class="fw-5">${this.headerFields[field]}</small>
-                        <p class="m-0">${presupuesto[field]??0}</p>
+                        <small class="fw-5">${title}</small>
+                        <p class="m-0">${value}</p>
                     </div>
                 `;
             });
-            
         }
         else
         {
@@ -459,7 +472,8 @@ var editor =
         let isDirty = false;
 
         if (!isDirty && this.tablePartidas.DataArray && this.partidasBackup) {
-            isDirty = (JSON.stringify(this.tablePartidas.DataArray) !== JSON.stringify(this.partidasBackup));
+            let partidas = JSON.parse(JSON.stringify(this.tablePartidas.DataArray));
+            isDirty = (JSON.stringify(this.tablePartidas.TableArray(partidas)) !== JSON.stringify(this.partidasBackup));
         }
 
         return isDirty;
@@ -486,14 +500,14 @@ var editor =
             success => {
                 this.tablePartidas.DataArray = JSON.parse(JSON.stringify(success));
                 this.showDirtyControls(false);
-                this.partidasBackup = JSON.parse(JSON.stringify(success));
-                this.printPartidas(); 
+                this.printPartidas();
+                this.setPartidasBackup();
             },
             failure => { 
                 alert('No fue posible obtener las partidas.\n\n' + failure); 
                 this.tablePartidas.DataArray = [];
-                this.partidasBackup = [];
                 this.printPartidas();
+                this.setPartidasBackup();
             }
         );
     },
@@ -555,6 +569,10 @@ var editor =
     {
         this.tablePartidas.DeleteCurrentRow();
     },
+    setPartidasBackup()
+    {
+        this.partidasBackup = JSON.parse(JSON.stringify(this.tablePartidas.DataArray));
+    },
     savePartidasPresupuesto()
     {
         if (!this.presupuesto) {
@@ -577,7 +595,7 @@ var editor =
         main.request(endpoint, 'PUT', data,
             success => { 
                 this.presupuesto = success;
-                this.partidasBackup = JSON.parse(JSON.stringify(success));
+                this.setPartidasBackup();
                 this.showDirtyControls(false);
             },
             failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + failure); }

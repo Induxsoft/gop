@@ -118,7 +118,8 @@ class EditTable extends HTMLElement
                         position: absolute; 
                         top: 0; 
                         right: 0; 
-                        width: 5px; 
+                        width: 5px;
+                        min-height: 1rem;
                         cursor: col-resize;
                         background-color: transparent;
                     }
@@ -669,6 +670,7 @@ class EditTable extends HTMLElement
                 }
             },
             Events:{
+                BeforeCellFocus:"beforecellfocus",
                 EnterCell:"entercell",
                 LeaveCell:"leavecell",
                 StartEdition:"startedition",
@@ -1761,6 +1763,17 @@ class EditTable extends HTMLElement
      */
     CellFocus=(td)=>
     {
+        var eventArgs={
+            td:td,
+            sender:this._getCurren(),
+            cancel:false
+        };
+
+        if (this._getCurren().Events[this.EdiTable.Const.Events.BeforeCellFocus]!=undefined)
+            this._getCurren().Events[this.EdiTable.Const.Events.BeforeCellFocus](eventArgs);
+
+        if (eventArgs.cancel) return;
+
         let selector=this.EdiTable.GetSelector();
         let input=this.EdiTable.GetInput();
 
@@ -2195,7 +2208,7 @@ class EditTable extends HTMLElement
             {
                 level++;
                 listObj.forEach(obj => {
-                    let childsObj = JSON.parse(JSON.stringify((obj[treeOptions.childs]??[])));
+                    let childsObj = (obj[treeOptions.childs]??[]);
                     newArray.push(obj);
                     if (!treeInfo) {
                         obj['__level__']=level;
@@ -2269,7 +2282,7 @@ class EditTable extends HTMLElement
 
         if (sourceData && targetData)
         {
-            if(this._moveData(sourceData, targetData, inFront, treeOptions))
+            if(this._moveData(sourceData, this.DataArray[1], inFront, treeOptions))
                 this._printRows();
         }
     }

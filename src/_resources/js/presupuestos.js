@@ -69,6 +69,11 @@ var presupuesto =
                     if (hasChilds) {
                         e.cancel = true;
                     }
+                    else
+                    {
+                        // Parseamos el nuevo valor a tipo numérico para que no se guarde como texto
+                        e.text = Number(e.text);
+                    }
                 }
             }
         }

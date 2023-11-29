@@ -18,9 +18,9 @@ module "Editor Modals"
                 div(class="modal-body p-4 bg-white" id="mdl_au_controls")
                 {
                     label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Código:"}
-                    input(type="text" class="induxsoft-form-control" name="codigo")
+                    input(type="text" class="induxsoft-form-control" name="codigo" required="true")
                     label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Descripción:"}
-                    input(type="text" class="induxsoft-form-control" name="descripcion")
+                    input(type="text" class="induxsoft-form-control" name="descripcion" required="true")
                     label(class="text-secondary fz-8 mt-2 mb-1"){$"Depende de:"}
                    "input-key"(
                         id="mdl_au_ik_unidad"
