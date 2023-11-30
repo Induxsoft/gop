@@ -111,7 +111,7 @@ module
                 partida<"sys_dtcreated*">: dbr.sql("NOW()")
                 partida<"sys_timestamp*">: dbr.sql("NOW()")
                 partida<"ref_presupuesto">: pk_presupuesto
-                partida<"id">: @@(partida, "$id")
+                if @@(partida,"$id")=="" { partida<"id">: @@(partida, "$sys_guid") }
                 partida<"partida">: @@(partida, "$partida")
 
                 do parseNumbersPartida(partida)
@@ -137,7 +137,7 @@ module
             for i = 0; i < list.count(partidas)
             {
                 ref p = list.obj(partidas, i)
-                p<"sys_guid">: uuid()
+                if @@(p,"$sys_guid") == "" { p<"sys_guid">: uuid() }
                 
                 if field.exist(p, "padre") && trim(@@(p, "$padre")) != ""
                 {
@@ -145,7 +145,7 @@ module
                     for j = 0; j < list.count(partidas)
                     {
                         ref p2 = list.obj(partidas, j)
-                        if @@(p, "$padre") == @@(p2, "$sys_pk") { guid_padre = @@(p2 ,"sys_guid") }
+                        if @@(p, "$padre") == @@(p2, "$sys_pk") { guid_padre = @@(p2 ,"$sys_guid") }
                     }
                     p<"padre">: guid_padre
                 }

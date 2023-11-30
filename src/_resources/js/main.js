@@ -3,7 +3,7 @@ var main = {
     {
         
     },
-    request(url, method="GET", data=null, success, fail)
+    async request(url, method='GET', data=null, success, fail, reload=true, async=true, autorizations='', formdata=false)
     {
         let fetchData = {
             method: method,
@@ -12,47 +12,101 @@ var main = {
                 'Access-Control-Allow-Origin':'*'
             }
         }
-        if (data) fetchData['body'] = JSON.stringify(data);
 
-        fetch(url, fetchData).then(response => 
+        if (autorizations) fetchData.headers['Authorization'] = autorizations;
+        if (data)
         {
-            if (response.ok){
-                const isJson = response.headers.get('content-type')?.includes('application/json');
+            if (formdata) 
+                fetchData['body'] = data;
+            else 
+            {
+                fetchData.headers['Content-Type'] = 'application/json';
+                fetchData['body'] = JSON.stringify(data);
+            }
+        }
+
+        const resHandler = res => 
+        {
+            if (method.toUpperCase() == "DELETE" && (res == null || res=='undefined'))
+            {
+                success(res);
+            }
+            else
+            {
+                const isJson = res.headers.get('content-type')?.includes('application/json');
                 if (isJson)
                 {
-                    try
+                    res.json().then(json => 
                     {
-                        response.json().then(json => {
+                        if (json.success && success) {
                             success(json);
-                        }).catch(error=>success(error));
-                    }
-                    catch
-                    {
-                        success(response.message ?? response.status);
-                    }
+                        }
+                        else if (!json.success && json.success != null && res.success != undefined && fail) {
+                            fail(json);
+                        }
+                        else
+                        {
+                            if (res.status >= 200 && res.status < 300 && success) {
+                                success(json);
+                            }
+                            else {
+                                if (fail) fail(json);
+                            }
+                        }
+                    }).catch(error=>success(error));
                 }
-                else
-                {
-                    success(response.message ?? response.status);
-                }
-            }
-            else {
-                const isJson = response.headers.get('content-type')?.includes('application/json');
-                if (isJson)
-                {
-                    response.json().then(json => {
-                        fail(json);
-                    });
-                }
-                else
-                {
-                    fail((response.message ?? JSON.stringify(response)));
+                else {
+                    success(res);
                 }
             }
-        })
-        .catch(error => {
-            fail(error.message ?? JSON.stringify(error));
-        })
+
+            // if (res.ok)
+            // {
+            //     const isJson = res.headers.get('content-type')?.includes('application/json');
+            //     if (isJson)
+            //     {
+            //         try {
+            //             res.json().then(json => {
+            //                 success(json);
+            //             }).catch(error=>success(error));
+            //         }
+            //         catch {
+            //             success(res.message ?? res.status);
+            //         }
+            //     }
+            //     else {
+            //         success(res.message ?? res.status);
+            //     }
+            // }
+            // else 
+            // {
+            //     const isJson = res.headers.get('content-type')?.includes('application/json');
+            //     if (isJson) {
+            //         res.json().then(json => {
+            //             fail(json);
+            //         });
+            //     }
+            //     else {
+            //         fail((res.message ?? JSON.stringify(res)));
+            //     }
+            // }
+
+            if(reload)
+                window.location.reload();
+        }
+
+        if (async)
+        {
+            await fetch(url, fetchData).then(resHandler).catch(error => {
+                if (fail) fail(error.message ?? JSON.stringify(error));
+            });
+        }
+        else
+        {
+            fetch(url, fetchData).then(resHandler).catch(error => {
+                if (fail) fail(error.message ?? JSON.stringify(error));
+            });
+        }
     },
     getValues(containerId='')
     {
@@ -114,13 +168,13 @@ var main = {
         const modal = document.getElementById(modalId);
         if (modal)
         {
-            modal.style.display = "none";
+            modal.style.display = 'none';
             modal.classList.remove('show');
             return true;
         }
         return false;
     }
 }
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener('DOMContentLoaded', () => {
     main.init();
 });

@@ -206,7 +206,8 @@ var editor =
                     main.clearValues('mdl_au_controls'); 
                     main.closeModal('modal_add_unidades');
                 },
-                failure => { alert('No fue posible agregar la unidad.\n\n' + failure); }
+                failure => { alert('No fue posible agregar la unidad.\n\n' + failure); }, 
+                false
             );
         }
     },
@@ -222,7 +223,8 @@ var editor =
                 main.clearValues('mdl_au_controls'); 
                 main.closeModal('modal_add_unidades');
             },
-            failure => { alert('No fue posible actualizar la unidad.\n\n' + failure); }
+            failure => { alert('No fue posible actualizar la unidad.\n\n' + failure); },
+            false
         );
     },
     getUnidades()
@@ -235,7 +237,8 @@ var editor =
                 this.tableUnidades.DataArray = success;
                 this.printUnidades(); 
             },
-            failure => { alert('No fue posible obtener la unidades.\n\n' + failure); }
+            failure => { alert('No fue posible obtener la unidades.\n\n' + failure); },
+            false
         );
     },
     getUnidad(unidad_pk, withSubUnidades=false)
@@ -247,7 +250,8 @@ var editor =
 
         main.request(endpoint, 'GET', null,
             success => { this.prepareSubUnidadesView(success); },
-            failure => { console.log(failure); this.prepareSubUnidadesView(null); }
+            failure => { console.log(failure); this.prepareSubUnidadesView(null); },
+            false
         );
     },
     printUnidades(listUnidades)
@@ -292,8 +296,9 @@ var editor =
         endpoint += "/" + this.unidadSelected.sys_pk;
 
         main.request(endpoint, 'DELETE', null,
-            success => { /*this.getUnidades();*/ window.location.reload(); },
-            failure => { alert('No fue posible eliminar la unidad.\n\n' + failure); }
+            success => { /*this.getUnidades();*/ },
+            failure => { alert('No fue posible eliminar la unidad.\n\n' + failure); },
+            true
         );
     },
     load_unidad_modal(empty=false)
@@ -311,7 +316,8 @@ var editor =
 
                 main.request(endpoint, 'GET', null,
                     success => { ik_unidad.setValue(success); },
-                    failure => { console.log(failure); }
+                    failure => { console.log(failure); },
+                    false
                 );
             }
         }
@@ -352,7 +358,8 @@ var editor =
                 main.clearValues('mdl_ap_controls'); 
                 main.closeModal('modal_presupuesto');
             },
-            failure => { alert('No se pudo completar el proceso.\n\n' + failure); }
+            failure => { alert('No se pudo completar el proceso.\n\n' + failure); },
+            false
         );
     },
     getPresupuesto(unidadPK)
@@ -379,7 +386,8 @@ var editor =
                     this.printPartidas();
                 }
                 else alert('No fue posible obtener el presupuesto.\n\n' + failure); 
-            }
+            },
+            false
         );
     },
     printPresupuesto(presupuesto)
@@ -441,7 +449,8 @@ var editor =
                 this.tablePartidas.DataArray = [];
                 this.printPartidas();
             },
-            failure => { alert('No fue posible eliminar el presupuesto.\n\n' + failure); }
+            failure => { alert('No fue posible eliminar el presupuesto.\n\n' + failure); },
+            false
         );
     },
     updatePresupuestoData(dataArray)
@@ -508,7 +517,8 @@ var editor =
                 this.tablePartidas.DataArray = [];
                 this.printPartidas();
                 this.setPartidasBackup();
-            }
+            },
+            false
         );
     },
     printPartidas()
@@ -598,7 +608,8 @@ var editor =
                 this.setPartidasBackup();
                 this.showDirtyControls(false);
             },
-            failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + failure); }
+            failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + failure); },
+            false
         );
     },
     discardPartidasPresupuesto()

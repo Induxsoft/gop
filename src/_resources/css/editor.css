@@ -14,6 +14,8 @@
     width: auto;
     outline: 1px solid var(--color-borders);
     transition: .5s;
+    position: relative;
+    padding-right: 5px;
 }
 #content_container {
     background-color: var(--color-light-gray);
@@ -41,6 +43,10 @@
     height: 100%;
     background-color: var(--color-gray);
     width: 5px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 100;
 }
 #ajust_panel_unidad:hover {
     cursor: col-resize;
@@ -69,6 +75,7 @@
 }
 .hidde-unidad {
     width: 0 !important;
+    padding: 0 !important;
 }
 
 /* ========== PRESUPUESTO ========== */
