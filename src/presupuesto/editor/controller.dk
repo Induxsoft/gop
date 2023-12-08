@@ -1,0 +1,54 @@
+#include "dkli.dkh"
+#!
+module "controller"
+{
+    switch @@(@http_context,"$request/get/_view")
+    {
+        case "divisa"
+        {
+            point @list to gop.obtenerDivisas
+            break
+        }
+        case "gop_partida"
+        {
+            point @list to gop.obtenerPartidas
+            point @read to gop.obtenerPartida
+            point @create to gop.crearPartida
+            point @update to gop.actualizarPartida
+            point @delete to gop.eliminarPartida
+            break
+        }
+        case "gop_presupuesto"
+        {
+            point @list to gop.obtenerPresupuestos
+            point @read to gop.obtenerPresupuesto
+            point @update to gop.actualizarPresupuesto
+            point @delete to gop.eliminarPresupuesto
+            break
+        }
+        case "gop_presupuesto_status"
+        {
+            point @list to gop.obtenerEstadoPresupuestos
+            point @read to gop.obtenerEstadoPresupuesto
+            break
+        }
+        case "rh_unidad_org"
+        {
+            @add_others = @false
+            point @list to gop.obtenerUnidades
+            point @read to gop.obtenerUnidad
+            point @update to gop.actualizarUnidad
+            point @delete to gop.eliminarUnidad
+            break
+        }
+        default
+        {
+            @add_others = @true
+            point @list to gop.obtenerUnidades
+            point @read to gop.obtenerUnidad
+            @form_view = "form.dk"
+            @list_view="index.dkl"
+            break
+        }
+    }
+}

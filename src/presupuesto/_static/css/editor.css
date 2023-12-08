@@ -1,0 +1,131 @@
+/* ========== CONTAINERS ========== */
+
+#main_container {
+    height: 100vh;
+    width: 100vw;
+}
+#main_container {
+    display: grid;
+    grid-template-columns: auto 1fr;
+}
+#unidades_container {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    width: auto;
+    outline: 1px solid var(--color-borders);
+    transition: .5s;
+    position: relative;
+    padding-right: 5px;
+}
+#content_container {
+    background-color: var(--color-light-gray);
+}
+.section-container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+}
+.control {
+    transition: .3s ease-in;
+    opacity: 1;
+}
+.hidde-control {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+.t-table, .btn-tab{
+    transition: .2s;
+}
+
+/* ========== UNIDADES ========== */
+
+#ajust_panel_unidad {
+    height: 100%;
+    background-color: var(--color-gray);
+    width: 5px;
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 100;
+}
+#ajust_panel_unidad:hover {
+    cursor: col-resize;
+    background-color: var(--color-borders);
+}
+#btn_hidde_unidad_panel {
+    display: none;
+}
+#unidad_selected {
+    text-align: start;
+    max-width: 50vw;
+    text-wrap: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.unit {
+    cursor: pointer;
+}
+.unit:hover {
+    background-color: var(--color-light-gray);
+    color: #000;
+}
+.unit-selected {
+    background-color: var(--color-blue) !important;
+    color: var(--color-white) !important;
+}
+.hidde-unidad {
+    width: 0 !important;
+    padding: 0 !important;
+}
+
+/* ========== PRESUPUESTO ========== */
+#presupuesto_container, #partidas_main_container{
+    transition: .3s;
+}
+.presupuesto-box-info{
+    border-right: 1px solid var(--color-borders);
+    padding: 8px 12px;
+}
+
+/* ========== MEDIA QUERIES ========== */
+
+@media screen and (max-width: 768px)
+{
+    #main_container {
+        grid-template-columns: 100%;
+    }
+    #unidades_container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 10000;
+    }
+    #ajust_panel_unidad {
+        display: none !important;
+    }
+    #btn_hidde_unidad_panel {
+        display: initial;
+    }
+    #unidad_selected {
+        max-width: 90vw;
+    }
+    .hidde-unidad{
+        left: -100vw !important;
+        width: auto !important;
+    }
+    .presupuesto-box-info {
+        font-size: .9rem;
+        padding: 4px;
+        border: none;
+    }
+}
+
+@keyframes show {
+    from{
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

@@ -1,0 +1,454 @@
+#include "dkli.dkh"
+#!
+module "model"
+{
+    @table_name = "rh_unidad_org"
+
+    // =============== DIVISA
+    function gop.obtenerDivisas(&db, &params)
+    {
+        sql = "SELECT * FROM divisa;"
+		return dbr.list(db, sql, params)
+    }
+
+    // =============== GOP_PARTIDA
+    function gop.obtenerPartidas(&db, &params)
+    {
+        @list_query = "
+        SELECT p.sys_pk, p.sys_guid, p.ref_presupuesto, IFNULL(p.id,'') id, p.padre, p.partida, IFNULL(p.autorizado,0) autorizado,
+            IFNULL(p.reserva,0) reserva, IFNULL(p.p01,0) p01, IFNULL(p.p02,0) p02, IFNULL(p.p03,0) p03, IFNULL(p.p04,0) p04,
+            IFNULL(p.p05,0) p05, IFNULL(p.p06,0) p06, IFNULL(p.p07,0) p07, IFNULL(p.p08,0) p08, IFNULL(p.p09,0) p09,
+            IFNULL(p.p10,0) p10, IFNULL(p.p11,0) p11, IFNULL(p.p12,0) p12, IFNULL(notas,'') notas
+        FROM #<@table_name> p 
+        WHERE IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto );"
+
+        return entity.list(db, params)
+    }
+    function gop.obtenerPartida(&db, &params)
+    {
+        @read_query = "SELECT * FROM gop_partida where #<@keyfield>=@_entity_id limit 1;"
+        
+        return entity.read(db, params)
+    }
+    function gop.crearPartida(&db, &params, &data)
+    {
+        @use_transaction = @false
+        do dbr.begin(db)
+
+        ref res = entity.create(db,params,data)
+
+        if trim(@@(data, "$padre")) != "" {
+            do updateParent(db, @@(res, "#sys_pk"))
+        }
+
+        do dbr.commit(db)
+        return res
+
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+    function gop.actualizarPartida(&db,&params,&data)
+    {
+        ref updateAsc = dbr.rec(db, "SELECT * FROM gop_partida p WHERE p.sys_pk=@sys_pk AND 
+            (IF(IFNULL(@padre,'_')='_', false, @padre!=p.padre)
+            OR IF(IFNULL(@autorizado,'_')='_', false, @autorizado!=p.autorizado)
+            OR IF(IFNULL(@reserva,'_')='_', false, @reserva!=p.reserva)
+            OR IF(IFNULL(@p01,'_')='_', false, @p01!=p.p01)
+            OR IF(IFNULL(@p02,'_')='_', false, @p02!=p.p02)
+            OR IF(IFNULL(@p03,'_')='_', false, @p03!=p.p03)
+            OR IF(IFNULL(@p04,'_')='_', false, @p04!=p.p04)
+            OR IF(IFNULL(@p05,'_')='_', false, @p05!=p.p05)
+            OR IF(IFNULL(@p06,'_')='_', false, @p06!=p.p06)
+            OR IF(IFNULL(@p07,'_')='_', false, @p07!=p.p07)
+            OR IF(IFNULL(@p08,'_')='_', false, @p08!=p.p08)
+            OR IF(IFNULL(@p09,'_')='_', false, @p09!=p.p09)
+            OR IF(IFNULL(@p10,'_')='_', false, @p10!=p.p10)
+            OR IF(IFNULL(@p11,'_')='_', false, @p11!=p.p11)
+            OR IF(IFNULL(@p12,'_')='_', false, @p12!=p.p12)) LIMIT 1;", data)
+
+        @use_transaction = @false
+        do dbr.begin(db)
+
+        ref res = entity.create(db,params,data)
+
+        if not(isnull(updateAsc)) {
+            do updateParent(db, @@(res, "#sys_pk"))
+        }
+
+        do dbr.commit(db)
+        return res
+
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+    function gop.eliminarPartida(&db, &params)
+    {
+        @use_transaction = @false
+        do dbr.begin(db)
+
+        do deleteChilds(db, @@(params,"_entity_id"))
+        do entity.delete(db, params)
+        do dbr.commit(db)
+
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+    function updateParent(&db,childPK)
+    {
+        new prm { @"child": childPK }
+
+        ref parent = dbr.rec(db ,"
+            SELECT p1.sys_pk 
+            FROM gop_partida p1 
+                INNER JOIN gop_partida p2 ON p2.padre=p1.sys_pk 
+            WHERE p2.sys_pk=@child LIMIT 1;", prm)
+
+        if not(isnull(parent))
+        {
+            do dbr.execute(db, "
+                UPDATE gop_partida parent
+                    INNER JOIN (
+                        SELECT p.padre, SUM(IFNULL(p.autorizado,0)) autorizado, SUM(IFNULL(p.reserva,0)) reserva,
+                            SUM(IFNULL(p.p01,0)) p01, SUM(IFNULL(p.p02,0)) p02, SUM(IFNULL(p.p03,0)) p03, SUM(IFNULL(p.p04,0)) p04,
+                            SUM(IFNULL(p.p05,0)) p05, SUM(IFNULL(p.p06,0)) p06, SUM(IFNULL(p.p07,0)) p07, SUM(IFNULL(p.p08,0)) p08,
+                            SUM(IFNULL(p.p09,0)) p09, SUM(IFNULL(p.p10,0)) p10, SUM(IFNULL(p.p11,0)) p11, SUM(IFNULL(p.p12,0)) p12
+                        FROM gop_partida p 
+                        WHERE p.padre=@sys_pk GROUP BY p.padre)
+                    childs ON parent.sys_pk=childs.padre
+                SET parent.autorizado = childs.autorizado, parent.reserva = childs.reserva, 
+                    parent.p01 = childs.p01, parent.p02 = childs.p02, parent.p03 = childs.p03, 
+                    parent.p04 = childs.p04, parent.p05 = childs.p05, parent.p06 = childs.p06, 
+                    parent.p07 = childs.p07, parent.p08 = childs.p08, parent.p09 = childs.p09, 
+                    parent.p10 = childs.p10, parent.p11 = childs.p11, parent.p12 = childs.p12
+                WHERE parent.sys_pk=@sys_pk", parent)
+            
+            do updateParent(db, @@(parent, "#sys_pk"))
+        }
+    }
+    function deleteChilds(&db, parentPK)
+    {
+        new prm { @"pk": parentPK }
+
+        ref childs = dbr.list(db, "SELECT sys_pk FROM gop_partida WHERE padre=@pk;", prm)
+        
+        if not(isnull(childs)) && list.count(childs) > 0
+        {
+            for i=0; i<list.count(childs)
+            {
+                ref child = list.obj(childs, i)
+                do deleteChilds(db, @@(child, "#sys_pk"))
+                do dbr.delete(db, "gop_partida", "sys_pk=@sys_pk", child)
+            }
+        }
+    }
+
+    // =============== GOP_PRESUPUESTO
+    function gop.obtenerPresupuestos(&db, &params)
+    {
+        @list_query="SELECT * FROM gop_presupuesto;"
+        return entity.list(db, params)
+    }
+    function gop.obtenerPresupuesto(&db, &params)
+    {
+        @read_query="
+        SELECT p.sys_pk, p.sys_recver, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
+            IFNULL(p.monto_autorizado, 0) monto_autorizado, IFNULL(p.monto_planeado, 0) monto_planeado, 
+            IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido
+        FROM gop_presupuesto p
+            INNER JOIN gop_presupuesto_status s ON p.status = s.id
+            INNER JOIN divisa d ON p.divisa = d.sys_pk
+        WHERE p.#<@keyfield>=@_entity_id 
+            AND IF(IFNULL(@e,'')='', true, p.ejercicio=@e)
+        LIMIT 1;"
+
+        return entity.read(db, params)
+    }
+    function gop.actualizarPresupuesto(&db, &params, &data)
+    {
+        ref new_data = record.create()
+        @use_transaction = @false
+
+        if field.exist(data, "sys_pk"){ new_data<"sys_pk">: @@(data, "#sys_pk") }
+        if field.exist(data, "sys_recver"){ new_data<"sys_recver">: @@(data, "#sys_recver") }
+        if field.exist(data, "titulo"){ new_data<"titulo">: @@(data, "$titulo") }
+        if field.exist(data, "notas"){ new_data<"notas">: @@(data, "$notas") }
+        if field.exist(data, "status"){ new_data<"status">: @@(data, "#status") }
+        if field.exist(data, "divisa"){ new_data<"divisa">: @@(data, "#divisa") }
+
+        if field.exist(data, "monto_autorizado"){ new_data<"monto_autorizado">: @@(data, "#monto_autorizado") }
+        if field.exist(data, "monto_planeado"){ new_data<"monto_planeado">: @@(data, "#monto_planeado") }
+        if field.exist(data, "monto_comprometido"){ new_data<"monto_comprometido">: @@(data, "#monto_comprometido") }
+        if field.exist(data, "monto_ejercido"){ new_data<"monto_ejercido">: @@(data, "#monto_ejercido") }
+
+        ref partidas = @null
+
+        if field.exist(data, "partidas")
+        {
+            ref partidas = from.json(to.json(@@(data, "&partidas")))
+            do field.remove(data, "partidas")
+            do changePkParentToGuid(partidas)
+        }
+
+        do dbr.begin(db)
+
+        ref res = entity.create(db,params,new_data)
+        if not(isnull(partidas))
+        {
+            pk_presupuesto = @@(res, "#sys_pk")
+            do removeAllPartidas(db, pk_presupuesto)
+            do insertPartidas(db, partidas, pk_presupuesto)
+        }
+
+        do dbr.commit(db)
+
+        return res
+
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+    function gop.eliminarPresupuesto(&db, &params)
+    {
+        @use_transaction = @false
+        do dbr.begin(db)
+        
+        if field.exist(params, "_entity_id")
+        {
+            new prm { @"pk_presupuesto": @@(params, "#_entity_id") }
+            do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk_presupuesto", prm)
+            do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk_presupuesto;", prm)
+        }
+        do entity.delete(db, params)
+        
+        do dbr.commit(db)
+        return @null
+        
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+    function removeAllPartidas(&db, pk_presupuesto)
+    {
+        new prm { @"pk": pk_presupuesto }
+        do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk", prm)
+        do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk", prm)
+    }
+    function insertPartidas(&db, &partidas, pk_presupuesto)
+    {
+        if not(isnull(partidas)) && list.count(partidas) > 0
+        {
+            for i = 0; i < list.count(partidas)
+            {
+                ref partida = list.obj(partidas, i)
+                /*
+                 * Si tiene padre lo guardamos temporalmente en el campo info para
+                 * asignarselo a todos en una sola consulta
+                 */
+                partida<"sys_info">: @@(partida, "padre")
+                partida<"padre*">: @null
+
+                do field.remove(partida, "anual")
+                do field.remove(partida, "sys_pk")
+                partida<"sys_recver">:0
+                partida<"sys_dtcreated*">: dbr.sql("NOW()")
+                partida<"sys_timestamp*">: dbr.sql("NOW()")
+                partida<"ref_presupuesto">: pk_presupuesto
+                if @@(partida,"$id")=="" { partida<"id">: @@(partida, "$sys_guid") }
+                partida<"partida">: @@(partida, "$partida")
+
+                do parseNumbersPartida(partida)
+
+                do dbr.insert(db, "gop_partida", partida)
+            }
+
+            new prm { @"presupuesto": pk_presupuesto }
+            //do dbr.execute(db, "UPDATE gop_partida p SET p.padre=(SELECT p2.sys_pk FROM gop_partida p2 WHERE p2.sys_guid=p.sys_info LIMIT 1) WHERE p.ref_presupuesto=@presupuesto", prm)
+            do dbr.execute(db, "
+                UPDATE gop_partida p
+                    INNER JOIN gop_partida p2 ON p2.sys_guid=p.sys_info 
+                SET p.padre=p2.sys_pk
+                WHERE p.ref_presupuesto=@presupuesto", prm)
+            do dbr.execute(db, "UPDATE gop_partida p SET p.sys_info=NULL WHERE p.ref_presupuesto=@presupuesto", prm)
+        }
+    }
+    function changePkParentToGuid(&partidas)
+    {
+        if not(isnull(partidas)) && list.count(partidas) > 0
+        {
+            for i = 0; i < list.count(partidas)
+            {
+                ref p = list.obj(partidas, i)
+                if @@(p,"$sys_guid") == "" { p<"sys_guid">: uuid() }
+                
+                if field.exist(p, "padre") && trim(@@(p, "$padre")) != ""
+                {
+                    guid_padre = ""
+                    for j = 0; j < list.count(partidas)
+                    {
+                        ref p2 = list.obj(partidas, j)
+                        if @@(p, "$padre") == @@(p2, "$sys_pk") { guid_padre = @@(p2 ,"$sys_guid") }
+                    }
+                    p<"padre">: guid_padre
+                }
+            }
+        }
+    }
+    function parseNumbersPartida(&partida)
+    {
+        if trim(@@(partida, "$autorizado")) != "" { partida<"autorizado">: @@(partida, "#autorizado") }
+        if trim(@@(partida, "$reserva")) != "" { partida<"reserva">: @@(partida, "#reserva") }
+        if trim(@@(partida, "$p01")) != "" { partida<"p01">: @@(partida, "#p01") }
+        if trim(@@(partida, "$p02")) != "" { partida<"p02">: @@(partida, "#p02") }
+        if trim(@@(partida, "$p03")) != "" { partida<"p03">: @@(partida, "#p03") }
+        if trim(@@(partida, "$p04")) != "" { partida<"p04">: @@(partida, "#p04") }
+        if trim(@@(partida, "$p05")) != "" { partida<"p05">: @@(partida, "#p05") }
+        if trim(@@(partida, "$p06")) != "" { partida<"p06">: @@(partida, "#p06") }
+        if trim(@@(partida, "$p07")) != "" { partida<"p07">: @@(partida, "#p07") }
+        if trim(@@(partida, "$p08")) != "" { partida<"p08">: @@(partida, "#p08") }
+        if trim(@@(partida, "$p09")) != "" { partida<"p09">: @@(partida, "#p09") }
+        if trim(@@(partida, "$p10")) != "" { partida<"p10">: @@(partida, "#p10") }
+        if trim(@@(partida, "$p11")) != "" { partida<"p11">: @@(partida, "#p11") }
+        if trim(@@(partida, "$p12")) != "" { partida<"p12">: @@(partida, "#p12") }
+    }
+
+    // =============== GOP_PRESUPUESTO_STATUS
+    function gop.obtenerEstadoPresupuestos(&db, &params)
+    {
+        @list_query="SELECT * FROM gop_presupuesto_status;"
+        return entity.list(db, params)
+    }
+    function gop.obtenerEstadoPresupuesto(&db, &params)
+    {
+        @read_query="SELECT * FROM gop_presupuesto_status where #<@keyfield>=@_entity_id limit 1;"
+        return entity.read(db, params)
+    }
+
+    // =============== RH_UNIDAD_ORG
+    function gop.obtenerUnidades(&db, &params)
+    {
+        @list_query="SELECT * FROM rh_unidad_org;"
+        ref res = record.create()
+        if @add_others
+        {
+            res<"unidades*">: entity.list(db, params)
+            res<"status*">: dbr.list(db, 'SELECT * FROM gop_presupuesto_status;', @null)
+            res<"divisa*">: dbr.list(db, 'SELECT * FROM divisa;', @null)
+        }
+        else
+        {
+            ref res = entity.list(db, params)
+        }
+        return res
+    }
+    function gop.obtenerUnidad(&db, &params)
+    {
+        @read_query="SELECT * FROM rh_unidad_org where #<@keyfield>=@_entity_id limit 1;"
+        
+        ref res = entity.read(db, params)
+
+        if @@(params,"$details") == "true"
+        {
+            new prm {
+                @"unidad_padre": @@(res, "#sys_pk")
+                @"ejercicio": @@(params, "$ejercicio")
+            }
+
+            query = "
+            SELECT u.sys_pk unidad_pk, u.descripcion unidad_desc, p.titulo pres_title, s.const status, d.codigo divisa, 
+                IFNULL(p.monto_autorizado,0) monto_autorizado, IFNULL(p.monto_planeado,0) monto_planeado, 
+                IFNULL(p.monto_comprometido,0) monto_comprometido, IFNULL(p.monto_ejercido,0) monto_ejercido
+            FROM gop_presupuesto p
+                INNER JOIN gop_presupuesto_status s ON p.`status` = s.id
+                INNER JOIN divisa d ON p.divisa = d.sys_pk
+                INNER JOIN rh_unidad_org u ON p.ref_unidad = u.sys_pk
+            WHERE u.superior = @unidad_padre
+                AND IF(IFNULL(@ejercicio,'')='', TRUE, p.ejercicio = @ejercicio);"
+            
+            res<"subunidades*">: dbr.list(db, query, prm)
+        }
+
+        return res
+    }
+    function gop.actualizarUnidad(&db, &params, &data)
+    {
+        if @@(data, "$superior") == "" { data<"superior*">: @null }
+
+        do dbr.update(db, "rh_unidad_org", data, "sys_pk=@sys_pk", data)
+        ref res = entity.read(db,params)
+
+        return res
+    }
+    function gop.eliminarUnidad(&db, &params)
+    {
+        @use_transaction = @false
+        ref presupuestos = list.create()
+
+        do dbr.begin(db)
+
+        if field.exist(params, "_entity_id")
+        {
+            new prm { @"pk_unidad": @@(params, "#_entity_id") }
+
+            // Eliminar relaciones y registros de todas las partidas de todos los presupuestos de la unidad
+            do dbr.execute(db, "
+                UPDATE gop_partida par
+                    INNER JOIN gop_presupuesto pre ON par.ref_presupuesto = pre.sys_pk
+                    INNER JOIN rh_unidad_org uni ON pre.ref_unidad = uni.sys_pk
+                SET par.padre=NULL WHERE uni.sys_pk=@pk_unidad", prm)
+
+            do dbr.execute(db, "
+                DELETE par FROM gop_partida par
+                    INNER JOIN gop_presupuesto pre ON par.ref_presupuesto = pre.sys_pk
+                    INNER JOIN rh_unidad_org uni ON pre.ref_unidad = uni.sys_pk
+                WHERE uni.sys_pk=@pk_unidad;", prm)
+
+            // Eliminar todos los presupuestos de la unidad
+            do dbr.execute(db, "
+                DELETE pre FROM gop_presupuesto pre
+                    INNER JOIN rh_unidad_org uni ON pre.ref_unidad = uni.sys_pk
+                WHERE uni.sys_pk=@pk_unidad;", prm)
+        }
+        
+        // Eliminar la unidad
+        do deleteChilds(db, @@(params,"#_entity_id"))
+        do entity.delete(db, params)
+        
+        do dbr.commit(db)
+        return @null
+        
+        exception
+    	{
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+    		do rise_error(500,last_error())
+    	}
+    }
+    function deleteChilds(&db, parentPK)
+    {
+        new prm { @"pk": parentPK }
+
+        ref childs = dbr.list(db, "SELECT sys_pk FROM rh_unidad_org WHERE superior=@pk;", prm)
+        
+        if not(isnull(childs)) && list.count(childs) > 0
+        {
+            for i=0; i<list.count(childs)
+            {
+                ref child = list.obj(childs, i)
+                do deleteChilds(db, @@(child, "#sys_pk"))
+                do dbr.delete(db, "rh_unidad_org", "sys_pk=@sys_pk", child)
+            }
+        }
+    }
+}

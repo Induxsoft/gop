@@ -1,0 +1,290 @@
+﻿// #include "dkli.dkh"
+// #set "meta-xml-declaration" "<!DOCTYPE html>\r\n"
+
+// #!
+// module "web_page"
+// {
+//     #include "functions.dkh"
+// 	#include "serialize.dkh"
+// 	#include "webcl.dkh"
+// 	#include "website.dkl"
+
+// 	current_year = get_current_year()
+// 	ref unidades = get_rh_unidad_org()
+	
+// 	ref stts = @null
+// 	ref dvss = @null
+
+//     #$ div
+// 	{
+// 		#! include path.concat(@path_modals, "editor.dk")
+// 		#$ link(href="/_resources/css/editor.css" rel="stylesheet"){$""}
+
+// 		div(id="main_container")
+// 		{
+// 			// Panel izquierdo
+// 			div(id="unidades_container" class="section-container bg-white")
+// 			{
+// 				div
+// 				{
+// 					// Barra de controles
+// 					div(class="d-flex flex-wrap justify-content-between border-bottom")
+// 					{
+// 						div(id="btn_hidde_unidad_panel")
+// 						{
+// 							button(onclick="editor.toggleTabUnidades()" class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow"){
+// 								svg(xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-list" viewBox="0 0 16 16"){
+// 									path("fill-rule"="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5")
+// 								}
+// 								small{$""}
+// 							}
+// 						}
+// 						div(class="d-flex flex-wrap justify-content-end flex-grow-1" id="unidad_controls")
+// 						{
+// 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Editar unidad" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_edit_unidad"){
+// 								$"#<@@(@icons,'edit')>"
+// 								small{$""}
+// 							}
+// 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar unidad" "data-bs-toggle"="modal" "data-bs-target"="#modal_add_unidades" id="btn_add_unidad"){
+// 								$"#<@@(@icons,'add')>"
+// 								small{$""}
+// 							}
+// 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Eliminar unidad" onclick="editor.deleteUnidadSelected()" id="btn_delete_unidad"){
+// 								$"#<@@(@icons,'delete')>"
+// 								small{$""}
+// 							}
+// 						}
+// 					}
+// 					// Lista de unidades
+// 					div(id="unidades_container_list")
+// 					{
+// 						div(style="max-height: 90vh;display: flex;")
+// 						{
+// 							"edit-table"(id="treeUnidades" "show-tree"="true" parentkey="superior" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important; font-weight:500 !important;} #__table_input{ font-size: unset !important; }" data='#<to.json(unidades)>')
+// 							{
+// 								"edit-thead"
+// 								{
+// 									"edit-tr"
+// 									{
+// 										"edit-th"(type="NoEditable" field="descripcion" style="text-align:start;"){$"Unidades organizacionales"}
+// 									}
+// 								}
+// 							}
+// 						}
+// 					}
+// 				}
+// 				div(id="ajust_panel_unidad"){ $"" }
+// 			}
+
+// 			// Panel derecho
+// 			div(id="content_container" class="section-container")
+// 			{
+// 				// Presupuesto
+// 				div(class="border-bottom bg-white")
+// 				{
+// 					// Barra de controles
+// 					div(class="d-flex flex-wrap justify-content-between align-items-center border-bottom")
+// 					{
+// 						div
+// 						{
+// 							button(id="tab_unidades" onclick="editor.toggleTabUnidades()" class="btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow"){
+// 								svg(xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-list" viewBox="0 0 16 16"){
+// 									path("fill-rule"="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5")
+// 								}
+// 								h6(class="m-0" id="unidad_selected"){$""}
+// 							}
+// 						}
+// 						div(class="d-flex flex-wrap align-items-center" id="presupuesto_controls")
+// 						{
+// 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Editar presupuesto" id="edit_pre" "data-bs-toggle"="modal" "data-bs-target"="#modal_presupuesto"){
+// 								$"#<@@(@icons,'edit')>"
+// 								small{$""}
+// 							}
+// 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Eliminar presupuesto" id="delete_pre" onclick="editor.deletePresupuesto()"){
+// 								$"#<@@(@icons,'delete')>"
+// 								small{$""}
+// 							}
+// 							div(class="d-flex align-items-center gap-1")
+// 							{
+// 								small(class="fz-8 text-secondary"){$"Ejercicio:"}
+// 								select(class="induxsoft-form-select fz-7" id="ejercicio_select")
+// 								{
+// 									option(value="2023"){$"2023"}
+// 									option(value="2022"){$"2022"}
+// 									option(value="2021"){$"2021"}
+// 								}
+// 							}
+// 						}
+// 					}
+// 					// Información del presupuesto
+// 					div(class="py-2 px-3 d-flex gap-2 flex-wrap" id="presupuesto_container")
+// 					{
+// 						small(class="text-secondary"){$"Selecciona una Unidad Organizacional."}
+// 					}
+// 				}
+// 				// Partidas
+// 				div
+// 				{
+// 					// table tabs
+// 					div(class="d-flex justify-content-end m-2 align-items-center d-none" id="table_tabs")
+// 					{
+// 						div(style="background-color:var(--color-gray); padding: 4px;")
+// 						{
+// 							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="unidades_main_container"){$"Sub unidades"}
+// 							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_presupuesto" table="partidas_main_container"){$"Presupuesto"}
+// 						}
+// 					}
+// 					// Tables
+// 					div(id="tables")
+// 					{
+// 						// Table partidas
+// 						div(id="partidas_main_container" class='t-table d-none')
+// 						{
+// 							// Barra de controles
+// 							div(class="d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white")
+// 							{
+// 								div(class="d-flex")
+// 								{
+// 									button(class="btn btn-sm rounded-0 d-flex align-items-center justify-content-center gap-2 no-shadow" title="Disminuir identación" onclick="editor.indentPartidaRow(false)"){
+// 										svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-right" viewBox="0 0 16 16"){
+// 											path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m10.646 2.146a.5.5 0 0 1 .708.708L11.707 8l1.647 1.646a.5.5 0 0 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2zM2 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
+// 										}
+// 									}
+// 									button(class="btn btn-sm rounded-0 d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar identación" onclick="editor.indentPartidaRow(true)"){
+// 										svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-left" viewBox="0 0 16 16"){
+// 											path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m.646 2.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L4.293 8 2.646 6.354a.5.5 0 0 1 0-.708M7 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m-5 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
+// 										}
+// 									}
+// 									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar fila" onclick="editor.addRowPartida()"){
+// 										$"#<@@(@icons,'add_row')>"
+// 									}
+// 									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Eliminar fila" onclick="editor.deleteRowPartida()"){
+// 										$"#<@@(@icons,'remove_row')>"
+// 									}
+// 									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Insertar fila" onclick="editor.insertRowPartida()"){
+// 										$"#<@@(@icons,'insert_row')>"
+// 									}
+// 								}
+// 								div(class="d-flex align-items-center" id="partidas_control")
+// 								{
+// 									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Guardar cambios" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
+// 										$"#<@@(@icons,'save')>"
+// 										small{$""}
+// 									}
+// 									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Descartar cambios" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
+// 										$"#<@@(@icons,'discard')>"
+// 										small{$"Descartar"}
+// 									}
+// 								}
+// 							}
+// 							// Tabla de partidas
+// 							div(id="partidas_container")
+// 							{
+// 								div(style="max-height: 80vh;display: flex;")
+// 								{
+// 									"edit-table"(id="treePartidas" "show-tree"="true" parentkey="padre" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
+// 									{
+// 										"edit-thead"
+// 										{
+// 											"edit-tr"
+// 											{
+// 												"edit-th"(type="Text" field="partida"){$"Partida"}
+
+// 												"edit-th"(type="Number" field="autorizado" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
+// 												"edit-th"(type="Number" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
+												
+// 												"edit-th"(type="Number" field="reserva" "default"="0" "textalign"="end"){$"Reserva"}
+// 												"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
+// 												"edit-th"(type="Number" field="p02" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Febrero"}
+// 												"edit-th"(type="Number" field="p03" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Marzo"}
+// 												"edit-th"(type="Number" field="p04" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Abril"}
+// 												"edit-th"(type="Number" field="p05" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Mayo"}
+// 												"edit-th"(type="Number" field="p06" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Junio"}
+// 												"edit-th"(type="Number" field="p07" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Julio"}
+// 												"edit-th"(type="Number" field="p08" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Agosto"}
+// 												"edit-th"(type="Number" field="p09" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Septiembre"}
+// 												"edit-th"(type="Number" field="p10" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Octubre"}
+// 												"edit-th"(type="Number" field="p11" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Noviembre"}
+// 												"edit-th"(type="Number" field="p12" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Diciembre"}
+
+// 												"edit-th"(type="Memo" field="notas"){$"Notas"}
+// 											}
+// 										}
+// 									}
+// 								}
+// 							}
+// 						}
+// 						// Table sub unidades
+// 						div(id="unidades_main_container" class='t-table d-none')
+// 						{
+// 							// Barra de controles
+// 							div(class="p-2 d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white")
+// 							{
+// 								small(class="fw-5"){$"Resumen"}
+// 							}
+// 							// Tabla de sub unidades
+// 							div
+// 							{
+// 								div(style="max-height: 80vh;display: flex;")
+// 								{
+// 									"edit-table"(id="tableSubUnids" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}")
+// 									{
+// 										"edit-thead"
+// 										{
+// 											"edit-tr"
+// 											{
+// 												"edit-th"(type="NoEditable" field="unidad_desc"){$"Unidad"}
+// 												"edit-th"(type="NoEditable" field="pres_title"){$"Presupuesto"}
+// 												"edit-th"(type="NoEditable" field="status"){$"Estado"}
+// 												"edit-th"(type="NoEditable" field="divisa"){$"Divisa"}
+// 												"edit-th"(type="Number" field="monto_autorizado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto autorizado"}
+// 												"edit-th"(type="Number" field="monto_planeado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto planeado"}
+// 												"edit-th"(type="Number" field="monto_comprometido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto comprometido"}
+// 												"edit-th"(type="Number" field="monto_ejercido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto ejercido"}
+// 											}
+// 										}
+// 									}
+// 								}
+// 							}
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+
+// 		script(src="/_resources/js/induxsoft.math.js"){$""}
+// 		script(src="/_resources/js/presupuestos.js"){$""}
+// 		script(src="/_resources/js/editor.js"){$""}
+// 		script{$'
+// 			editor.services = #<to.json(@services)>;
+// 			editor.unidades = #<to.json(unidades)>;
+// 			editor.currenty = #<current_year>;
+// 		'}
+// 	}
+// }
+
+#include "dkli.dkh"
+#!
+module "index"
+{
+	#include "functions.dkh"
+	#include "serialize.dkh"
+	#include "config.dk"
+
+	if @@(@http_context,"$session/user/ids") == "" {
+		@http_context<"response/headers/location"> : "/"
+		return
+	}
+	
+	#$
+	div(class="container-fluid")
+	{
+		div(class="card")
+		{
+			div(class="card-body")
+			{
+				a(href="#<@EDITOR>"){"Editor de presupuestos"}br{}
+			}
+		}
+	}
+}

@@ -1,0 +1,142 @@
+# include "ddm.dkh"
+model "presupuestos operativos"
+{
+	#include "induxsoft.abstracts.ddm"
+
+	// Unidad organizacional
+	entity "rh_unidad_org" : "TableModel"
+	{
+		@"codigo" string(32) unique required
+		@"descripcion" string(150) required
+		@"superior" int ref:"rh_unidad_org" ["sys_pk"] 
+		@"notas" string(4096) 
+		@"link" string(1024) 
+	}
+
+	// Catálogo de monedas o divisas
+    entity "divisa" : "TableModel"
+    {
+        @"codigo" string(5) unique required
+        @"descripcion" string(30) required
+        @"tcambio" decimal(18,8)
+    }
+
+	entity "gop_presupuesto_status" : "EnumModel" {} // 1-Borrador, 2-Por aprobar, 3-Aprobado, 4-Cerrado
+
+	// Presupuesto de una unidad organizacional	
+	entity "gop_presupuesto" : "TableModel"
+	{
+		@"ref_unidad" ref: "rh_unidad_org" required
+		@"ejercicio" int required
+		@"titulo" string(150) required
+		@"notas" memo
+		@"status" ref : "gop_presupuesto_status" required
+		@"divisa" ref : "divisa" required
+		@"monto_autorizado" decimal(18,4) // El total aprobado del presupuesto
+		@"monto_planeado" decimal(18,4) // El total presupuestado del ejercicio
+		@"monto_comprometido" decimal(18,4) // El total que está en operaciones de adquisición en proceso
+		@"monto_ejercido" decimal(18,4) // El total de operaciones de adquisición ya realizadas
+
+		index "gop_presupuesto_id" unique
+		{
+			field "ref_unidad"
+			field "ejercicio"
+		}
+	}
+
+	entity "gop_partida" :"TableModel"
+	{
+		@"ref_presupuesto" ref: "gop_presupuesto" required
+		@"id" string(36) required
+		@"padre" ref : "gop_partida"
+		@"partida" string(255) required
+		@"ccontable" string(32) // Código de cuenta contable asociada a esta partida
+		@"autorizado" decimal(18,4)
+
+		// Importes presupuestados
+		@"reserva" decimal(18,4)
+		@"p01" decimal(18,4)
+		@"p02" decimal(18,4)
+		@"p03" decimal(18,4)
+		@"p04" decimal(18,4)
+		@"p05" decimal(18,4)
+		@"p06" decimal(18,4)
+		@"p07" decimal(18,4)
+		@"p08" decimal(18,4)
+		@"p09" decimal(18,4)
+		@"p10" decimal(18,4)
+		@"p11" decimal(18,4)
+		@"p12" decimal(18,4)
+
+		// Importes comprometidos
+		@"rc" decimal(18,4)
+		@"c01" decimal(18,4)
+		@"c02" decimal(18,4)
+		@"c03" decimal(18,4)
+		@"c04" decimal(18,4)
+		@"c05" decimal(18,4)
+		@"c06" decimal(18,4)
+		@"c07" decimal(18,4)
+		@"c08" decimal(18,4)
+		@"c09" decimal(18,4)
+		@"c10" decimal(18,4)
+		@"c11" decimal(18,4)
+		@"c12" decimal(18,4)
+
+		// Importes ejercidos
+		@"re" decimal(18,4)
+		@"e01" decimal(18,4)
+		@"e02" decimal(18,4)
+		@"e03" decimal(18,4)
+		@"e04" decimal(18,4)
+		@"e05" decimal(18,4)
+		@"e06" decimal(18,4)
+		@"e07" decimal(18,4)
+		@"e08" decimal(18,4)
+		@"e09" decimal(18,4)
+		@"e10" decimal(18,4)
+		@"e11" decimal(18,4)
+		@"e12" decimal(18,4)
+
+		@"notas" memo
+	}
+
+	entity "gop_usuario_uo" : "TableModel"
+	{
+		@"ref_rh_unidad_org" ref: "rh_unidad_org" required
+		@"userid" string(32) required
+
+		index "gop_usuario_uo_id" unique
+		{
+			field "ref_rh_unidad_org"
+			field "userid"
+		}
+	}
+
+	// Información de la aplicación
+    entity "sys_app_catalog"
+    {
+        @"pack_id" string(32) required
+        @"app_id" string(32) key
+        @"app_title" string(255)
+        @"created" datetime required
+        @"app_info" mmemo
+    }
+    // Categoria de la aplicación
+    entity "sys_app_category"
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+    }
+    // Recursos de la aplicación
+    entity "sys_app_shortcut" 
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+        @"icon96x96" string(1024) required
+        @"src" string(1024) required
+        @"_blank" bool
+        @"appid" ref : "sys_app_catalog"
+        @"cat" ref :"sys_app_category"
+    }
+}

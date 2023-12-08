@@ -1,0 +1,86 @@
+#include "dkli.dkh"
+#!
+program
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "dbr.dkh"
+
+    ref lib_csv = _import_library("devkron.serialize.csv.dll")
+    /**
+    * CsvRead
+    *
+    * @param string file Ruta y nombre del archivo csv.
+    * @param string numcols Cadena delimitada por coma de los campos que se tomaran como numericos.
+    * @return list<object>
+    */
+    do _map_function(lib_csv,"devkron.serialize.csv.csvHelper","CsvRead","CsvRead","System.String,System.String","*")
+    /**
+    * CsvWrite
+    *
+    * @param string file Ruta y nombre del archivo csv.
+    * @param list<object> data Datos a escribir en el fichero.
+    */
+    do _map_function(lib_csv,"devkron.serialize.csv.csvHelper","CsvWrite","CsvWrite","System.String,*System.Object","void")
+
+    installData::&db,fsrc
+    {
+        table_name = file.justname(fsrc)
+        ref list_records = CsvRead(fsrc,"")
+
+        for m = 0; m < list.count(list_records); m+1
+        {
+            ref record = list.obj(list_records,m)
+            ref fields = list.create_from_fields(record)
+
+            for n = 0; n < list.count(fields); n+1
+            {
+                field = list.str(fields,n)
+                if @@(record,field) == "\\N" || @@(record,field) == "\\0" { record<field+"*"> : @null }
+            }
+
+            do dbr.insert(db,table_name,record)
+
+            exception{ do print(last_error()) }
+            // exception{/*ignore*/}
+        }
+        // do print("-- " + table_name + " finalizado.")
+    }
+
+    src = _get(@_run_settings,"$SourceCodeFile")
+    dir = dir.name(src)
+
+    file_sys_app_catalog = path.concat(dir,"\\_install\\initial_data\\sys_app_catalog.csv")
+    file_sys_app_category = path.concat(dir,"\\_install\\initial_data\\sys_app_category.csv")
+    file_sys_app_shortcut = path.concat(dir,"\\_install\\initial_data\\sys_app_shortcut.csv")
+
+    file_divisa = path.concat(dir,"\\_install\\initial_data\\divisa.csv")
+    file_gop_presupuesto_status = path.concat(dir,"\\_install\\initial_data\\gop_presupuesto_status.csv")
+    
+    ref args = commandline("=")
+    qname = trim(@@(args,"$qn"))
+    if qname == "" { do rise_error(99,"Debe de indicar un nombre cualificado de conexión.") }
+    ref database = dbr.open(qname)
+    if not(dbr.is_open(database)) { do rise_error(99,"No fue posible abrir la conexión. Verifique el nombre cualificado de conexión.") }
+    
+    do print("-- sys_app_catalog")
+    do installData(database,file_sys_app_catalog)
+    do print("-- sys_app_category")
+    do installData(database,file_sys_app_category)
+    do print("-- sys_app_shortcut")
+    do installData(database,file_sys_app_shortcut)
+
+    do print("-- divisa")
+    do installData(database,file_divisa)
+    do print("-- file_gop_presupuesto_status")
+    do installData(database,file_gop_presupuesto_status)
+
+    do dbr.close(database)
+    exception
+    {
+        if isset("database") {
+            if dbr.is_open(database){ do dbr.close(database) }
+        }
+        do print(last_error())
+    }
+}
