@@ -1,7 +1,0 @@
-#include "dkli.dkh"
-#!
-module
-{   
-    @list_query="SELECT * FROM #<@table_name>;"
-    @read_query="SELECT * FROM #<@table_name> where #<@keyfield>=@_entity_id limit 1;"
-}

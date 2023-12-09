@@ -6,11 +6,13 @@ module "controller"
     {
         case "divisa"
         {
+            @table_name = "divisa"
             point @list to gop.obtenerDivisas
             break
         }
         case "gop_partida"
         {
+            @table_name = "gop_partida"
             point @list to gop.obtenerPartidas
             point @read to gop.obtenerPartida
             point @create to gop.crearPartida
@@ -20,20 +22,24 @@ module "controller"
         }
         case "gop_presupuesto"
         {
+            @table_name = "gop_presupuesto"
             point @list to gop.obtenerPresupuestos
             point @read to gop.obtenerPresupuesto
+            // point @create to gop.crearPresupuesto
             point @update to gop.actualizarPresupuesto
             point @delete to gop.eliminarPresupuesto
             break
         }
         case "gop_presupuesto_status"
         {
+            @table_name = "gop_presupuesto_status"
             point @list to gop.obtenerEstadoPresupuestos
             point @read to gop.obtenerEstadoPresupuesto
             break
         }
         case "rh_unidad_org"
         {
+            @table_name = "rh_unidad_org"
             @add_others = @false
             point @list to gop.obtenerUnidades
             point @read to gop.obtenerUnidad
@@ -43,6 +49,7 @@ module "controller"
         }
         default
         {
+            @table_name = "rh_unidad_org"
             @add_others = @true
             point @list to gop.obtenerUnidades
             point @read to gop.obtenerUnidad

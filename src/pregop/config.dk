@@ -1,0 +1,26 @@
+#include "dkli.dkh"
+#!
+program
+{
+    // _STATIC RESOURCES
+    @CSS_EDITOR = "/$/pregop/css/editor.css"
+    @CSS_MAIN = "/$/pregop/css/main.css"
+    @JS_MAIN = "/$/pregop/js/main.js"
+    @JS_PRESUPUESTOS = "/$/pregop/js/presupuestos.js"
+    @JS_EDITOR = "/$/pregop/js/editor.js"
+    
+
+    // _PACKAGE
+    @URL_BUSCAR_UNIDAD = "/!/pregop/editor/?_view=rh_unidad_org&s=@search"
+
+    new @URL_SERVICES
+    {
+        @"gop_partida": "/!/pregop/editor/@partida/gop_partida"
+        @"gop_presupuesto": "/!/pregop/editor/@presupuesto/gop_presupuesto"
+        @"rh_unidad": "/!/pregop/editor/@unidad/rh_unidad_org"
+        @"divisa": "/!/pregop/editor/?view=divisa"
+        @"gop_presupuesto_status": "/!/pregop/editor/?view=gop_presupuesto_status"
+    }
+
+    @EDITOR = "/!/pregop/editor/"
+}

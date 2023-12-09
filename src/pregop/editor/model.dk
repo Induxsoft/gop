@@ -14,21 +14,21 @@ module "model"
     // =============== GOP_PARTIDA
     function gop.obtenerPartidas(&db, &params)
     {
-        @list_query = "
+        query = "
         SELECT p.sys_pk, p.sys_guid, p.ref_presupuesto, IFNULL(p.id,'') id, p.padre, p.partida, IFNULL(p.autorizado,0) autorizado,
             IFNULL(p.reserva,0) reserva, IFNULL(p.p01,0) p01, IFNULL(p.p02,0) p02, IFNULL(p.p03,0) p03, IFNULL(p.p04,0) p04,
             IFNULL(p.p05,0) p05, IFNULL(p.p06,0) p06, IFNULL(p.p07,0) p07, IFNULL(p.p08,0) p08, IFNULL(p.p09,0) p09,
             IFNULL(p.p10,0) p10, IFNULL(p.p11,0) p11, IFNULL(p.p12,0) p12, IFNULL(notas,'') notas
-        FROM #<@table_name> p 
+        FROM gop_partida p 
         WHERE IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto );"
 
-        return entity.list(db, params)
+        return dbr.list(db, query, params)
     }
     function gop.obtenerPartida(&db, &params)
     {
-        @read_query = "SELECT * FROM gop_partida where #<@keyfield>=@_entity_id limit 1;"
+        sql = "SELECT * FROM gop_partida where #<@keyfield>=@_entity_id limit 1;"
         
-        return entity.read(db, params)
+        return dbr.rec(db, sql, params)
     }
     function gop.crearPartida(&db, &params, &data)
     {
@@ -154,12 +154,12 @@ module "model"
     // =============== GOP_PRESUPUESTO
     function gop.obtenerPresupuestos(&db, &params)
     {
-        @list_query="SELECT * FROM gop_presupuesto;"
-        return entity.list(db, params)
+        query = "SELECT * FROM gop_presupuesto;"
+        return dbr.list(db, query, params)
     }
     function gop.obtenerPresupuesto(&db, &params)
     {
-        @read_query="
+        sql = "
         SELECT p.sys_pk, p.sys_recver, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
             IFNULL(p.monto_autorizado, 0) monto_autorizado, IFNULL(p.monto_planeado, 0) monto_planeado, 
             IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido
@@ -170,10 +170,15 @@ module "model"
             AND IF(IFNULL(@e,'')='', true, p.ejercicio=@e)
         LIMIT 1;"
 
-        return entity.read(db, params)
+        return dbr.rec(db, sql, params)
+    }
+    function gop.crearPresupuesto(&db, &params, &data)
+    {
+        do rise_error(0, "crear")
     }
     function gop.actualizarPresupuesto(&db, &params, &data)
     {
+        do rise_error(0, "actualizar")
         ref new_data = record.create()
         @use_transaction = @false
 
@@ -327,37 +332,37 @@ module "model"
     // =============== GOP_PRESUPUESTO_STATUS
     function gop.obtenerEstadoPresupuestos(&db, &params)
     {
-        @list_query="SELECT * FROM gop_presupuesto_status;"
-        return entity.list(db, params)
+        query = "SELECT * FROM gop_presupuesto_status;"
+        return dbr.list(db, query, params)
     }
     function gop.obtenerEstadoPresupuesto(&db, &params)
     {
-        @read_query="SELECT * FROM gop_presupuesto_status where #<@keyfield>=@_entity_id limit 1;"
-        return entity.read(db, params)
+        sql = "SELECT * FROM gop_presupuesto_status where #<@keyfield>=@_entity_id limit 1;"
+        return dbr.rec(db, sql, params)
     }
 
     // =============== RH_UNIDAD_ORG
     function gop.obtenerUnidades(&db, &params)
     {
-        @list_query="SELECT * FROM rh_unidad_org;"
+        query = "SELECT * FROM rh_unidad_org;"
         ref res = record.create()
         if @add_others
         {
-            res<"unidades*">: entity.list(db, params)
+            res<"unidades*">: dbr.list(db, query, params)
             res<"status*">: dbr.list(db, 'SELECT * FROM gop_presupuesto_status;', @null)
             res<"divisa*">: dbr.list(db, 'SELECT * FROM divisa;', @null)
         }
         else
         {
-            ref res = entity.list(db, params)
+            ref res = dbr.list(db, query, params)
         }
         return res
     }
     function gop.obtenerUnidad(&db, &params)
     {
-        @read_query="SELECT * FROM rh_unidad_org where #<@keyfield>=@_entity_id limit 1;"
-        
-        ref res = entity.read(db, params)
+        sql = "SELECT * FROM rh_unidad_org where #<@keyfield>=@_entity_id limit 1;"
+        //do rise_error(0, ftext("SELECT * FROM rh_unidad_org where #<@keyfield>=#<@@(params,'_entity_id')> limit 1;"))
+        ref res = dbr.rec(db, sql, params)
 
         if @@(params,"$details") == "true"
         {

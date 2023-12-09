@@ -190,7 +190,8 @@ var editor =
 
         if (values == null) return;
 
-        let endpoint = editor.services['rh_unidad'] + "/_new";
+        let endpoint = editor.services['rh_unidad'];
+        endpoint = endpoint.replace('@unidad', "_new");
 
         if (values.sys_pk) 
         {
@@ -214,7 +215,7 @@ var editor =
     updateUnidad(unidad)
     {
         let endpoint = editor.services['rh_unidad'];
-        endpoint += '/' + unidad.sys_pk;
+        endpoint = endpoint.replace('@unidad', unidad.sys_pk);
 
         main.request(endpoint, 'PUT', unidad,
             success => { 
@@ -230,11 +231,12 @@ var editor =
     getUnidades()
     {
         let endpoint = editor.services['rh_unidad'];
+        endpoint = endpoint.replace('/@unidad/', "?view=");
 
         main.request(endpoint, 'GET', null,
             success => { 
-                this.unidades = success;
-                this.tableUnidades.DataArray = success;
+                this.unidades = success.unidades;
+                this.tableUnidades.DataArray = success.unidades;
                 this.printUnidades(); 
             },
             failure => { alert('No fue posible obtener la unidades.\n\n' + failure); },
@@ -244,7 +246,7 @@ var editor =
     getUnidad(unidad_pk, withSubUnidades=false)
     {
         let endpoint = editor.services['rh_unidad'];
-        endpoint += '/' + unidad_pk;
+        endpoint = endpoint.replace('@unidad', unidad_pk);
 
         if (withSubUnidades) endpoint += '?details=true&ejercicio=' + this.ejercicio_select.value;
 
@@ -293,7 +295,7 @@ var editor =
             return;
 
         let endpoint = editor.services['rh_unidad'];
-        endpoint += "/" + this.unidadSelected.sys_pk;
+        endpoint = endpoint.replace('@unidad', this.unidadSelected.sys_pk);
 
         main.request(endpoint, 'DELETE', null,
             success => { /*this.getUnidades();*/ },
@@ -312,7 +314,8 @@ var editor =
             data = this.unidadSelected;
             if (this.unidadSelected.superior)
             {
-                let endpoint = editor.services['rh_unidad'] + "/" + this.unidadSelected.superior;
+                let endpoint = editor.services['rh_unidad'];
+                endpoint = endpoint.replace('@unidad', this.unidadSelected.superior);
 
                 main.request(endpoint, 'GET', null,
                     success => { ik_unidad.setValue(success); },
@@ -342,11 +345,11 @@ var editor =
         {
             values['ref_unidad'] = this.unidadSelected.sys_pk;
             values['ejercicio'] = Number(this.ejercicio_select.value);
-            endpoint += '/_new';
+            endpoint = endpoint.replace('@presupuesto', '_new');
         }
         else
         {
-            endpoint += '/' + this.presupuesto.sys_pk;
+            endpoint = endpoint.replace('@presupuesto', this.presupuesto.sys_pk);
             method = 'PUT';
         }
 
@@ -366,7 +369,8 @@ var editor =
     {
         if (!unidadPK) return;
 
-        let endpoint = editor.services['gop_presupuesto'] + `/${unidadPK}/?_key=ref_unidad`;
+        let endpoint = editor.services['gop_presupuesto'];
+        endpoint = endpoint.replace('@presupuesto', unidadPK) + '?_key=ref_unidad';
         endpoint += '&e=' + this.ejercicio_select.value;
 
         main.request(endpoint, 'GET', null,
@@ -440,7 +444,8 @@ var editor =
         }
         if (!confirm('Está seguro de eliminar el presupuesto y todas sus partidas de la unidad organizacional seleccionada?')) return;
 
-        let endpoint = editor.services['gop_presupuesto'] + `/${presupuesto.sys_pk}/`;
+        let endpoint = editor.services['gop_presupuesto'];
+        endpoint = endpoint.replace('@presupuesto', presupuesto.sys_pk);
 
         main.request(endpoint, 'DELETE', null,
             success => { 
@@ -455,8 +460,9 @@ var editor =
     },
     updatePresupuestoData(dataArray)
     {
+        console.log(dataArray);
         let dataCopy = JSON.parse(JSON.stringify(dataArray));
-
+        console.log(dataCopy);
         if (this.presupuesto && dataCopy)
         {
             let autorzad = 0;
@@ -504,7 +510,8 @@ var editor =
     // =============== PARTIDAS
     getPartidas(presupuestoPK)
     {
-        let endpoint = editor.services['gop_partida'] + `/?presupuesto=${presupuestoPK}`;
+        let endpoint = editor.services['gop_partida'];
+        endpoint = endpoint.replace('/@partida/', '?view=') + `&presupuesto=${presupuestoPK}`;
         main.request(endpoint, 'GET', null,
             success => {
                 this.tablePartidas.DataArray = JSON.parse(JSON.stringify(success));
@@ -600,7 +607,8 @@ var editor =
 
         data['partidas'] = this.tablePartidas.DataArray;
 
-        let endpoint = editor.services['gop_presupuesto'] + `/${this.presupuesto.sys_pk}/`;
+        let endpoint = editor.services['gop_presupuesto'];
+        endpoint = endpoint.replace('@presupuesto', this.presupuesto.sys_pk);
         
         main.request(endpoint, 'PUT', data,
             success => { 

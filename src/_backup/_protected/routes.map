@@ -1,3 +1,0 @@
-GET: /favicon.ico > /favicon.ico
-GET: /gop_presup_editor > index.dkl
-GET,POST,PUT,DELETE: /{_entities_type}/{_entity_id?}> /entry-point.dkl

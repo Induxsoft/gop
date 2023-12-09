@@ -8,8 +8,8 @@ module "Controller configs"
 	#include "dbr.dkh"
 	#include "crudl/crudl.dk"
 
-	@base_path = "presupuesto"
-	@path_root= "" // Establezca una ruta de ser necesario
+	@base_path = "pregop"
+	@path_root= ""
 	
 	//No modifique a menos que sepa lo que está haciendo
 

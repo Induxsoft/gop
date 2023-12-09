@@ -17,7 +17,7 @@ model "presupuestos operativos"
     entity "divisa" : "TableModel"
     {
         @"codigo" string(5) unique required
-        @"descripcion" string(30) required
+        @"descripcion" string(30) unique required
         @"tcambio" decimal(18,8)
     }
 
@@ -112,4 +112,31 @@ model "presupuestos operativos"
 			field "userid"
 		}
 	}
+
+	// Información de la aplicación
+    entity "sys_app_catalog"
+    {
+        @"pack_id" string(32) required
+        @"app_id" string(32) key
+        @"app_title" string(255)
+        @"created" datetime required
+        @"app_info" mmemo
+    }
+    // Categoria de la aplicación
+    entity "sys_app_category"
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+    }
+    // Recursos de la aplicación
+    entity "sys_app_shortcut" 
+    {
+        @"id" string(32) key
+        @"title" string(255) required
+        @"icon96x96" string(1024) required
+        @"src" string(1024) required
+        @"_blank" bool
+        @"appid" ref : "sys_app_catalog"
+        @"cat" ref :"sys_app_category"
+    }
 }
