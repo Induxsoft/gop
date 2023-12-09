@@ -159,7 +159,9 @@ module "model"
     }
     function gop.obtenerPresupuesto(&db, &params)
     {
-        sql = "
+        if field.exist(params,"_key") { @keyfield = @@(params,"$_key") }
+
+        sql = ftext("
         SELECT p.sys_pk, p.sys_recver, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
             IFNULL(p.monto_autorizado, 0) monto_autorizado, IFNULL(p.monto_planeado, 0) monto_planeado, 
             IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido
@@ -168,9 +170,13 @@ module "model"
             INNER JOIN divisa d ON p.divisa = d.sys_pk
         WHERE p.#<@keyfield>=@_entity_id 
             AND IF(IFNULL(@e,'')='', true, p.ejercicio=@e)
-        LIMIT 1;"
+        LIMIT 1;")
 
-        return dbr.rec(db, sql, params)
+        ref res = dbr.rec(db, sql, params)
+
+        if isnull(res) { do rise_error(0, "Elemento no encontrado") }
+
+        return res
     }
     function gop.crearPresupuesto(&db, &params, &data)
     {
@@ -178,7 +184,6 @@ module "model"
     }
     function gop.actualizarPresupuesto(&db, &params, &data)
     {
-        do rise_error(0, "actualizar")
         ref new_data = record.create()
         @use_transaction = @false
 
@@ -337,7 +342,7 @@ module "model"
     }
     function gop.obtenerEstadoPresupuesto(&db, &params)
     {
-        sql = "SELECT * FROM gop_presupuesto_status where #<@keyfield>=@_entity_id limit 1;"
+        sql = ftext("SELECT * FROM gop_presupuesto_status where #<@keyfield>=@_entity_id limit 1;")
         return dbr.rec(db, sql, params)
     }
 
@@ -360,7 +365,8 @@ module "model"
     }
     function gop.obtenerUnidad(&db, &params)
     {
-        sql = "SELECT * FROM rh_unidad_org where #<@keyfield>=@_entity_id limit 1;"
+        // do rise_error(0, to.json(params))
+        sql = "SELECT * FROM rh_unidad_org where sys_pk=@_entity_id limit 1;"
         //do rise_error(0, ftext("SELECT * FROM rh_unidad_org where #<@keyfield>=#<@@(params,'_entity_id')> limit 1;"))
         ref res = dbr.rec(db, sql, params)
 

@@ -18,8 +18,8 @@ program
         @"gop_partida": "/!/pregop/editor/@partida/gop_partida"
         @"gop_presupuesto": "/!/pregop/editor/@presupuesto/gop_presupuesto"
         @"rh_unidad": "/!/pregop/editor/@unidad/rh_unidad_org"
-        @"divisa": "/!/pregop/editor/?view=divisa"
-        @"gop_presupuesto_status": "/!/pregop/editor/?view=gop_presupuesto_status"
+        @"divisa": "/!/pregop/editor/?_view=divisa"
+        @"gop_presupuesto_status": "/!/pregop/editor/?_view=gop_presupuesto_status"
     }
 
     @EDITOR = "/!/pregop/editor/"

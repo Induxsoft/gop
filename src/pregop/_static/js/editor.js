@@ -231,12 +231,12 @@ var editor =
     getUnidades()
     {
         let endpoint = editor.services['rh_unidad'];
-        endpoint = endpoint.replace('/@unidad/', "?view=");
+        endpoint = endpoint.replace('/@unidad/', "?_view=");
 
         main.request(endpoint, 'GET', null,
             success => { 
-                this.unidades = success.unidades;
-                this.tableUnidades.DataArray = success.unidades;
+                this.unidades = success;
+                this.tableUnidades.DataArray = success;
                 this.printUnidades(); 
             },
             failure => { alert('No fue posible obtener la unidades.\n\n' + failure); },
@@ -248,7 +248,7 @@ var editor =
         let endpoint = editor.services['rh_unidad'];
         endpoint = endpoint.replace('@unidad', unidad_pk);
 
-        if (withSubUnidades) endpoint += '?details=true&ejercicio=' + this.ejercicio_select.value;
+        if (withSubUnidades) endpoint += '/?details=true&ejercicio=' + this.ejercicio_select.value;
 
         main.request(endpoint, 'GET', null,
             success => { this.prepareSubUnidadesView(success); },
@@ -367,6 +367,7 @@ var editor =
     },
     getPresupuesto(unidadPK)
     {
+        console.log("get presupuesto de la unidad: " + unidadPK);
         if (!unidadPK) return;
 
         let endpoint = editor.services['gop_presupuesto'];
@@ -452,6 +453,7 @@ var editor =
                 this.presupuesto = null; 
                 this.printPresupuesto();
                 this.tablePartidas.DataArray = [];
+                this.partidasBackup = [];
                 this.printPartidas();
             },
             failure => { alert('No fue posible eliminar el presupuesto.\n\n' + failure); },
@@ -511,7 +513,7 @@ var editor =
     getPartidas(presupuestoPK)
     {
         let endpoint = editor.services['gop_partida'];
-        endpoint = endpoint.replace('/@partida/', '?view=') + `&presupuesto=${presupuestoPK}`;
+        endpoint = endpoint.replace('/@partida/', '?_view=') + `&presupuesto=${presupuestoPK}`;
         main.request(endpoint, 'GET', null,
             success => {
                 this.tablePartidas.DataArray = JSON.parse(JSON.stringify(success));
@@ -596,7 +598,7 @@ var editor =
             alert('No hay presupuesto para guardar');
             return;
         }
-
+        console.log(this.presupuesto);
         let data = {
             sys_pk: this.presupuesto.sys_pk,
             sys_recver: this.presupuesto.sys_recver
@@ -606,7 +608,7 @@ var editor =
         if (this.presupuesto['monto_planeado'] != undefined) data['monto_planeado'] = Number(this.presupuesto['monto_planeado']);
 
         data['partidas'] = this.tablePartidas.DataArray;
-
+        console.log(data);
         let endpoint = editor.services['gop_presupuesto'];
         endpoint = endpoint.replace('@presupuesto', this.presupuesto.sys_pk);
         

@@ -13,7 +13,6 @@ program
 	do @context.begin(@crud_context)
 
 	current_year = get_current_year()
-
 	ref unidades = @('&./unidades')
 	ref stts = @('&./status')
 	ref dvss = @('&./divisa')
