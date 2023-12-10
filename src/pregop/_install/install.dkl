@@ -27,7 +27,7 @@ program
         sys_app_category.csv,
         sys_app_shortcut.csv,
         divisa.csv,
-        file_gop_presupuesto_status.csv
+        gop_presupuesto_status.csv
     '
 
     // =============== EJECUCIÓN DEL PROGRAMA
