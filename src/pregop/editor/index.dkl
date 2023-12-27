@@ -63,7 +63,7 @@ program
 					{
 						div(style="max-height: 90vh;display: flex;")
 						{
-							"edit-table"(id="treeUnidades" "show-tree"="true" parentkey="superior" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important; font-weight:500 !important;} #__table_input{ font-size: unset !important; }" data='#<to.json(unidades)>')
+							"edit-table"(id="treeUnidades" "show-tree"="true" parentkey="superior" key="sys_pk" "hidde-selector"="true" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important; font-weight:500 !important;} #__table_input{ font-size: unset !important; }" data='#<to.json(unidades)>')
 							{
 								"edit-thead"
 								{
