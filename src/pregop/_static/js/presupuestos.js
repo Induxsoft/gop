@@ -52,13 +52,17 @@ var presupuesto =
             if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
         }
 
-        // Antes de actualizar una celda
-        this.table.Events[this.events.BeforeUpdateCell] = (e) =>
+        // Antes de enfocar una celda
+        this.table.Events[this.events.EnterCell] = (e) =>
         {
             /**
              * Si se va a actualizar una celda sumable y la fila de la celda a editar tiene hijos se cancela
              */
-            const isSumable = this.sumFields.includes(e.coldef.field);
+            let coldef = this.table.GetColumnDefOfTd(e.td);
+            if (!coldef) return;
+
+            const isSumable = this.sumFields.includes(coldef.field);
+            let columTypes = this.table.EdiTable.Const.Columns.Types;
             if (isSumable)
             {
                 let obj=e.sender.DataArray[e.sender.RowIndexOfTd(e.td)];
@@ -66,15 +70,22 @@ var presupuesto =
                 {
                     const options = this.table._getTreeOptions();
                     const hasChilds = e.sender.DataArray.find(data => (obj[options.key]??'___') == data[options.parentkey]);
-                    if (hasChilds) {
-                        e.cancel = true;
-                    }
-                    else
-                    {
-                        // Parseamos el nuevo valor a tipo numérico para que no se guarde como texto
-                        e.text = Number(e.text);
-                    }
+                    coldef.type = ((hasChilds || coldef.field == 'anual') ? columTypes.NoEditable : columTypes.Number);
                 }
+            }
+        }
+
+        // Antes de actualizar una celda
+        this.table.Events[this.events.BeforeUpdateCell] = (e) =>
+        {
+            /**
+             * Validamos que la celda a actualizar sea de campo sumable
+             */
+            const isSumable = this.sumFields.includes(e.coldef.field);
+            if (isSumable)
+            {
+                // Parseamos el nuevo valor a tipo numérico para que no se guarde como texto
+                e.text = Number(e.text);
             }
         }
 

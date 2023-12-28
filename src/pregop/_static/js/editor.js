@@ -367,7 +367,6 @@ var editor =
     },
     getPresupuesto(unidadPK)
     {
-        console.log("get presupuesto de la unidad: " + unidadPK);
         if (!unidadPK) return;
 
         let endpoint = editor.services['gop_presupuesto'];
@@ -462,9 +461,7 @@ var editor =
     },
     updatePresupuestoData(dataArray)
     {
-        console.log(dataArray);
         let dataCopy = JSON.parse(JSON.stringify(dataArray));
-        console.log(dataCopy);
         if (this.presupuesto && dataCopy)
         {
             let autorzad = 0;
@@ -598,7 +595,7 @@ var editor =
             alert('No hay presupuesto para guardar');
             return;
         }
-        console.log(this.presupuesto);
+
         let data = {
             sys_pk: this.presupuesto.sys_pk,
             sys_recver: this.presupuesto.sys_recver

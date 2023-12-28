@@ -194,9 +194,9 @@ program
 												"edit-th"(type="Text" field="partida"){$"Partida"}
 
 												"edit-th"(type="Number" field="autorizado" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
-												"edit-th"(type="Number" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
+												"edit-th"(type="NoEditable" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
 												
-												"edit-th"(type="Number" field="reserva" "default"="0" "textalign"="end"){$"Reserva"}
+												"edit-th"(type="Number" field="reserva" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true" "textalign"="end"){$"Reserva"}
 												"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
 												"edit-th"(type="Number" field="p02" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Febrero"}
 												"edit-th"(type="Number" field="p03" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Marzo"}
