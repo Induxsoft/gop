@@ -13,4 +13,21 @@ program
         NOW = NDATETIME.NOW()
         return NDATETIME.YEAR(NOW)
     }
+    function get_year_list()
+    {
+        dateNow = ndatetime.now()
+        years_back = 10    // años hacia atrás
+        years_forward = 5  // años hacia delante
+
+        yearfrom = ndatetime.add(dateNow, (years_back + 1) * -1, "y")
+        ref list = list.create()
+        date = yearfrom
+
+        for i = 1; i < years_back + (years_forward + 2)
+        {
+            date = ndatetime.add(date, 1 , 'y')
+            do list.add(list, ndatetime.year(date))
+        }
+        return list
+    }
 }

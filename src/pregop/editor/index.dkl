@@ -112,9 +112,11 @@ program
 								small(class="fz-8 text-secondary"){$"Ejercicio:"}
 								select(class="induxsoft-form-select fz-7" id="ejercicio_select")
 								{
-									option(value="2023"){$"2023"}
-									option(value="2022"){$"2022"}
-									option(value="2021"){$"2021"}
+									#! ref years = get_year_list()
+									for i = 0; i < list.count(years) {
+										y = list.num(years,i)
+										#$ option(value="#<y>" "#<ifstr(current_year != y,'', 'selected')>"="true"){$"#<y>"}
+									}
 								}
 							}
 						}
