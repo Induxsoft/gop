@@ -1,117 +1,149 @@
 #include "dkli.dkh"
 #!
-program
+program "instalador"
 {
     #include "functions.dkh"
     #include "serialize.dkh"
     #include "dbr.dkh"
     #include "dbm.dkl"
+    #include "dbr.vars.dkl"
+    #include "dbr.security.dkl"
+    #include "dbr.apps.dkl"
 
+    // PREPARACIÓN DE VARIABLES
     ref args = commandline("=")
-
-    qn = trim(@@(args,"$db"))
-    if qn == "" { do rise_error(99,"Debe de indicar un nombre cualificado de conexión.") }
-
-    ref db = dbr.open(qn)
-    if not(dbr.is_open(db)) { do rise_error(99,"No fue posible abrir la conexión. Verifique el nombre cualificado de conexión.") }
-
     src = _get(@_run_settings,"$SourceCodeFile")
+
     path_install = dir.name(src)
-    path_model = path.concat(path_install, "ddm")
+    path_ddm = path.concat(path_install,"ddm")
+    path_initial_data = path.concat(path_install,"initial_data")
+    path_app_info = path.concat(path_install,"app_info")
+
+    qname = trim(@@(args,"$db"))
+    if qname == "" { qname = trim(@@(args,"$bd")) }
+    if qname == "" { do rise_error(99,"Debe de indicar un nombre cualificado de conexión `db`.") }
+
+    categories_file = path.concat(path_app_info,"sys_app_category.csv")
+    catalogs_file = path.concat(path_app_info,"sys_app_catalog.csv")
+    shortcuts_file = path.concat(path_app_info,"sys_app_shortcut.csv")
+    sitem_file = path.concat(path_initial_data,"sitem.csv")
+
     model_name = file.name(dir.name(path_install)) + ".ddm"
-    model = path.concat(path_model, model_name)
+    model_file = path.concat(path_ddm, model_name)
 
     // Archivos de datos iniciales (Orden de instalación)
-    init_files = '
-        sys_app_catalog.csv,
-        sys_app_category.csv,
-        sys_app_shortcut.csv,
-        divisa.csv,
-        gop_presupuesto_status.csv
-    '
+    ref files_to_import = from.json('[
+        "divisa.csv",
+        "gop_presupuesto_status.csv",
+    ]')
+	// Lista de permisos iniciales
+    ref permissions_to_import = from.json('[]')
 
-    // =============== EJECUCIÓN DEL PROGRAMA
-
+    // DECLARACIÓN DE FUNCIONES
     ref lib_csv = _import_library("devkron.serialize.csv.dll")
     do _map_function(lib_csv,"devkron.serialize.csv.csvHelper","CsvRead","CsvRead","System.String,System.String","*")
     do _map_function(lib_csv,"devkron.serialize.csv.csvHelper","CsvWrite","CsvWrite","System.String,*System.Object","void")
 
-    installData::&db,fsrc
+    reconnect::&db,qn
     {
-        table_name = file.justname(fsrc)
-        ref list_records = CsvRead(fsrc,"")
-
-        for m = 0; m < list.count(list_records); m+1
+        if isnull(db) || not(dbr.is_open(db)) { ref db = dbr.open(qn) }
+        do dbr.rec(db,"select 1 as success;",@null)
+        exception
         {
-            ref record = list.obj(list_records,m)
-            ref fields = list.create_from_fields(record)
-
-            for n = 0; n < list.count(fields); n+1
-            {
-                field = list.str(fields,n)
-                if @@(record,field) == "\\N" || @@(record,field) == "\\0" { record<field+"*"> : @null }
-            }
-
-            do dbr.insert(db,table_name,record)
-
-            exception{ if not(contains(last_error(), "Duplicate entry")){ do print(last_error()) } }
+            do clear_exceptions()
+            ref db:dbr.open(qn)
         }
     }
 
-    if file.exists(model)
+    //* ======================================== [ EJECUCIÓN DEL PROGRAMA ]
+
+    //#region Instalar modelo (.ddm) del paquete.
+    if not(file.exists(model_file)) { do rise_error(99,"No se encontró el modelo: _install/ddm/" + model_name) }
+
+    fext = file.extension(model_file)
+    ref data_model = @null
+
+    if fext == ".json" { ref data_model = from.json(file.rtext(model_file)) }
+    else if fext == ".ddm" { ref data_model = getTableSchema(model_file) }
+    else { do rise_error(1,"El tipo de archivo del modelo no esta soportado.") }
+
+    ref database = dbr.open(qname)
+    if not(dbr.is_open(database)) { do rise_error(99,"No fue posible abrir la conexión. Verifique el nombre cualificado de conexión.") }
+
+    if not(dbm.existLogTables(database))
     {
-        fext = file.extension(model)
-        ref data_model = @null
+        do dbm.inferModel(qname)
+        do print("-- ------------------------- --")
+    }
 
-        if fext == ".json" { ref data_model = from.json(file.rtext(model)) }
-        else if fext == ".ddm" { ref data_model = getTableSchema(model) }
-        else { do rise_error(1,"El tipo de archivo no esta soportado.") }
+    do print("\nINSTALANDO MODELO")
+    if not(dbm.installModel(database,model_name,data_model)) { do rise_error(99,"No se instaló el modelo") }
+    
+    do reconnect(database,qname)
+    //#endregion
+    
+    if dir.exists(path_initial_data) && list.count(files_to_import) > 0
+    {
+        do print("\nIMPORTANDO DATOS INICIALES")
 
-        if not(dbm.existLogTables(db))
+        for i = 0; i < list.count(files_to_import)
         {
-            do dbm.inferModel(qn)
-            do print("-- ------------------------- --")
-        }
-
-        do print("\nINSTALANDO MODELO")
-
-        if dbm.installModel(db, model_name, data_model)
-        {
-            path_inial_data = path.concat(path_install, "initial_data")
-
-            if dir.exists(path_inial_data)
+            file = path.concat(path_initial_data,trim(list.str(files_to_import,i)))
+            if file.exists(file)
             {
-                do print("\nINSTALANDO DATOS INICIALES")
-                ref _db = dbr.open(qn)
-
-                ref files = split(trim(init_files), ",")
-                for i=0; i<list.count(files)
-                {
-                    file = path.concat(path_inial_data, trim(list.str(files, i)))
-                    if file.exists(file)
-                    {
-                        do print(file.justname(file))
-                        do installData(_db, file)
-                    }
-                }
-                
-                if dbr.is_open(_db){ do dbr.close(_db) }
+                ref CsvData = CsvRead(file,"")
+                table_name = file.justname(file)
+                do dbr.vars.ImportList(database,CsvData,table_name)
             }
         }
-        else {
-            do print("No se instaló el modelo")
-        }
-    }
-    else {
-        do print("No se encontró el modelo: _install/ddm/"+model_name)
     }
 
-    if dbr.is_open(db){ do dbr.close(db) }
+    if file.exists(categories_file)
+    {
+        do print("\nESTABLECIENDO CATEGORIAS")
+
+        ref categoriesData = CsvRead(categories_file,"")
+        do dbr.apps.category.import(database,categoriesData)
+    }
+
+    if file.exists(catalogs_file)
+    {
+        do print("\nESTABLECIENDO APLICACIONES")
+
+        ref catalogsData = CsvRead(catalogs_file,"")
+        do dbr.apps.import(database,catalogsData)
+    }
+
+    if file.exists(shortcuts_file)
+    {
+        do print("\nESTABLECIENDO SHORTCUTS")
+
+        ref shortcutsData = CsvRead(shortcuts_file,"")
+        do dbr.apps.shortcut.import(database,shortcutsData)
+    }
+
+    if file.exists(sitem_file)
+    {
+        do print("\nIMPORTANDO PRIVILEGIOS")
+
+        ref sitemData = CsvRead(sitem_file,"")
+        do dbr.vars.ImportPrivs(database,sitemData)
+    }
+    
+    if list.count(permissions_to_import) > 0
+    {
+        do print("\nNUEVOS PRIVILEGIOS AL GRUPO DE ADMINISTRADORES")
+
+        admins_groupid = dbr.security.admins(database)
+        do dbr.security.assign(database,admins_groupid,permissions_to_import)
+    }
+
+    if dbr.is_open(database){ do dbr.close(database) }
 
     exception
     {
-        if isset("db") {
-            if dbr.is_open(db){ do dbr.close(db) }
+        if isset("database") {
+            if dbr.is_open(database){ do dbr.close(database) }
         }
         do print(last_error())
     }
