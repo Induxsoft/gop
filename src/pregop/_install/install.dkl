@@ -26,6 +26,9 @@ program "instalador"
     categories_file = path.concat(path_app_info,"sys_app_category.csv")
     catalogs_file = path.concat(path_app_info,"sys_app_catalog.csv")
     shortcuts_file = path.concat(path_app_info,"sys_app_shortcut.csv")
+    item_type_file = path.concat(path_app_info,"sys_app_item_type.csv")
+    item_action_file = path.concat(path_app_info,"sys_app_item_action.csv")
+    // Archivo de permisos
     sitem_file = path.concat(path_initial_data,"sitem.csv")
 
     model_name = file.name(dir.name(path_install)) + ".ddm"
@@ -120,6 +123,22 @@ program "instalador"
 
         ref shortcutsData = CsvRead(shortcuts_file,"")
         do dbr.apps.shortcut.import(database,shortcutsData)
+    }
+
+    if file.exists(item_type_file)
+    {
+        do print("\nETABLECIENDO ENTIDADES")
+
+        ref itemsData = CsvRead(item_type_file,"")
+        do dbr.apps.itemtype.import(database,itemsData)
+    }
+
+    if file.exists(item_action_file)
+    {
+        do print("\nESTABLECIENDO ACCIONES")
+
+        ref actionsData = CsvRead(item_action_file,"")
+        do dbr.apps.itemaction.import(database,actionsData)
     }
 
     if file.exists(sitem_file)
