@@ -135,7 +135,7 @@ program
 					{
 						div(style="background-color:var(--color-gray); padding: 4px;")
 						{
-							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="unidades_main_container"){$"Sub unidades"}
+							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="unidades_main_container"){$"Resumen"}
 							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_presupuesto" table="partidas_main_container"){$"Presupuesto"}
 						}
 					}

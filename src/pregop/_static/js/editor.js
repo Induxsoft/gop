@@ -19,6 +19,15 @@ var editor =
         {id:'monto_ejercido', caption:'Ejercido', format:true},
         {id:'notas', caption:'Notas'}
     ],
+    fieldsResumen: [
+        {id:'', caption:'Resumen'},
+        // {id:'status_text', caption:'Estado'},
+        {id:'divisa_text', caption:'Divisa'},
+        {id:'monto_autorizado', caption:'Autorizado', format:true},
+        {id:'monto_planeado', caption:'Planeado', format:true},
+        {id:'monto_comprometido', caption:'Comprometido', format:true},
+        {id:'monto_ejercido', caption:'Ejercido', format:true}
+    ],
 
     init()
     {
@@ -26,6 +35,7 @@ var editor =
         this.tablePartidas = document.querySelector('#treePartidas');
         this.tableSubUnids = document.querySelector('#tableSubUnids');
 
+        this.setKeyboardShortcuts();
         this.setConfigTables();
         this.setEventTables();
         this.setAjustPanelUnidadEvent();
@@ -46,6 +56,20 @@ var editor =
         if (btn_edit_unidad) btn_edit_unidad.addEventListener('click', () => { this.load_unidad_modal(false) });
         if (btn_tab_subunidades) btn_tab_subunidades.addEventListener('click', () => this.selectTabTable(btn_tab_subunidades));
         if (btn_tab_presupuesto) btn_tab_presupuesto.addEventListener('click', () => this.selectTabTable(btn_tab_presupuesto));
+    },
+    setKeyboardShortcuts()
+    {
+        document.addEventListener("keydown", (e) => {
+            // console.log("key: "+ e.key + " | " + "code: " + e.code);
+            if (e.key === "Escape") {
+                e.preventDefault();
+                window.open("/","_top");
+            }
+            if (e.key === "F5") {
+                e.preventDefault();
+                window.location.reload();
+            }
+        });
     },
     setConfigTables()
     {
@@ -179,6 +203,9 @@ var editor =
         
         if (showTable) {
             showTable.classList.remove('d-none');
+            
+            if (showTable.id === "unidades_main_container") this.printResumen();
+            else this.printPresupuesto(this.presupuesto);
         }
     },
 
@@ -429,6 +456,49 @@ var editor =
                 </button>
             `;
         }
+
+        setTimeout(()=>{
+            container.innerHTML = template;
+            container.style.opacity = 1;
+        },300);
+    },
+    printResumen()
+    {
+        const container = document.querySelector('#presupuesto_container');
+        container.style.opacity = 0;
+        let template = '';
+        
+        let resumen =
+        {
+            status_text: '',
+            divisa_text: '',
+            monto_autorizado: 0,
+            monto_planeado: 0,
+            monto_comprometido: 0,
+            monto_ejercido: 0
+        };
+
+        (this.tableSubUnids.DataArray ?? []).forEach(row => {
+            resumen.status_text = row.status;
+            resumen.divisa_text = row.divisa;
+            resumen.monto_autorizado = Math.add(resumen.monto_autorizado, row.monto_autorizado);
+            resumen.monto_planeado = Math.add(resumen.monto_planeado, row.monto_planeado);
+            resumen.monto_comprometido = Math.add(resumen.monto_comprometido, row.monto_comprometido);
+            resumen.monto_ejercido = Math.add(resumen.monto_ejercido, row.monto_ejercido);
+        });
+        // console.log(this.tableSubUnids.DataArray)
+        
+        this.fieldsResumen.forEach(field => {
+            let value = resumen[field.id]??"";
+            if (field.format) value = '$'+this.tableSubUnids._format(Number(value), 2, true);
+
+            template += `
+                <div class="presupuesto-box-info">
+                    <small class="fw-5">${field.caption}</small>
+                    <p class="m-0">${value}</p>
+                </div>
+            `;
+        });
 
         setTimeout(()=>{
             container.innerHTML = template;

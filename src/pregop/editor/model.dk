@@ -365,9 +365,7 @@ module "model"
     }
     function gop.obtenerUnidad(&db, &params)
     {
-        // do rise_error(0, to.json(params))
         sql = "SELECT * FROM rh_unidad_org where sys_pk=@_entity_id limit 1;"
-        //do rise_error(0, ftext("SELECT * FROM rh_unidad_org where #<@keyfield>=#<@@(params,'_entity_id')> limit 1;"))
         ref res = dbr.rec(db, sql, params)
 
         if @@(params,"$details") == "true"
@@ -378,15 +376,25 @@ module "model"
             }
 
             query = "
-            SELECT u.sys_pk unidad_pk, u.descripcion unidad_desc, p.titulo pres_title, s.const status, d.codigo divisa, 
-                IFNULL(p.monto_autorizado,0) monto_autorizado, IFNULL(p.monto_planeado,0) monto_planeado, 
-                IFNULL(p.monto_comprometido,0) monto_comprometido, IFNULL(p.monto_ejercido,0) monto_ejercido
+            SELECT
+                u.sys_pk AS unidad_pk,
+                IFNULL(u.superior,0) AS unidad_fk,
+                IF(IFNULL(u.superior,0) > 0, u.descripcion, '') AS unidad_desc,
+                p.titulo AS pres_title,
+                s.const AS `status`,
+                d.codigo AS `divisa`,
+                IFNULL(p.monto_autorizado,0) AS monto_autorizado,
+                IFNULL(p.monto_planeado,0) AS monto_planeado,
+                IFNULL(p.monto_comprometido,0) AS monto_comprometido,
+                IFNULL(p.monto_ejercido,0) AS monto_ejercido
             FROM gop_presupuesto p
                 INNER JOIN gop_presupuesto_status s ON p.`status` = s.id
                 INNER JOIN divisa d ON p.divisa = d.sys_pk
                 INNER JOIN rh_unidad_org u ON p.ref_unidad = u.sys_pk
-            WHERE u.superior = @unidad_padre
-                AND IF(IFNULL(@ejercicio,'')='', TRUE, p.ejercicio = @ejercicio);"
+            WHERE u.sys_pk = @unidad_padre
+                OR (u.superior = @unidad_padre AND IF(IFNULL(@ejercicio,'')='', TRUE, p.ejercicio = @ejercicio))
+            ORDER BY u.sys_pk ASC
+            "
             
             res<"subunidades*">: dbr.list(db, query, prm)
         }
