@@ -1,0 +1,62 @@
+#include "dkli.dkh"
+#!
+module ":pregop"
+{
+    /**
+    * Obtener los importes del presupuesto de la partida indicada.
+    *
+    * string partidaId | Identificador de la partida.
+    * int ejercicio | Ejercicio (año) del presupuesto.
+    * int periodo | Mes del que se obtendran los importes.
+    */
+    partida.importes::&db, partidaId, ejercicio, periodo
+    {
+        new params
+        {
+            @"id": str(partidaId)
+            @"ejercicio": parse.num(ejercicio)
+        }
+
+        month = padleft(parse.num(periodo), 2, "0")
+
+        sql_obtener_importes = "
+        SELECT
+            IFNULL(pda.p#<month>,0) AS presupuestado,
+            IFNULL(pda.c#<month>,0) AS comprometido,
+            IFNULL(pda.e#<month>,0) AS ejercido,
+            (IFNULL(pda.p#<month>,0) - IFNULL(pda.c#<month>,0) - IFNULL(pda.e#<month>,0)) AS disponible
+        FROM gop_partida AS pda
+            INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
+        WHERE pda.id = @id
+            AND ppto.ejercicio = @ejercicio
+        "
+
+        return dbr.rec(db, ftext(sql_obtener_importes), params)
+    }
+
+    /**
+    * Afectar el monto comprometido de la partida en el periodo indicado.
+    *
+    * string partidaId | Identificador de la partida.
+    * int ejercicio | Ejercicio (año) del presupuesto.
+    * int periodo | Mes sobre el que se hara la afectación.
+    * decimal monto | Monto de la afectación.
+    */
+    partida.comprometido::&db, partidaId, ejercicio, periodo, monto
+    {
+        return @true
+    }
+
+    /**
+    * Afectar el monto ejercido de la partida en el periodo indicado.
+    *
+    * string partidaId | Identificador de la partida.
+    * int ejercicio | Ejercicio (año) del presupuesto.
+    * int periodo | Mes sobre el que se hara la afectación.
+    * decimal monto | Monto de la afectacioón.
+    */
+    partida.ejercido::&db, partidaId, ejercicio, periodo, monto
+    {
+        return @true
+    }
+}
