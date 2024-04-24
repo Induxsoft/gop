@@ -3,6 +3,28 @@
 module ":pregop"
 {
     /**
+    * Devuelve el nombre del campo en la tabla de la 
+    * base de datos que le corresponde según el periodo
+    * y clase de monto.
+    *
+    * string clase_monto | Valores posibles='presupuestado' o 'p','comprometido' 'c' o bien, 'ejercido' o 'e' (no es sensible a mayúsculas).
+    * int periodo | Mes del que se obtendran los importes, valores menores o mayores al intervalo 1...12 se consideran la reserva.
+    */
+
+    partida.datafield::clase_monto,periodo
+    {
+        clase_monto=tolower(trim(clase_monto))
+        if clase_monto=="presupuestado" { clase_monto="p"}
+        if clase_monto=="comprometido" { clase_monto="c"}
+        if clase_monto=="ejercido" { clase_monto="e"}
+
+        if clase_monto=="p" && periodo>12 || periodo<1 { return "reserva" }
+        if clase_monto=="c" && periodo>12 || periodo<1 { return "rc" }
+        if clase_monto=="e" && periodo>12 || periodo<1 { return "re" }
+
+        return clase_monto+format(periodo,"00")
+    }
+    /**
     * Obtener los importes del presupuesto de la partida indicada.
     *
     * string partidaId | Identificador de la partida.
@@ -17,14 +39,16 @@ module ":pregop"
             @"ejercicio": parse.num(ejercicio)
         }
 
-        month = padleft(parse.num(periodo), 2, "0")
+        p_field=partida.datafield("p",periodo)
+        c_field=partida.datafield("c",periodo)
+        e_field=partida.datafield("e",periodo)
 
         sql_obtener_importes = "
         SELECT
-            IFNULL(pda.p#<month>,0) AS presupuestado,
-            IFNULL(pda.c#<month>,0) AS comprometido,
-            IFNULL(pda.e#<month>,0) AS ejercido,
-            (IFNULL(pda.p#<month>,0) - IFNULL(pda.c#<month>,0) - IFNULL(pda.e#<month>,0)) AS disponible
+            IFNULL(pda.#<p_field>,0) AS presupuestado,
+            IFNULL(pda.#<c_field>,0) AS comprometido,
+            IFNULL(pda.#<e_field>,0) AS ejercido,
+            (IFNULL(pda.#<p_field>,0) - IFNULL(pda.#<c_field>,0) - IFNULL(pda.#<e_field>,0)) AS disponible
         FROM gop_partida AS pda
             INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
         WHERE pda.id = @id
@@ -32,6 +56,97 @@ module ":pregop"
         "
 
         return dbr.rec(db, ftext(sql_obtener_importes), params)
+    }
+
+    /**
+    * Afectar los monto presupuestado, comprometido o ejercido de la partida en el periodo indicado.
+    *
+    * string partidaId | Identificador de la partida.
+    * int ejercicio | Ejercicio (año) del presupuesto.
+    * int periodo | Mes sobre el que se hara la afectación.
+    * registro montos | Montos de la afectación:
+    *       presupuestado
+    *       comprometido
+    *       ejercido
+    *   Para incrementarlos usar un número positivo, para disminuirlos un número negativo
+    */
+    partida.afectar::&db, partidaId, ejercicio, periodo,&montos
+    {
+        namespace "pregop"
+
+        sql_partida = "
+        SELECT
+            sys_pk,
+            ifnull(padre,0) padre,
+            ifnull((select id from gop_partida where sys_pk=pda.padre limit 1),'') padre_id,
+            ifnull((select ifnull(count(sys_pk),0) from gop_partida where padre=pda.sys_pk),0) hijos,
+            ref_presupuesto
+        FROM gop_partida AS pda
+            INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
+        WHERE pda.id = @id
+            AND ppto.ejercicio = @ejercicio AND ppto.status=3
+        "
+
+        new params
+        {
+            @"id": str(partidaId)
+            @"ejercicio": parse.num(ejercicio)
+        }
+
+        new data { }
+
+        if @@(montos,"#presupuestado")!=0 { data<partida.datafield("p",periodo)+"*">:dbr.sql("ifnull("+partida.datafield("p",periodo)+",0)+"+@@(montos,"$presupuestado"))}
+        if @@(montos,"#comprometido")!=0 { data<partida.datafield("c",periodo)+"*">:dbr.sql("ifnull("+partida.datafield("p",periodo)+",0)+"+@@(montos,"$comprometido"))}
+        if @@(montos,"#ejercido")!=0 { data<partida.datafield("e",periodo)+"*">:dbr.sql("ifnull("+partida.datafield("p",periodo)+",0)+"+@@(montos,"$ejercido"))}
+
+        ref partida=dbr.rec(db,sql_partida,params)
+
+        if isnull(partida) { do rise_error(0,ftext("Partida no encontrada #<partidaId> #<ejercicio> Periodo:#<periodo>, compruebe Id de la partida y estado del presupuesto")) }
+
+        if not(dbr.in_transaction(db)) { do rise_error(0,"No se pueden afectar partidas fuera del contexto de una transacción de bases de datos")}
+        
+        if @@(montos,"#_levels")<1 && @@(partida,"#hijos")>0 { do rise_error(0,"No se puede afectar una partida que tiene sub-partidas de forma directa")}
+
+        im_first=@@(montos,"#_levels")<1
+
+        using params
+        {
+            @"sys_pk":@@(partida,"sys_pk")
+            @"padre":@@(partida,"padre")
+            @"padre_id":@@(partida,"padre_id")
+            @"presupuesto": @@(partida,"#ref_presupuesto")
+        }
+
+        do dbr.update(db,"gop_presupuesto",data,"sys_pk=@sys_pk", params)
+
+        if @(params,"#padre")!=0 
+        { 
+            montos<"_level">:@@(montos,"#_level")+1
+            do partida.afectar(db, @@(params,"$padre_id"), ejercicio, periodo,montos)
+        }
+
+        if im_first
+        {
+            sql_totales="select 
+                ifnull(sum(ifnull(reserva,0)+ifnull(p01,0)+ifnull(p02,0)+ifnull(p03,0)+ifnull(p04,0)+ifnull(p05,0)+ifnull(p06,0)+ifnull(p07,0)+ifnull(p08,0)+ifnull(p09,0)+ifnull(p10,0)+ifnull(p11,0)+ifnull(p12,0)),0)
+                    planeado,
+                ifnull(sum(ifnull(cr,0)+ifnull(c01,0)+ifnull(c02,0)+ifnull(c03,0)+ifnull(c04,0)+ifnull(c05,0)+ifnull(c06,0)+ifnull(c07,0)+ifnull(c08,0)+ifnull(c09,0)+ifnull(c10,0)+ifnull(c11,0)+ifnull(c12,0)),0)
+                    comprometido,
+                ifnull(sum(ifnull(er,0)+ifnull(e01,0)+ifnull(e02,0)+ifnull(e03,0)+ifnull(e04,0)+ifnull(e05,0)+ifnull(e06,0)+ifnull(e07,0)+ifnull(e08,0)+ifnull(e09,0)+ifnull(e10,0)+ifnull(e11,0)+ifnull(e12,0)),0)
+                    ejercido
+                from gop_partida 
+                    where padre is null and ref_presupuesto=@presupuesto;"
+            
+            ref d_totales=dbr.rec(db,sql_totales,params)
+            d_totales<"presupuesto">:@@(params,"presupuesto")
+
+            do dbr.execute(db,"update gop_presupuesto set 
+                                monto_planeado=@planeado,
+                                monto_comprometido=@comprometido,
+                                monto_ejercido=ejercido where sys_pk=@presupuesto;",d_totales)
+        }
+
+        return @true
     }
 
     /**
@@ -44,7 +159,14 @@ module ":pregop"
     */
     partida.comprometido::&db, partidaId, ejercicio, periodo, monto
     {
-        return @true
+        namespace "pregop"
+
+        new montos
+        {
+            @"comprometido":monto
+        }
+
+        return partida.afectar(db, partidaId, ejercicio, periodo,montos)
     }
 
     /**
@@ -57,6 +179,13 @@ module ":pregop"
     */
     partida.ejercido::&db, partidaId, ejercicio, periodo, monto
     {
-        return @true
+        namespace "pregop"
+
+        new montos
+        {
+            @"ejercido":monto
+        }
+
+        return partida.afectar(db, partidaId, ejercicio, periodo,montos)
     }
 }

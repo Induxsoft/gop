@@ -99,6 +99,12 @@ model "presupuestos operativos"
 		@"e12" decimal(18,4)
 
 		@"notas" memo
+
+		index "gop_partida_unique1" unique
+		{
+			field "id"
+			field "ref_presupuesto"
+		}
 	}
 
 	entity "gop_usuario_uo" : "TableModel"
