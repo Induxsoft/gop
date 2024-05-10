@@ -189,4 +189,82 @@ module ":pregop"
 
         return partida.afectar(db, partidaId, ejercicio, periodo, montos)
     }
+
+    /**
+    * Afectar importes de la partida.
+    *
+    * db | Referencia a una conexión de base de datos abierta (recomendado: transacción de base de datos previamente iniciada).
+    * params | Referencia a un registro que contiene los datos necesarios para realizar las afectaciones.
+    * return bool
+    *
+    * ```dkl
+    * new params
+    {
+        @"ipartida": // (int|string) Identificador de la partida [sys_pk,sys_guid,id].
+        @"ejercicio": // (int) Ejercicio (yyyy) del presupuesto de la partida.
+        @"periodo": // (int) Mes (MM) sobre el que se hara la afectación.
+        @"comprometido": // (decimal) Monto (+\-) de la afectación.
+        @"ejercido": // (decimal) Monto (+\-) de la afectación.
+        @"det": // (string) Código DET (Data Element Type) del elemento que realiza la afectación.
+        @"det_id": // (int) Clave primaria del elemento que realiza la afectación.
+        @"usuario": // (string) UserId del usuario logueado que realiza la afectación.
+    }
+    * ```
+    */
+    partida.movimiento::&db,&params
+    {
+        namespace "pregop"
+
+        start_transaction = @false
+
+        if not(dbr.in_transaction(db)) {
+            do dbr.begin(db)
+            start_transaction = @true
+        }
+
+        sql_partida = "
+        SELECT
+            pda.sys_pk,
+            pda.id
+        FROM gop_partida AS pda
+            INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
+        WHERE (pda.sys_pk = @ipartida OR pda.sys_guid = @ipartida)
+            OR (pda.id = @ipartida AND ppto.ejercicio = @ejercicio)
+        "
+        ref partida = dbr.rec(db,sql_partida,params)
+
+        new gop_mov
+        {
+            @"ref_partida": @@(partida,"#sys_pk")
+            @"periodo": @@(params,"#periodo")
+            @"comprometido": @@(params,"#comprometido")
+            @"ejercido": @@(params,"#ejercido")
+            @"dte": @@(params,"$det")
+            @"dte_id": @@(params,"#det_id")
+            @"usuario": @@(params,"$usuario")
+        }
+
+        do dbr.insert(db,"gop_mov",gop_mov)
+
+        if @@(params,"#comprometido") != 0 {
+            do partida.comprometido(db, @@(partida,"$id"), @@(params,"#ejercicio"), @@(params,"#periodo"), @@(params,"#comprometido"))
+        }
+        if @@(params,"#ejercido") != 0 {
+            do partida.ejercido(db, @@(partida,"$id"), @@(params,"#ejercicio"), @@(params,"#periodo"), @@(params,"#ejercido"))
+        }
+
+        if start_transaction { do dbr.commit(db) }
+
+        return @true
+
+        exception
+        {
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+            
+            code = last_error_code()
+            error = last_error()
+
+            do rise_error(code,error)
+        }
+    }
 }
