@@ -107,6 +107,17 @@ model "presupuestos operativos"
 		}
 	}
 
+	entity "gop_mov": "TableModel"
+	{
+		@"ref_partida" ref:"gop_partida" required
+		@"periodo" int required // 1...12 -(Enero...Dic), 13-Reserva
+		@"comprometido" decimal(18,4)
+		@"ejercido" decimal(18,4)
+		@"dte" ref:"sys_app_item_type" required
+		@"dte_id" int required
+		@"usuario" string(50)
+	}
+
 	entity "gop_usuario_uo" : "TableModel"
 	{
 		@"ref_rh_unidad_org" ref: "rh_unidad_org" required
@@ -144,5 +155,11 @@ model "presupuestos operativos"
         @"_blank" bool
         @"appid" ref : "sys_app_catalog"
         @"cat" ref :"sys_app_category"
+    }
+
+	entity "sys_app_item_type"
+    {
+        @"id" string(32) key
+        @"title" string(255) required
     }
 }
