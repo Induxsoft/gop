@@ -6,6 +6,7 @@ module "Controller configs"
 	#include "functions.dkh"
 	#include "serialize.dkh"
 	#include "dbr.dkh"
+	#include "config.dk"
 	#include "crudl/crudl.dk"
 
 	@base_path = "pregop"
@@ -15,6 +16,7 @@ module "Controller configs"
 
 	do crudl.routes.pattern("/_program/")
 	do crudl.routes.entity("/editor/","editor")
+	do crudl.routes.entity("/gestion/","gestion")
 	
 	@dbmvc_path="crudl/"
 	

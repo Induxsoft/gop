@@ -1,0 +1,202 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    #include "functions.dkh"
+	#include "serialize.dkh"
+	#include "webcl.dkh"
+	//#include "website.dkl"
+    #include "config.dk"
+    #include "../config.dk"
+	#include "lib.dk"
+    #include "uielements.v12.dkl"
+
+    do @context.begin(@crud_context)
+
+    current_year = get_current_year()
+
+    ref resumen=@("&./resumen")
+    ref presupuestos=@("&./presupuestos")
+    @text_button_detalle="Detalle"
+
+    print_partida::&partida
+    {
+        panual=@@(partida,"#reserva")+@@(partida,"#p01")+@@(partida,"#p02")+@@(partida,"#p03")+@@(partida,"#p04")+@@(partida,"#p05")+@@(partida,"#p06")+@@(partida,"#p07")+@@(partida,"#p08")+@@(partida,"#p09")+@@(partida,"#p10")+@@(partida,"#p11")+@@(partida,"#p12")
+        comanual=@@(partida,"#rc")+@@(partida,"#c01")+@@(partida,"#c02")+@@(partida,"#c03")+@@(partida,"#c04")+@@(partida,"#c05")+@@(partida,"#c06")+@@(partida,"#c07")+@@(partida,"#c08")+@@(partida,"#c09")+@@(partida,"#c10")+@@(partida,"#c11")+@@(partida,"#c12")
+        ejeanual=@@(partida,"#re")+@@(partida,"#e01")+@@(partida,"#e02")+@@(partida,"#e03")+@@(partida,"#e04")+@@(partida,"#e05")+@@(partida,"#e06")+@@(partida,"#e07")+@@(partida,"#e08")+@@(partida,"#e09")+@@(partida,"#e10")+@@(partida,"#e11")+@@(partida,"#e12")
+        
+        disponible=panual - comanual - ejeanual
+
+        disponiblerc=@@(partida,'#reserva')-@@(partida,'#rc')-@@(partida,'#re')
+        #$
+        tr
+        {
+            td{"#<@@(partida,'$partida')>"}
+
+            //anual
+            td{"#<format(panual,@FORMAT_DET_PRES)>"}
+            td{"#<format(comanual,@FORMAT_DET_PRES)>"}
+            td{"#<format(ejeanual,@FORMAT_DET_PRES)>"}
+            td{"#<format(disponible,@FORMAT_DET_PRES)>"}
+            td
+            {
+                button(class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+            }
+
+            //reserva
+            td{"#<format(@@(partida,'#reserva'),@FORMAT_DET_PRES)>"}
+            td{"#<format(@@(partida,'#rc'),@FORMAT_DET_PRES)>"}
+            td{"#<format(@@(partida,'#re'),@FORMAT_DET_PRES)>"}
+            td{"#<format(disponiblerc,@FORMAT_DET_PRES)>"}
+            td
+            {
+                button(class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+            }
+            #!
+            for j = 0; j < 12
+            {
+                pkey="p"+format(j,"00")
+                p=@@(partida,"#"+pkey)
+                ckey="c"+format(j,"00")
+                c=@@(partida,"#"+ckey)
+                ekey="e"+format(j,"00")
+                e=@@(partida,"#"+ekey)
+
+                disponible=p-c- e
+                #$
+                td{"#<format(p,@FORMAT_DET_PRES)>"}
+                td{"#<format(c,@FORMAT_DET_PRES)>"}
+                td{"#<format(e,@FORMAT_DET_PRES)>"}
+                td{"#<format(disponible,@FORMAT_DET_PRES)>"}
+                td
+                {
+                    button(class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                }
+            }
+        }
+        #!
+    }
+    #$ div
+	{
+        #$ link(rel="stylesheet" href="#<@CSS_MAIN>"){""}
+		link(rel="stylesheet" href="#<@CSS_EDITOR>"){""}
+        #!
+        do uie.printMainBar(@null,"Detalle presupuesto",@false,@EDITOR)
+        #$
+        // Información del presupuesto
+        div(class="py-2 px-3 d-flex gap-2 flex-wrap" id="presupuesto_container" style="opacity: 1;") 
+        {
+            div(class="presupuesto-box-info")
+            {
+               small(class="fw-5"){"Título"}
+               p(class="m-0"){"#<@@(resumen,'$titulo')>"}
+            }
+            div(class="presupuesto-box-info")
+            {
+                small(class="fw-5"){"Estado"}
+                p(class="m-0"){"#<@@(resumen,'$status_text')>"}
+            }
+            div(class="presupuesto-box-info")
+            {
+                small(class="fw-5"){"Divisa"}
+                p(class="m-0"){"#<@@(resumen,'$divisa_text')>"}
+            }
+
+            div(class="presupuesto-box-info")
+            {
+                small(class="fw-5"){"Autorizado"}
+                p(class="m-0"){"#<format(@@(resumen,'#monto_autorizado'),@FORMAT_DET_PRES)>"}
+            }
+            div(class="presupuesto-box-info")
+            {
+                small(class="fw-5"){"Planeado"}
+                p(class="m-0"){"#<format(@@(resumen,'#monto_planeado'),@FORMAT_DET_PRES)>"}
+            }
+            div(class="presupuesto-box-info")
+            {
+                small(class="fw-5"){"Comprometido"}
+                p(class="m-0"){"#<format(@@(resumen,'#monto_comprometido'),@FORMAT_DET_PRES)>"}
+            }
+            div(class="presupuesto-box-info")
+            {
+                small(class="fw-5"){"Ejercido"}
+                p(class="m-0"){"#<format(@@(resumen,'#monto_ejercido'),@FORMAT_DET_PRES)>"}
+            }
+            div(class="presupuesto-box-info")
+            {
+                small(class="fw-5"){"Notas"}
+                p(class="m-0"){"#<@@(resumen,'$notas')>"}
+            }
+        }
+
+        div(class="ms-2 me-2" style="overflow:auto;whidth:100%")
+        {
+            table(class="table border-1")
+            {
+                thead
+                {
+                    tr
+                    {
+                        th(rowspan="2" class="text-center"){"Partida"}
+                        th(colspan="5" class="text-center"){"Anual"}
+                        th(colspan="5" class="text-center"){"Reserva"}
+                        th(colspan="5" class="text-center"){"Enero"}
+                        th(colspan="5" class="text-center"){"Febrero"}
+                        th(colspan="5" class="text-center"){"Marzo"}
+                        th(colspan="5" class="text-center"){"Abril"}
+                        th(colspan="5" class="text-center"){"Mayo"}
+                        th(colspan="5" class="text-center"){"Junio"}
+                        th(colspan="5" class="text-center"){"Julio"}
+                        th(colspan="5" class="text-center"){"Agosto"}
+                        th(colspan="5" class="text-center"){"Septiembre"}
+                        th(colspan="5" class="text-center"){"Octubre"}
+                        th(colspan="5" class="text-center"){"Noviembre"}
+                        th(colspan="5" class="text-center"){"Diciembre"}
+                    }
+                    tr
+                    {
+                        #!
+                        for i = 0; i < 14
+                        {
+                            #$
+                            th{"Presupuestado"}
+                            th{"Comprometido"}
+                            th{"Ejercido"}
+                            th{"Disponible"}
+                            th{""}
+                        }
+                    }
+                }
+
+                tbody
+                {$""
+                    #!
+                    
+                    for i = 0; i < @count(presupuestos)
+                    {
+                        ref partida=@item(presupuestos,i)
+                        do print_partida(partida)
+                    }
+                    #$
+                }
+            }
+            style
+            {
+                $'
+                tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}
+                '
+            }
+
+        }
+        script(src="#<@JS_MAIN>"){$""}
+		script(src="#<@JS_PRESUPUESTOS>"){$""}
+		script(src="#<@JS_EDITOR>"){$""}
+        
+        script{$'
+			editor.services = #<to.json(@URL_SERVICES)>;
+			editor.currenty = #<current_year>;
+			editor.view_detail_preg="#<@VIEW_DETAIL_PREG>";
+
+		'}
+    }
+}

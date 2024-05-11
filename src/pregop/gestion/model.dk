@@ -1,0 +1,43 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    include @MODEL_EDITOR
+
+    inferirPartida::&partida
+    {
+        new p{@"padre":@@(partida,"#padre")}
+
+        ref lpartida=@@(partida,"&lpartida")
+        if isnull(lpartida){ref lpartida=list}
+    }
+    inferirPartidas::&partidas
+    {
+        for i = 0; i < @count(partidas)
+        {
+            ref partida=@item(partidas,i)
+            
+        }
+    }
+    list::&db,&params
+    {
+        using params
+        {
+            @"presupuesto":@@(params,"#parent")
+            @"_entity_id":@@(params,"#parent")
+        }
+        new entity
+        {
+            @"resumen*":gop.obtenerPresupuesto(db,params)
+            @"presupuestos*":dbr.list(db,"select *,(SELECT COUNT(*)
+        FROM gop_partida pg 
+       WHERE ifnull(pg.padre,0)>0
+       and ifnull(pg.padre,0)=p.sys_pk)counthijos from gop_partida p where ref_presupuesto=@_entity_id ",params)
+        }
+        // ref partidas=dbr.list(db,"select * from gop_partida where ref_presupuesto=@_entity_id and ifnull(padre,0)>0",params)
+        
+        return entity
+    }
+    
+    point @list to list
+}

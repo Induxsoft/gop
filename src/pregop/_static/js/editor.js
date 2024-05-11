@@ -385,6 +385,7 @@ var editor =
                 this.presupuesto = success;
                 this.printPresupuesto(this.presupuesto);
                 this.getPartidas(this.presupuesto.sys_pk);
+
                 main.clearValues('mdl_ap_controls'); 
                 main.closeModal('modal_presupuesto');
             },
@@ -431,9 +432,13 @@ var editor =
 
         if (presupuesto)
         {
+            var btn_seguimiento_presupuesto=document.getElementById("btn_seguimiento_presupuesto");
+            if(btn_seguimiento_presupuesto && editor.view_detail_preg)btn_seguimiento_presupuesto.setAttribute("href",editor.view_detail_preg.replace("{id}",presupuesto.sys_pk));
+
             this.fieldsPresupuesto.forEach(field => {
                 let title = field.caption;
                 let value = (presupuesto[field.id]??0);
+                
                 if (field.format) value = '$'+this.tablePartidas._format(Number(value), 2, true);
 
                 template += `

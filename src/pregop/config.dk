@@ -9,6 +9,7 @@ program
     @JS_PRESUPUESTOS = "/$/pregop/js/presupuestos.js"
     @JS_EDITOR = "/$/pregop/js/editor.js"
     
+    @FORMAT_DET_PRES="$ #,#.00"
 
     // _PACKAGE
     @URL_BUSCAR_UNIDAD = "/!/pregop/editor/?_view=rh_unidad_org&s=@search"
@@ -23,4 +24,6 @@ program
     }
 
     @EDITOR = "/!/pregop/editor/"
+    @VIEW_DETAIL_PREG="/!/pregop/gestion/?parent={id}"
+    @MODEL_EDITOR="pregop/editor/model.dk"
 }

@@ -181,6 +181,11 @@ program
 										small{$"Descartar"}
 									}
 								}
+								div(class="d-flex")
+								{
+									span(class="flex-grow-1"){""}
+									a(href="#" id="btn_seguimiento_presupuesto" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"Seguimiento"}
+								}
 							}
 							// Tabla de partidas
 							div(id="partidas_container")
@@ -264,6 +269,7 @@ program
 			editor.services = #<to.json(@URL_SERVICES)>;
 			editor.unidades = #<to.json(unidades)>;
 			editor.currenty = #<current_year>;
+			editor.view_detail_preg="#<@VIEW_DETAIL_PREG>";
 		'}
 	}
 }
