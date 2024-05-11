@@ -110,12 +110,14 @@ model "presupuestos operativos"
 	entity "gop_mov": "TableModel"
 	{
 		@"ref_partida" ref:"gop_partida" required
+		@"referencia" string(60)
 		@"periodo" int required // 1...12 -(Enero...Dic), 13-Reserva
 		@"comprometido" decimal(18,4)
 		@"ejercido" decimal(18,4)
 		@"dte" ref:"sys_app_item_type" required
 		@"dte_id" int required
 		@"usuario" string(50)
+		@"notas" memo
 	}
 
 	entity "gop_usuario_uo" : "TableModel"

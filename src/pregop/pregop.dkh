@@ -201,6 +201,7 @@ module ":pregop"
     * new params
     {
         @"ipartida": // (int|string) Identificador de la partida [sys_pk,sys_guid,id].
+        @"referencia": // Referencia del elemento que realiza la afectación.
         @"ejercicio": // (int) Ejercicio (yyyy) del presupuesto de la partida.
         @"periodo": // (int) Mes (MM) sobre el que se hara la afectación.
         @"comprometido": // (decimal) Monto (+\-) de la afectación.
@@ -208,6 +209,7 @@ module ":pregop"
         @"det": // (string) Código DET (Data Element Type) del elemento que realiza la afectación.
         @"det_id": // (int) Clave primaria del elemento que realiza la afectación.
         @"usuario": // (string) UserId del usuario logueado que realiza la afectación.
+        @"notas":
     }
     * ```
     */
@@ -236,12 +238,14 @@ module ":pregop"
         new gop_mov
         {
             @"ref_partida": @@(partida,"#sys_pk")
+            @"referencia": trim(@@(params,"$referencia"))
             @"periodo": @@(params,"#periodo")
             @"comprometido": @@(params,"#comprometido")
             @"ejercido": @@(params,"#ejercido")
             @"dte": @@(params,"$det")
             @"dte_id": @@(params,"#det_id")
             @"usuario": @@(params,"$usuario")
+            @"notas": trim(@@(params,"$notas"))
         }
 
         do dbr.insert(db,"gop_mov",gop_mov)
