@@ -29,10 +29,7 @@ module ""
         new entity
         {
             @"resumen*":gop.obtenerPresupuesto(db,params)
-            @"presupuestos*":dbr.list(db,"select *,(SELECT COUNT(*)
-        FROM gop_partida pg 
-       WHERE ifnull(pg.padre,0)>0
-       and ifnull(pg.padre,0)=p.sys_pk)counthijos from gop_partida p where ref_presupuesto=@_entity_id ",params)
+            @"presupuestos*":dbr.list(db,"select * from gop_partida where ref_presupuesto=@_entity_id and ifnull(padre,0)=0 order by sys_pk ",params)
         }
         // ref partidas=dbr.list(db,"select * from gop_partida where ref_presupuesto=@_entity_id and ifnull(padre,0)>0",params)
         

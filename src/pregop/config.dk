@@ -24,6 +24,7 @@ program
     }
 
     @EDITOR = "/!/pregop/editor/"
+    @GESTION="/!/pregop/gestion/"
     @VIEW_DETAIL_PREG="/!/pregop/gestion/?parent={id}"
     @MODEL_EDITOR="pregop/editor/model.dk"
 }

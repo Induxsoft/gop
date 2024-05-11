@@ -1,0 +1,26 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    #include "functions.dkh"
+	#include "serialize.dkh"
+	#include "webcl.dkh"
+	//#include "website.dkl"
+    #include "config.dk"
+    #include "../config.dk"
+	#include "lib.dk"
+    #include "uielements.v12.dkl"
+    #include "dbr.dkh"
+
+    do @context.begin(@crud_context)
+
+    url_exit=replace(@VIEW_DETAIL_PREG,"{id}",@("parameters/_entity_id"))
+    #$ div
+	{
+        #$ link(rel="stylesheet" href="#<@CSS_MAIN>"){""}
+		link(rel="stylesheet" href="#<@CSS_EDITOR>"){""}
+        #!
+        do uie.printMainBar(@null,"Detalle partida",@false,url_exit)
+        #$
+    }
+}

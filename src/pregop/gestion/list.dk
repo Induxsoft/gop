@@ -10,15 +10,26 @@ module ""
     #include "../config.dk"
 	#include "lib.dk"
     #include "uielements.v12.dkl"
+    #include "dbr.dkh"
 
     do @context.begin(@crud_context)
 
-    current_year = get_current_year()
 
     ref resumen=@("&./resumen")
     ref presupuestos=@("&./presupuestos")
     @text_button_detalle="Detalle"
 
+    @indentacion=0
+
+    spaces::n
+    {
+        s=""
+        for i=0;i<n
+        {
+            s=s+"&nbsp;&nbsp;&nbsp;"
+        }
+        return s
+    }
     print_partida::&partida
     {
         panual=@@(partida,"#reserva")+@@(partida,"#p01")+@@(partida,"#p02")+@@(partida,"#p03")+@@(partida,"#p04")+@@(partida,"#p05")+@@(partida,"#p06")+@@(partida,"#p07")+@@(partida,"#p08")+@@(partida,"#p09")+@@(partida,"#p10")+@@(partida,"#p11")+@@(partida,"#p12")
@@ -26,34 +37,37 @@ module ""
         ejeanual=@@(partida,"#re")+@@(partida,"#e01")+@@(partida,"#e02")+@@(partida,"#e03")+@@(partida,"#e04")+@@(partida,"#e05")+@@(partida,"#e06")+@@(partida,"#e07")+@@(partida,"#e08")+@@(partida,"#e09")+@@(partida,"#e10")+@@(partida,"#e11")+@@(partida,"#e12")
         
         disponible=panual - comanual - ejeanual
-
         disponiblerc=@@(partida,'#reserva')-@@(partida,'#rc')-@@(partida,'#re')
+        
+        url=@GESTION +@("$parameters/parent")+"/?partida="+ @@(partida,"$sys_pk")
+
+        url=url +"&ejercicio=@ejer"
         #$
         tr
         {
-            td{"#<@@(partida,'$partida')>"}
+            td(style="padding-left:#<@indentacion+1>rem;"){$"#<@@(partida,'$partida')>"}
 
             //anual
-            td{"#<format(panual,@FORMAT_DET_PRES)>"}
-            td{"#<format(comanual,@FORMAT_DET_PRES)>"}
-            td{"#<format(ejeanual,@FORMAT_DET_PRES)>"}
-            td{"#<format(disponible,@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(panual,@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(comanual,@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(ejeanual,@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(disponible,@FORMAT_DET_PRES)>"}
             td
             {
-                button(class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                a(href="#<replace(url,'@ejer','0')>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
             }
 
             //reserva
-            td{"#<format(@@(partida,'#reserva'),@FORMAT_DET_PRES)>"}
-            td{"#<format(@@(partida,'#rc'),@FORMAT_DET_PRES)>"}
-            td{"#<format(@@(partida,'#re'),@FORMAT_DET_PRES)>"}
-            td{"#<format(disponiblerc,@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(@@(partida,'#reserva'),@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(@@(partida,'#rc'),@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(@@(partida,'#re'),@FORMAT_DET_PRES)>"}
+            td(class="text-end"){"#<format(disponiblerc,@FORMAT_DET_PRES)>"}
             td
             {
-                button(class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                a(href="#<replace(url,'@ejer','13')>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
             }
             #!
-            for j = 0; j < 12
+            for j = 1; j < 13
             {
                 pkey="p"+format(j,"00")
                 p=@@(partida,"#"+pkey)
@@ -64,17 +78,26 @@ module ""
 
                 disponible=p-c- e
                 #$
-                td{"#<format(p,@FORMAT_DET_PRES)>"}
-                td{"#<format(c,@FORMAT_DET_PRES)>"}
-                td{"#<format(e,@FORMAT_DET_PRES)>"}
-                td{"#<format(disponible,@FORMAT_DET_PRES)>"}
+                td(class="text-end"){"#<format(p,@FORMAT_DET_PRES)>"}
+                td(class="text-end"){"#<format(c,@FORMAT_DET_PRES)>"}
+                td(class="text-end"){"#<format(e,@FORMAT_DET_PRES)>"}
+                td(class="text-end"){"#<format(disponible,@FORMAT_DET_PRES)>"}
                 td
                 {
-                    button(class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                    a(href="#<replace(url,'@ejer',str(j))>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
                 }
             }
         }
         #!
+
+        ref hijos=dbr.list(@("&database"),"select * from gop_partida where padre=@sys_pk order by sys_pk",partida)
+        @indentacion=@indentacion + 1
+        for i = 0; i < @count(hijos)
+        {
+            ref hijo=@item(hijos,i)
+            do print_partida(hijo)
+        }
+        @indentacion=@indentacion - 1
     }
     #$ div
 	{
