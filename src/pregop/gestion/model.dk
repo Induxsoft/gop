@@ -4,6 +4,14 @@ module ""
 {
     include @MODEL_EDITOR
 
+    @list_query_table_partidas="SELECT DATE_FORMAT(gm.sys_dtcreated,'%Y-%m-%d')fecha,sy.title concepto,gm.referencia,
+    IFNULL(gm.comprometido,0)comprometido,IFNULL(gm.ejercido,0)ejercido,MONTH(gm.sys_dtcreated) mes,YEAR(gm.sys_dtcreated)ano
+    FROM gop_mov gm
+    INNER JOIN sys_app_item_type sy ON gm.dte=sy.id
+    INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
+    INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
+    WHERE p.sys_pk=@presupuesto AND gm.ref_partida=@partida AND MONTH(gm.sys_dtcreated)=@month"
+
     inferirPartida::&partida
     {
         new p{@"padre":@@(partida,"#padre")}
@@ -31,10 +39,27 @@ module ""
             @"resumen*":gop.obtenerPresupuesto(db,params)
             @"presupuestos*":dbr.list(db,"select * from gop_partida where ref_presupuesto=@_entity_id and ifnull(padre,0)=0 order by sys_pk ",params)
         }
-        // ref partidas=dbr.list(db,"select * from gop_partida where ref_presupuesto=@_entity_id and ifnull(padre,0)>0",params)
         
         return entity
     }
+    read::&db,&params
+    {
+        new entity{}
+        if @@(params,"#partida")>0
+        {
+            // using params{@"presupuesto":@@(params,"#_entity_id")}
+
+            // using entity
+            // {
+            //     @"presupesto*":dbr.rec(db,"select * from  gop_presupuesto where sys_pk=@_entity_id",params)
+            //     @"mov_partidas*":dbr.list(db,ftext(@list_query_table_partidas),params)
+            // }
+            return entity
+        }
+        ref entity= entity.read(db,params)
+        return entity
+    }
     
+    point @read to read
     point @list to list
 }

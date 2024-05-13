@@ -41,9 +41,13 @@ module ""
         
         url=@GESTION +@("$parameters/parent")+"/?partida="+ @@(partida,"$sys_pk")
 
-        url=url +"&ejercicio=@ejer"
+        url=url +"&month=@ejer"
+        ref hijos=dbr.list(@("&database"),"select * from gop_partida where padre=@sys_pk order by sys_pk",partida)
+        tiene_hijos=@count(hijos)
+
+        style=ifstr(tiene_hijos,'background-color:#e1eff7;','')
         #$
-        tr
+        tr(style="#<style>")
         {
             td(style="padding-left:#<@indentacion+1>rem;"){$"#<@@(partida,'$partida')>"}
 
@@ -54,7 +58,13 @@ module ""
             td(class="text-end"){"#<format(disponible,@FORMAT_DET_PRES)>"}
             td
             {
-                a(href="#<replace(url,'@ejer','0')>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                $""
+                #!
+                if not(tiene_hijos)
+                {
+                    ##
+                    a(href="#<replace(url,'@ejer','0')>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                }
             }
 
             //reserva
@@ -64,7 +74,13 @@ module ""
             td(class="text-end"){"#<format(disponiblerc,@FORMAT_DET_PRES)>"}
             td
             {
-                a(href="#<replace(url,'@ejer','13')>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                $""
+                #!
+                if not(tiene_hijos)
+                {
+                    ##
+                    a(href="#<replace(url,'@ejer','13')>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                }
             }
             #!
             for j = 1; j < 13
@@ -84,13 +100,19 @@ module ""
                 td(class="text-end"){"#<format(disponible,@FORMAT_DET_PRES)>"}
                 td
                 {
-                    a(href="#<replace(url,'@ejer',str(j))>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                    $""
+                    #!
+                    if not(tiene_hijos)
+                    {
+                        ##
+                        a(href="#<replace(url,'@ejer',str(j))>" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"#<@text_button_detalle>"}
+                    }
                 }
             }
         }
         #!
 
-        ref hijos=dbr.list(@("&database"),"select * from gop_partida where padre=@sys_pk order by sys_pk",partida)
+        
         @indentacion=@indentacion + 1
         for i = 0; i < @count(hijos)
         {

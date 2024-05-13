@@ -5,8 +5,6 @@ module ""
     #include "functions.dkh"
 	#include "serialize.dkh"
 	#include "webcl.dkh"
-	//#include "website.dkl"
-    #include "config.dk"
     #include "../config.dk"
 	#include "lib.dk"
     #include "uielements.v12.dkl"
@@ -15,12 +13,226 @@ module ""
     do @context.begin(@crud_context)
 
     url_exit=replace(@VIEW_DETAIL_PREG,"{id}",@("parameters/_entity_id"))
-    #$ div
+
+    @query_movs="SELECT DATE_FORMAT(gm.sys_dtcreated,'%Y-%m-%d')fecha,sy.title concepto,gm.referencia,
+    IFNULL(gm.comprometido,0)comprometido,IFNULL(gm.ejercido,0)ejercido,MONTH(gm.sys_dtcreated) mes,
+    YEAR(gm.sys_dtcreated)ano,sy.view_url url,gm.dte_id
+    FROM gop_mov gm
+    INNER JOIN sys_app_item_type sy ON gm.dte=sy.id
+    INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
+    INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
+    WHERE p.sys_pk=@_entity_id AND gm.ref_partida=@partida AND ifnull(gm.periodo,0)=@month"
+
+    @query_partida="select * from gop_partida gp where gp.sys_pk=@partida"
+    
+    ref db=@("&database")
+    ref params=@("&parameters")
+    ref presupuesto=dbr.rec(db,"select * from gop_presupuesto where sys_pk=@_entity_id",params)
+    ref partida=dbr.rec(db,ftext(@query_partida),params)
+    params<"ano">:@@(presupuesto,"#ejercicio")
+    params_month=@@(params,'#month')
+
+    @num_reserva = 13
+    @num_anual = 0
+
+    @presupuesto = 0
+    @comprometido = 0
+    @ejercido = 0
+    @disponible = 0
+
+    print_Total::&db,&params,&partida
+    {
+        month=@@(params,'#month')
+
+        ref movs_partida=dbr.list(db,ftext(@query_movs),params)
+        
+        if month==@num_reserva
+        {
+            p=@@(partida,'#reserva')
+            c=@@(partida,'#rc')
+            e=@@(partida,'#re')
+        }
+        else 
+        {
+            pkey="p"+format(month,"00")
+            p=@@(partida,"#"+pkey)
+            ckey="c"+format(month,"00")
+            c=@@(partida,"#"+ckey)
+            ekey="e"+format(month,"00")
+            e=@@(partida,"#"+ekey)
+        }
+        disponible=p - c - e
+
+        @presupuesto=@presupuesto + p
+        @comprometido= @comprometido + c
+        @ejercido=@ejercido + e
+        @disponible=@disponible + disponible
+    }
+    #!
+    print_Table::&db,&params,&partida
+    {
+        month=@@(params,'#month')
+        mes=getMes(month) + " "+@@(params,'$ano')
+
+        ref movs_partida=dbr.list(db,ftext(@query_movs),params)
+        
+        if month==@num_reserva
+        {
+            p=@@(partida,'#reserva')
+            c=@@(partida,'#rc')
+            e=@@(partida,'#re')
+
+            mes="Reserva" + " "+@@(params,'$ano')
+        }
+        else 
+        {
+            pkey="p"+format(month,"00")
+            p=@@(partida,"#"+pkey)
+            ckey="c"+format(month,"00")
+            c=@@(partida,"#"+ckey)
+            ekey="e"+format(month,"00")
+            e=@@(partida,"#"+ekey)
+        }
+
+        disponible=p - c - e
+        #$
+        div(class="table-responsive")
+        {
+            table(class="table")
+            {
+                thead(style="background-color: #e1eff7;")
+                {
+                    tr
+                    {
+                        th(style="width:20% !important;" class=""){"#<mes>"}
+                        th(style="width:20% !important;" class=""){"Presupuesto:"}
+                        th(style="width:20% !important;" class=""){"#<format(p,@FORMAT_DET_PRES)>"}
+                        th(style="width:20% !important;" class=""){"Disponible:"}
+                        th(style="width:20% !important;" class=""){"#<format(disponible,@FORMAT_DET_PRES)>"}
+                    }
+                    tr
+                    {
+                        th(style="width:20% !important;" class="text-start"){"Fecha"}
+                        th(style="width:20% !important;" class="text-start"){"Concepto"}
+                        th(style="width:20% !important;" class="text-start"){"Referencia"}
+                        th(style="width:20% !important;" class="text-start"){"Comprometido"}
+                        th(style="width:20% !important;" class="text-start"){"Ejercido"}
+                    }
+                }
+                tbody
+                {$""
+                    #!
+                    total_ejercido=0
+                    total_comprometido=0
+                    for i = 0; i < @count(movs_partida)
+                    {
+                        ref mp=@item(movs_partida,i)
+                        total_ejercido=total_ejercido + @@(mp,'#ejercido')
+                        total_comprometido=total_comprometido + @@(mp,'#comprometido')
+                        url=@@(mp,"$url")
+                        #$
+                        tr
+                        {
+                            td(style="word-break: break-word;"){"#<@@(mp,'$fecha')>"}
+                            td(style="word-break: break-word;")
+                            {
+                                $"#<@@(mp,'$concepto')>"
+                                #! if trim(url)!="" && @@(mp,"#dte_id")>0
+                                {
+                                    url=replace(url,"@_entity_id",@@(mp,"$dte_id"))
+                                    #$
+                                    a(href="#<url>" class="d-flex"){"Ver mas"}
+                                }
+                            }
+                            td(style="word-break: break-word;"){"#<@@(mp,'$referencia')>"}
+                            td(class="text-end" style="word-break: break-word;"){"#<format(@@(mp,'#comprometido'),@FORMAT_DET_PRES)>"}
+                            td(class="text-end" style="word-break: break-word;"){"#<format(@@(mp,'#ejercido'),@FORMAT_DET_PRES)>"}
+                        }
+                        
+                    } 
+                    tr
+                    {
+                        td{""}
+                        td{""}
+                        td{""}
+                        td(colspan="" class="text-end" style="word-break: break-word;"){"#<format(total_comprometido,@FORMAT_DET_PRES)>"}
+                        td(colspan="" class="text-end" style="word-break: break-word;"){"#<format(total_ejercido,@FORMAT_DET_PRES)>"}
+                    }
+                    #$
+                }
+            }
+        }
+        
+    }
+    #!
+    if params_month==@num_anual
+    {
+        for i = 1; i < 14
+        {
+            params<"month">:i
+            do print_Total(db,params,partida)
+        }
+    }
+    else 
+    {
+        do print_Total(db,params,partida)
+    }
+
+    #$ div(class="container-fluid")
 	{
         #$ link(rel="stylesheet" href="#<@CSS_MAIN>"){""}
 		link(rel="stylesheet" href="#<@CSS_EDITOR>"){""}
         #!
         do uie.printMainBar(@null,"Detalle partida",@false,url_exit)
+
         #$
+        h4{"#<@@(partida,'$partida')>"}
+        h5{"#<@@(presupuesto,'$titulo')>"}
+
+        table(class="table")
+        {
+            tbody
+            {
+                tr
+                {
+                    td{"Presupuesto"}
+                    td{"#<format(@presupuesto,@FORMAT_DET_PRES)>"}
+                    td{"Comprometido"}
+                    td{"#<format(@comprometido,@FORMAT_DET_PRES)>"}
+                    td{"Ejercido"}
+                    td{"#<format(@ejercido,@FORMAT_DET_PRES)>"}
+                    td{"Disponible"}
+                    td{"#<format(@disponible,@FORMAT_DET_PRES)>"}
+                }
+            }
+        }
+        div(class="card_table_partida1 mt-4 #<ifstr(@@(params,'#month')!=@num_anual,'d-block','')> d-block-sm")
+        {
+            #!
+            if params_month==@num_anual
+            {
+                for i = 1; i < 14
+                {
+                    params<"month">:i
+                    #$ div(class="card_table_partida_container ")
+                    {
+                        #!
+                        do print_Table(db,params,partida)
+                    }
+                    
+                }
+            }
+            else 
+            {
+                #$ div(class="card_table_partida_container d-block")
+                {
+                    #! do print_Table(db,params,partida)    
+                }
+                
+            }
+            
+        }
+        
+        
     }
 }

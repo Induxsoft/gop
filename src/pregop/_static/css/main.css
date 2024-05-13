@@ -27,3 +27,41 @@
 .modal-content{ background-color: var(--color-light-gray) !important; }
 
 .no-shadow{box-shadow: none !important;}
+
+.card_table_partida
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 30%);
+    grid-auto-rows: auto;
+    gap: 2rem;
+}
+.card_table_partida_container
+{
+    transition: .3s;
+    outline: 1px solid transparent;
+    /* height: 5rem; */
+    /* display: flex; */
+    /* justify-items: center; */
+    /* align-items: center; */
+    outline: 1px solid #DDD;
+}
+.card_table_partida_container:hover
+{
+    box-shadow: 3px 3px 9px 0 #DDD;
+    outline: 1px solid #DDD;
+}
+.card_table_partida_caption
+{
+    word-break: break-word;
+    text-align: center;
+}
+
+@media screen and (max-width: 750px) 
+{
+	.m-card{grid-template-columns: repeat(auto-fill, minmax(80vw, 1fr)) !important;}
+	.lbl-d-block{display: block !important;}
+	.control-sm-w-100{width: 100% !important;}
+	.control-sm-h-100{height: 100% !important;}
+	.reset-styles-md{all: revert !important;}
+	.d-block-sm{display: block !important;}
+}
