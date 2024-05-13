@@ -224,15 +224,29 @@ module ":pregop"
             start_transaction = @true
         }
 
-        sql_partida = "
-        SELECT
-            pda.sys_pk,
-            pda.id
-        FROM gop_partida AS pda
-            INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
-        WHERE (pda.sys_pk = @ipartida OR pda.sys_guid = @ipartida)
-            OR (pda.id = @ipartida AND ppto.ejercicio = @ejercicio)
-        "
+        if @@(params,"#sys_pk")>0
+        {
+            sql_partida = "
+            SELECT
+                pda.sys_pk,
+                pda.id
+            FROM gop_partida AS pda
+                INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
+            WHERE pda.sys_pk = @sys_pk
+            "
+        }
+        else
+        {
+            sql_partida = "
+            SELECT
+                pda.sys_pk,
+                pda.id
+            FROM gop_partida AS pda
+                INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
+            WHERE (pda.sys_pk = @ipartida OR pda.sys_guid = @ipartida)
+                OR (pda.id = @ipartida AND ppto.ejercicio = @ejercicio)
+            "
+        }
         ref partida = dbr.rec(db,sql_partida,params)
 
         new gop_mov
