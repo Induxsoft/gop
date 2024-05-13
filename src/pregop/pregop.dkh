@@ -26,19 +26,15 @@ module ":pregop"
     /**
     * Obtener los importes del presupuesto de la partida indicada.
     *
-    * string partidaId | Identificador de la partida.
+    * int pda_sys_pk | Clave primaria de la partida.
     * int ejercicio | Ejercicio (año) del presupuesto.
     * int periodo | Mes del que se obtendran los importes.
     */
-    partida.importes::&db, partidaId, ejercicio, periodo
+    partida.importes::&db, pda_sys_pk, ejercicio, periodo
     {
         namespace "pregop"
 
-        new params
-        {
-            @"id": str(partidaId)
-            @"ejercicio": parse.num(ejercicio)
-        }
+        new params { @"pda_sys_pk": parse.num(pda_sys_pk) }
 
         p_field=partida.datafield("p",periodo)
         c_field=partida.datafield("c",periodo)
@@ -51,9 +47,7 @@ module ":pregop"
             IFNULL(pda.#<e_field>,0) AS ejercido,
             (IFNULL(pda.#<p_field>,0) - IFNULL(pda.#<c_field>,0) - IFNULL(pda.#<e_field>,0)) AS disponible
         FROM gop_partida AS pda
-            INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
-        WHERE pda.id = @id
-            AND ppto.ejercicio = @ejercicio
+        WHERE pda.sys_pk = @pda_sys_pk
         "
 
         return dbr.rec(db, ftext(sql_obtener_importes), params)
@@ -62,39 +56,41 @@ module ":pregop"
     /**
     * Afectar los monto presupuestado, comprometido o ejercido de la partida en el periodo indicado.
     *
-    * string partidaId | Identificador de la partida.
-    * int ejercicio | Ejercicio (año) del presupuesto.
+    * int pda_sys_pk | Clave primaria de la partida.
     * int periodo | Mes sobre el que se hara la afectación.
-    * registro montos | Montos de la afectación:
-    *       presupuestado
-    *       comprometido
-    *       ejercido
-    *   Para incrementarlos usar un número positivo, para disminuirlos un número negativo
+    * registro montos | Referencia a un registro que contiene los montos de la afectación.
+    *
+    * ```dkl
+    * new montos
+    {
+        @"presupuestado": 0.00 //(decimal) Monto (+\-) de la afectación.
+        @"comprometido": 0.00 //(decimal) Monto (+\-) de la afectación.
+        @"ejercido": 0.00 //(decimal) Monto (+\-) de la afectación.
+    }
+    * ``` 
+    * Para incrementarlos usar un número positivo, para disminuirlos un número negativo
     */
-    partida.afectar::&db, partidaId, ejercicio, periodo, &montos
+    partida.afectar::&db, pda_sys_pk periodo, &montos
     {
         namespace "pregop"
 
         sql_partida = "
         SELECT
             pda.sys_pk,
-            ifnull(pda.padre,0) padre,
-            ifnull((select id from gop_partida where sys_pk=pda.padre limit 1),'') padre_id,
-            ifnull((select ifnull(count(sys_pk),0) from gop_partida where padre=pda.sys_pk),0) hijos,
+            IFNULL(pda.padre,0) padre,
+            IFNULL((select ifnull(count(sys_pk),0) from gop_partida where padre=pda.sys_pk),0) hijos,
             pda.ref_presupuesto
         FROM gop_partida AS pda
             INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
-        WHERE pda.id = @id
-            AND ppto.ejercicio = @ejercicio AND ppto.status=3
+        WHERE pda.sys_pk = @pda_sys_pk AND ppto.status = 3
         "
 
         new params
         {
-            @"id": str(partidaId)
-            @"ejercicio": parse.num(ejercicio)
+            @"pda_sys_pk": parse.num(pda_sys_pk)
         }
 
-        new data { }
+        new data {}
 
         if @@(montos,"#presupuestado")!=0 { data<partida.datafield("p",periodo)+"*">:dbr.sql("ifnull("+partida.datafield("p",periodo)+",0)+"+@@(montos,"$presupuestado"))}
         if @@(montos,"#comprometido")!=0 { data<partida.datafield("c",periodo)+"*">:dbr.sql("ifnull("+partida.datafield("c",periodo)+",0)+"+@@(montos,"$comprometido"))}
@@ -102,7 +98,7 @@ module ":pregop"
 
         ref partida=dbr.rec(db,sql_partida,params)
 
-        if isnull(partida) { do rise_error(0,ftext("Partida no encontrada #<partidaId> #<ejercicio> Periodo:#<periodo>, compruebe Id de la partida y estado del presupuesto")) }
+        if isnull(partida) { do rise_error(0,ftext("Partida no encontrada, compruebe Id de la partida y estado del presupuesto")) }
 
         if not(dbr.in_transaction(db)) { do rise_error(0,"No se pueden afectar partidas fuera del contexto de una transacción de bases de datos")}
         
@@ -112,9 +108,8 @@ module ":pregop"
 
         using params
         {
-            @"sys_pk":@@(partida,"sys_pk")
-            @"padre":@@(partida,"padre")
-            @"padre_id":@@(partida,"padre_id")
+            @"sys_pk": @@(partida,"#sys_pk")
+            @"padre": @@(partida,"#padre")
             @"presupuesto": @@(partida,"#ref_presupuesto")
         }
 
@@ -123,20 +118,23 @@ module ":pregop"
         if @@(params,"#padre")!=0 
         { 
             montos<"_level">:@@(montos,"#_level")+1
-            do partida.afectar(db, @@(params,"$padre_id"), ejercicio, periodo, montos)
+            do partida.afectar(db, @@(params,"#padre"), periodo, montos)
         }
 
         if im_first
         {
-            sql_totales="select 
+            sql_totales = "
+            select 
                 ifnull(sum(ifnull(reserva,0)+ifnull(p01,0)+ifnull(p02,0)+ifnull(p03,0)+ifnull(p04,0)+ifnull(p05,0)+ifnull(p06,0)+ifnull(p07,0)+ifnull(p08,0)+ifnull(p09,0)+ifnull(p10,0)+ifnull(p11,0)+ifnull(p12,0)),0)
                     planeado,
                 ifnull(sum(ifnull(rc,0)+ifnull(c01,0)+ifnull(c02,0)+ifnull(c03,0)+ifnull(c04,0)+ifnull(c05,0)+ifnull(c06,0)+ifnull(c07,0)+ifnull(c08,0)+ifnull(c09,0)+ifnull(c10,0)+ifnull(c11,0)+ifnull(c12,0)),0)
                     comprometido,
                 ifnull(sum(ifnull(re,0)+ifnull(e01,0)+ifnull(e02,0)+ifnull(e03,0)+ifnull(e04,0)+ifnull(e05,0)+ifnull(e06,0)+ifnull(e07,0)+ifnull(e08,0)+ifnull(e09,0)+ifnull(e10,0)+ifnull(e11,0)+ifnull(e12,0)),0)
                     ejercido
-                from gop_partida 
-                    where padre is null and ref_presupuesto=@presupuesto;"
+            from gop_partida
+            where padre is null
+                and ref_presupuesto=@presupuesto;
+            "
             
             ref d_totales=dbr.rec(db,sql_totales,params)
             d_totales<"presupuesto">:@@(params,"presupuesto")
@@ -151,43 +149,60 @@ module ":pregop"
     }
 
     /**
-    * Afectar el monto comprometido de la partida en el periodo indicado.
+    * Afectar el monto presupuestado de la partida en el periodo indicado.
     *
-    * string partidaId | Identificador de la partida.
-    * int ejercicio | Ejercicio (año) del presupuesto.
+    * int pda_sys_pk | Clave primaria de la partida.
     * int periodo | Mes sobre el que se hara la afectación.
     * decimal monto | Monto de la afectación.
     */
-    partida.comprometido::&db, partidaId, ejercicio, periodo, monto
+    partida.presupuestado::&db, pda_sys_pk, periodo, monto
     {
         namespace "pregop"
 
         new montos
         {
-            @"comprometido":monto
+            @"presupuestado": monto
         }
 
-        return partida.afectar(db, partidaId, ejercicio, periodo, montos)
+        return partida.afectar(db, pda_sys_pk, periodo, montos)
+    }
+
+    /**
+    * Afectar el monto comprometido de la partida en el periodo indicado.
+    *
+    * int pda_sys_pk | Clave primaria de la partida.
+    * int periodo | Mes sobre el que se hara la afectación.
+    * decimal monto | Monto de la afectación.
+    */
+    partida.comprometido::&db, pda_sys_pk, periodo, monto
+    {
+        namespace "pregop"
+
+        new montos
+        {
+            @"comprometido": monto
+        }
+
+        return partida.afectar(db, pda_sys_pk, periodo, montos)
     }
 
     /**
     * Afectar el monto ejercido de la partida en el periodo indicado.
     *
-    * string partidaId | Identificador de la partida.
-    * int ejercicio | Ejercicio (año) del presupuesto.
+    * int pda_sys_pk | Clave primaria de la partida.
     * int periodo | Mes sobre el que se hara la afectación.
     * decimal monto | Monto de la afectacioón.
     */
-    partida.ejercido::&db, partidaId, ejercicio, periodo, monto
+    partida.ejercido::&db, pda_sys_pk, ejercicio, periodo, monto
     {
         namespace "pregop"
 
         new montos
         {
-            @"ejercido":monto
+            @"ejercido": monto
         }
 
-        return partida.afectar(db, partidaId, ejercicio, periodo, montos)
+        return partida.afectar(db, pda_sys_pk, periodo, montos)
     }
 
     /**
@@ -200,16 +215,19 @@ module ":pregop"
     * ```dkl
     * new params
     {
-        @"ipartida": // (int|string) Identificador de la partida [sys_pk,sys_guid,id].
-        @"referencia": // Referencia del elemento que realiza la afectación.
-        @"ejercicio": // (int) Ejercicio (yyyy) del presupuesto de la partida.
-        @"periodo": // (int) Mes (MM) sobre el que se hara la afectación.
-        @"comprometido": // (decimal) Monto (+\-) de la afectación.
-        @"ejercido": // (decimal) Monto (+\-) de la afectación.
-        @"det": // (string) Código DET (Data Element Type) del elemento que realiza la afectación.
-        @"det_id": // (int) Clave primaria del elemento que realiza la afectación.
-        @"usuario": // (string) UserId del usuario logueado que realiza la afectación.
-        @"notas":
+        @"sys_pk":          //(int) Clave primaria de la partida.
+        @"sys_guid":        //(string) GUID que puede usarse como clave primaria de la partida.
+        @"partida_id":      //(string) Identificador de la partida.
+        @"ejercicio":       //(int) Ejercicio (yyyy) del presupuesto de la partida *Solo si ha indicado `partida_id`.
+        @"unidad_org":      //(string) Código de la unidad organizacional *Solo si ha indicado `partida_id`.
+        @"referencia":      //(string) Referencia del elemento que realiza la afectación.
+        @"periodo":         //(int) Mes (MM) sobre el que se hara la afectación.
+        @"comprometido":    //(decimal) Monto (+\-) de la afectación.
+        @"ejercido":        //(decimal) Monto (+\-) de la afectación.
+        @"det":             //(string) Código DET (Data Element Type) del elemento que realiza la afectación.
+        @"det_id":          //(int) Clave primaria del elemento que realiza la afectación.
+        @"usuario":         //(string) UserId del usuario logueado que realiza la afectación.
+        @"notas":           //(string) Descripción sobre el movimiento de afectación de presupuesto.
     }
     * ```
     */
@@ -224,34 +242,26 @@ module ":pregop"
             start_transaction = @true
         }
 
-        if @@(params,"#sys_pk")>0
+        joins = ""
+        conditions = "FALSE"
+
+        if @@(params,"#sys_pk") > 0 { conditions = "pda.sys_pk = @sys_pk" }
+        else if trim(@@(params,"$sys_guid")) != "" { conditions = "pda.sys_guid = @sys_guid" }
+        else if trim(@@(params,"$partida_id")) != ""
         {
-            sql_partida = "
-            SELECT
-                pda.sys_pk,
-                pda.id
-            FROM gop_partida AS pda
-                INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
-            WHERE pda.sys_pk = @sys_pk
+            joins = "
+            INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
+            INNER JOIN rh_unidad_org AS uorg ON ppto.ref_unidad = uorg.sys_pk
             "
+
+            conditions = "(pda.id = @partida_id AND ppto.ejercicio = @ejercicio AND uorg.codigo = @unidad_org)"
         }
-        else
-        {
-            sql_partida = "
-            SELECT
-                pda.sys_pk,
-                pda.id
-            FROM gop_partida AS pda
-                INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
-            WHERE (pda.sys_pk = @ipartida OR pda.sys_guid = @ipartida)
-                OR (pda.id = @ipartida AND ppto.ejercicio = @ejercicio)
-            "
-        }
-        ref partida = dbr.rec(db,sql_partida,params)
+
+        pda_sys_pk = dbr.num(db,ftext("SELECT pda.sys_pk FROM gop_partida AS pda #<joins> WHERE #<conditions>"),params)
 
         new gop_mov
         {
-            @"ref_partida": @@(partida,"#sys_pk")
+            @"ref_partida": pda_sys_pk
             @"referencia": trim(@@(params,"$referencia"))
             @"periodo": @@(params,"#periodo")
             @"comprometido": @@(params,"#comprometido")
@@ -262,13 +272,13 @@ module ":pregop"
             @"notas": trim(@@(params,"$notas"))
         }
 
-        do dbr.insert(db,"gop_mov",gop_mov)
+        do dbr.save(db,"gop_mov",gop_mov)
 
         if @@(params,"#comprometido") != 0 {
-            do partida.comprometido(db, @@(partida,"$id"), @@(params,"#ejercicio"), @@(params,"#periodo"), @@(params,"#comprometido"))
+            do partida.comprometido(db, pda_sys_pk, @@(params,"#periodo"), @@(params,"#comprometido"))
         }
         if @@(params,"#ejercido") != 0 {
-            do partida.ejercido(db, @@(partida,"$id"), @@(params,"#ejercicio"), @@(params,"#periodo"), @@(params,"#ejercido"))
+            do partida.ejercido(db, pda_sys_pk, @@(params,"#periodo"), @@(params,"#ejercido"))
         }
 
         if start_transaction { do dbr.commit(db) }
