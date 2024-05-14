@@ -27,10 +27,9 @@ module ":pregop"
     * Obtener los importes del presupuesto de la partida indicada.
     *
     * int pda_sys_pk | Clave primaria de la partida.
-    * int ejercicio | Ejercicio (año) del presupuesto.
     * int periodo | Mes del que se obtendran los importes.
     */
-    partida.importes::&db, pda_sys_pk, ejercicio, periodo
+    partida.importes::&db, pda_sys_pk, periodo
     {
         namespace "pregop"
 
@@ -193,7 +192,7 @@ module ":pregop"
     * int periodo | Mes sobre el que se hara la afectación.
     * decimal monto | Monto de la afectacioón.
     */
-    partida.ejercido::&db, pda_sys_pk, ejercicio, periodo, monto
+    partida.ejercido::&db, pda_sys_pk, periodo, monto
     {
         namespace "pregop"
 
