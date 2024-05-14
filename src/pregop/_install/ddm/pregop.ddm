@@ -132,6 +132,20 @@ model "presupuestos operativos"
 		}
 	}
 
+	entity "gop_src": "TableModel" // Tipo de movimiento al presupuesto
+	{
+		@"dte" ref:"sys_app_item_type" required
+		@"text" string(50) unique required
+		@"qry_pending": memo //Consulta para mostrar movimientos pendientes (sin ningún filtro)
+		@"qry_select": memo // Aceptar @filter_text para filtrar y seleccionar un movimiento
+		@"max_field" string(50) required // Este es el campo que se usa como máximo para afectar el presupuesto
+		@"ref_field" string(50) required // Campo a usar como referencia
+		@"key_show" string(50) required //Campo clave a mostrar
+		@"show_text" string(50) required // Campo de texto a mostrar
+		@"info_text" string(50) // Campo informativo
+	}
+
+
 	// Información de la aplicación
     entity "sys_app_catalog"
     {
