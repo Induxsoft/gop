@@ -8,11 +8,17 @@ program
     @JS_MAIN = "/$/pregop/js/main.js"
     @JS_PRESUPUESTOS = "/$/pregop/js/presupuestos.js"
     @JS_EDITOR = "/$/pregop/js/editor.js"
+    @JS_OPS = "/$/pregop/js/ops.js"
     
     @FORMAT_DET_PRES="$ #,#.00"
-
+    @OPS_OPER="/!/pregop/ops/"
+    @OPS_OPER_GOP="/!/pregop/ops/{id}/view.oper_gop/"
+    @OPS_EDIT="/!/pregop/ops/{id}/"
     // _PACKAGE
     @URL_BUSCAR_UNIDAD = "/!/pregop/editor/?_view=rh_unidad_org&s=@search"
+    
+    @URL_BUSCAR_UNIDAD_ORG = "/!/cmpreq/requisiciones/?_view=buscar-unidad-org&search=@search"
+	@URL_BUSCAR_PARTIDA_PRE = "/!/cmpreq/requisiciones/?_view=buscar-partida-pre&search=@search"
 
     new @URL_SERVICES
     {
@@ -28,6 +34,7 @@ program
     @VIEW_DETAIL_PREG="/!/pregop/gestion/?parent={id}"
     @MODEL_EDITOR="pregop/editor/model.dk"
 
+    @NUM_EJERCICIO = 10
     new @meses
     {
         @"1":"Enero"

@@ -1,0 +1,9 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    if @@(params,"$_view")!=""
+    {
+        @form_view="view.oper_gop.dk"
+    }
+}

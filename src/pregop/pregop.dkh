@@ -69,7 +69,7 @@ module ":pregop"
     * ``` 
     * Para incrementarlos usar un número positivo, para disminuirlos un número negativo
     */
-    partida.afectar::&db, pda_sys_pk periodo, &montos
+    partida.afectar::&db, pda_sys_pk,periodo, &montos
     {
         namespace "pregop"
 

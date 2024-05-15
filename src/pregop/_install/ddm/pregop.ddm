@@ -136,8 +136,8 @@ model "presupuestos operativos"
 	{
 		@"dte" ref:"sys_app_item_type" required
 		@"text" string(50) unique required
-		@"qry_pending": memo //Consulta para mostrar movimientos pendientes (sin ningún filtro)
-		@"qry_select": memo // Aceptar @filter_text para filtrar y seleccionar un movimiento
+		@"qry_pending" memo //Consulta para mostrar movimientos pendientes (sin ningún filtro)
+		@"qry_select" memo // Aceptar @filter_text para filtrar y seleccionar un movimiento
 		@"max_field" string(50) required // Este es el campo que se usa como máximo para afectar el presupuesto
 		@"ref_field" string(50) required // Campo a usar como referencia
 		@"key_show" string(50) required //Campo clave a mostrar

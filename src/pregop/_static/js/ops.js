@@ -1,0 +1,129 @@
+document.addEventListener("DOMContentLoaded",
+()=>
+{
+    ops.init();
+});
+
+var ops=
+{
+    init()
+    {
+        this.ref_gasto=document.getElementById("ref_gasto");
+        this.form_search=document.getElementById("form_search");
+        this.table_movs=document.getElementById("table_movs");
+        this.txt_gop_mov=document.getElementById("txt_gop_mov");
+        this.txt_ref_gasto=document.getElementById("txt_ref_gasto");
+        this.dte=document.getElementById("dte");
+        this.ejercicio=document.getElementById("ejercicio");
+
+        this.ik_unidad_org=document.getElementById("ik_unidad_org");
+        this.ik_partida_pre=document.getElementById("ik_partida_pre");
+
+        this.count_search=0;
+        if(this.ref_gasto)this.ref_gasto.addEventListener("change",
+        ()=>
+        {
+            if(ops.count_search>0)if(this.form_search)this.form_search.submit();
+            
+            ops.count_search++;
+        });
+        
+        setTimeout(() => {
+            if(this.table_movs && this.ik_unidad_org && this.ik_partida_pre)
+            {
+                this.table_movs.setInputKey("uorg",this.ik_unidad_org);
+                this.table_movs.setInputKey("partida",this.ik_partida_pre);
+                
+                this.ik_unidad_org.addEventListener('change', (data)=>
+                {
+                    ops.setFieldsTable(data);
+                });
+                this.ik_partida_pre.addEventListener("change",
+                ()=>
+                {
+                    ops.setFieldsTable(data);
+                });
+            } 
+        }, 300);
+        
+    },
+    setFieldsTable(data)
+    {
+        console.log(data);
+    },
+    AddRow()
+    {
+        if(this.table_movs)this.table_movs.AddRow();
+    },
+    form_gop_mov()
+    {
+        if(this.table_movs.DataArray.length<1)
+        {
+            alert("Debe llenar la tabla");
+            return false;
+        }
+
+        var ref_gasto=this.ref_gasto?.getValue()??null;
+        if(!ref_gasto || Object.keys(ref_gasto).length<1)
+        {
+            alert("Debe seleccionar el Ref. del gasto");
+            return false;
+        }
+        ref_gasto["dte"]=this.dte.value;
+        ref_gasto["ejercicio"]=this.ejercicio.value;
+
+        if(this.txt_gop_mov)this.txt_gop_mov.value=JSON.stringify(this.table_movs.DataArray);
+        if(this.txt_ref_gasto)this.txt_ref_gasto.value=JSON.stringify(ref_gasto);
+        
+        return true;
+    },
+    DelRow()
+    {
+        if(!this.table_movs)return;
+        var index=this.table_movs.CurrentRowIndex();
+
+        if(index<0)
+        {
+            alert("Debe seleccionar un elemento de la tabla");
+            return;
+        }
+
+        var row=this.table_movs.DataArray[index];
+        if((row.sys_pk??0)>0)
+        {
+            alert("No se puede eliminar la fila seleccionada");
+            return;
+        }
+        this.table_movs.DeleteCurrentRow();
+    },
+    descartar(id,params="")
+    {
+        var r=confirm("¿Esta seguro de descartar?");
+        if(!r)return;
+        
+        var data={id:id}
+        var url=ops.url_descartar.replace("{id}",id);
+        if(params.trim()!="")url=url.includes("?")?"&":"?"+params;
+
+        this.service(url,data,"descartar");
+    },
+    service(url,data,act,callback_success=null,callback_failed=null)
+    {
+        if(!data)data={};
+
+        data["act"]=act;
+
+        InduxsoftCrudlModel.InvokeService(url,data,
+	    function(data)
+	    {
+            if(callback_success)callback_success(data);
+            else window.location.reload();
+	    	
+	    },
+	    function(error)
+	    {
+	    	if(callback_failed)callback_failed(error);
+            else alert(error.message??error);
+	    },"POST",false);
+    }
+}

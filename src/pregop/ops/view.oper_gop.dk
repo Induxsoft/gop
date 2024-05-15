@@ -1,0 +1,192 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "../config.dk"
+    #include "uielements.v12.dkl"
+    #include "dbr.dkh"
+    #include "../_lib/icons.dk"
+
+    do @context.begin(@crud_context)
+
+    ref selects=@("&./selects")
+    ref first_select=@item(selects,0)
+
+     ref data=@("&./data")
+    ref ref_de_gasto=@item(data,0)
+    if isnull(ref_de_gasto) && @("$./txt_ref_gasto")!=""{ref ref_de_gasto=from.json(@("$./txt_ref_gasto"))}
+    
+    ref dte_selected=@("&./dte_selected")
+
+    ref gop_movs=@("&./gop_movs")
+    if isnull(gop_movs) && @("$./txt_gop_mov")!=""{ref gop_movs=from.json(@("$./txt_gop_mov"))}
+
+
+    new select
+    {
+        @"datatable*":selects
+        @"id":"dte"
+        member "attributes"
+        {
+            @"class":"induxsoft-form-select"
+            @"name":"dte"
+        }
+        @"value_field":"dte"
+        @"text_field":"text"
+        @"selected":@("$parameters/dte")
+    }
+    ref ejercicios=@("&./ejercicios")
+    new ejercicio
+    {
+        @"datatable*":ejercicios
+        @"id":"ejercicio"
+        member "attributes"
+        {
+            @"class":"induxsoft-form-select"
+            @"name":"ejercicio"
+        }
+        @"value_field":"clave"
+        @"text_field":"valor"
+        @"selected":@("$./ejercicio")
+    }
+    // ref ref_de_gasto=@("&./ref_de_gasto")
+
+   
+    buttons::
+    {
+        #$
+        button(class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print"){"Confirmar"}
+        #!
+    }
+
+    point buttons to buttons
+
+    source=replace(@OPS_OPER_GOP,"{id}",@("$parameters/_entity_id"))+"?dte="+@("$parameters/dte")+"&rgasto=1&ref_gasto=@search"
+    #$
+    div(class="container-fluid")
+    {
+        script(src="#<@JS_OPS>"){""}
+
+        form(method="POST" action="." onsubmit="return ops.form_gop_mov()")
+        {
+            input(type="hidden" class="induxsoft-form-control" id="txt_gop_mov" name="txt_gop_mov")
+            input(type="hidden" class="induxsoft-form-control" id="act" name="act" value="gop_mov" )
+            input(type="hidden" class="induxsoft-form-control" id="txt_ref_gasto" name="txt_ref_gasto")
+            #!
+            do uie.printMainBar(buttons,"Movimientos",@false,@OPS_OPER)
+            #$ 
+        }
+        
+        #! if @("$error/message")!=""{#$ div(class="alert alert-danger"){"#<@('$error/message')>"}}
+
+        form(method="GET" action="." id="form_search")
+        {
+            div(class="row")
+            {
+                div(class="col-md-6")
+                {
+                    label{"Tipo de movimiento:"}
+                    #!
+                    do uie.dbSelect(select)
+                    #$
+                }
+                div(class="col-md-6")
+                {
+                    label{"Ref. del gasto:"}
+                    "input-key"(name="ref_gasto" 
+                    id="ref_gasto" 
+                    "data-key"="#<@@(dte_selected,'$ref_field')>" 
+                    "data-search"="#<@@(dte_selected,'$key_show')>" 
+                    "data-text"="#<@@(dte_selected,'$show_text')>" 
+                    "data-value"="#<to.json(ref_de_gasto)>" 
+                    "data-source"="#<source>" 
+                    columns="#<@@(dte_selected,'$key_show')>,#<@@(dte_selected,'$show_text')>" 
+                    colcaptions="#<toupper(@@(dte_selected,'$key_show'))>,#<toupper(@@(dte_selected,'$show_text'))>"
+                    "control-styles"=""
+                    ){$""}
+                }
+            }
+        }
+        hr{}
+
+        div(class="d-flex")
+        {
+            h5{"#<@@(ref_de_gasto,'$'+@@(dte_selected,'$info_text'))>"}
+            span(class="flex-grow-1"){""}
+            h5(class="me-4"){"Valor del acto: "}
+            h5(class="text-end"){"#<format(@@(ref_de_gasto,'#'+@@(dte_selected,'$max_field')),@FORMAT_DET_PRES)>"}
+        }
+        #$ div(class="d-flex")
+        {
+            span(class="flex-grow-1"){""}
+            h5(class="me-2"){"Ejercicio:"}
+            div(class="col-md-1")
+            {
+                #!
+                do uie.dbSelect(ejercicio)
+                #$
+            }
+            
+            button(class="btn border-secondary induxsoft-corners btn-main-action no-print mb-2 btn-sm m-1" onclick="ops.DelRow();"){$"#<@ICON_REMOVE_ROW>"}
+            button(class="btn border-secondary induxsoft-corners btn-main-action no-print mb-2 btn-sm m-1" onclick="ops.AddRow();"){$"#<@ICON_ADD_ROW>"}
+        }
+        "edit-table"(class="table" id="table_movs" data="#<to.json(gop_movs)>" "cards-responsive"="true")
+        {
+            "edit-thead"
+            {
+                "edit-tr"(style="width:100%")
+                {
+                    "edit-th"(type="NoEditable" field="uorg" style="width:8%;height:0!important" button="true"){"U. organizacional"}
+                    "edit-th"(type="NoEditable" field="partida" style="width:8%;height:0!important" button="true"){"Partida"}
+                    "edit-th"(type="NoEditable"  field="fperiodo" style="width:8%;height:0 !important"){"Periodo"}
+                    "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" field="comprometido" style="width:8%;height:0!important"){"Comprometido"}
+                    "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" field="ejercido" style="width:8%;height:0 !important"){"Ejercido"}
+                }
+            }
+        }
+
+        "input-key"(name="unidad_org" 
+        id="ik_unidad_org" 
+        "data-key"="sys_pk"
+         "data-search"="codigo"
+          "data-text"="descripcion" 
+            "data-value"="{}" "data-source"="#<@URL_BUSCAR_UNIDAD_ORG>" columns="codigo,descripcion" colcaptions="Código,Descripción"
+            "hidden-input"="false"
+            "control-styles"="
+                    #container{ display: none !important; }
+                #input_search_container, #input_description_container,
+                #button_search_container, #button_clear_container {
+                    height: calc(1.5em + .5rem + 2px) !important;
+                    padding: .25rem .5rem !important;
+                    font-size: .875rem !important;
+                }
+            "
+        ){$""}
+
+        "input-key"(name="partida" 
+        id="ik_partida_pre" "data-key"="sys_pk" "data-search"="id" "data-text"="partida"
+        "data-value"="{}" "data-source"="#<@URL_BUSCAR_PARTIDA_PRE>" columns="id,partida" colcaptions="Id,Partida"
+        "hidden-input"="false"
+        "control-styles"="
+        #container{ display: none !important; }
+            #input_search_container, #input_description_container,
+            #button_search_container, #button_clear_container {
+                height: calc(1.5em + .5rem + 2px) !important;
+                padding: .25rem .5rem !important;
+                font-size: .875rem !important;
+            }
+        "
+        ){$""}
+
+        script
+        {
+            $'
+            var dte=document.getElementById("dte");
+            var form=document.getElementById("form_search");
+            if(dte)dte.addEventListener("change",(e)=>{if(form)form.submit();});
+            '
+        }
+    }
+}

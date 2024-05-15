@@ -1,0 +1,155 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "config.dk"
+    #include "../config.dk"
+	#include "lib.dk"
+    #include "uielements.v12.dkl"
+    #include "dbr.dkh"
+
+    do @context.begin(@crud_context)
+
+    ref selects=@("&./selects")
+    ref first_select=@item(selects,0)
+
+    new select
+    {
+        @"datatable*":selects
+        @"id":"dte"
+        member "attributes"
+        {
+            @"class":"induxsoft-form-select"
+            @"name":"dte"
+        }
+        @"value_field":"dte"
+        @"text_field":"text"
+        @"selected":@("$parameters/dte")
+    }
+
+    ref data=@("&./data")
+
+    ref @first_row=@item(data,0)
+    @dte=@@(first_select,"$dte")
+    if @("$parameters/dte")!=""{@dte=@("$parameters/dte")}
+
+    print_table::
+    {
+        ref columns=list.create_from_fields(ifnull(@first_row,record.create()))
+        ref dte_selected=@("&./dte_selected")
+        ref data=@("&./data")
+
+        #$
+        table(class="table")
+        {
+            thead
+            {
+                tr
+                {
+                    th{""}
+                    #!
+                    for i = 0; i <@count(columns)
+                    {
+                        column=list.str(columns,i)
+                        if not(contains(column,"sys")) || (column==@@(dte_selected,"$max_field") || column==@@(dte_selected,"$ref_field")|| column==@@(dte_selected,"$key_show")|| column==@@(dte_selected,"$show_text")|| column==@@(dte_selected,"$info_text") )
+                        {
+                            #$ th{"#<column>"}
+                        }
+                        
+                    }
+                    
+                }
+            }
+            tbody
+            {$""
+                #!
+                for j = 0; j <@count(data)
+                {
+                    ref dt=@item(data,j)
+                    url=replace(@OPS_OPER_GOP,"{id}",@@(dt,"$sys_pk")) + "?dte="+@dte
+                   #$ tr
+                   {
+                        td
+                        {
+                            a(class="btn btn-sm induxsoft-corners" href="#<url>")
+                            {
+                                $'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                                <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/>
+                                </svg>'
+                            }
+                            button(class="btn btn-sm induxsoft-corners" onclick="ops.descartar(#<@@(dt,'#sys_pk')>)")
+                            {
+                                $'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+                                    </svg>'
+                            }
+                        }
+                        #! 
+                        for i = 0; i <@count(columns)
+                        {
+                            column=list.str(columns,i)
+                            if not(contains(column,"sys")) || (column==@@(dte_selected,"$max_field") || column==@@(dte_selected,"$ref_field") || column==@@(dte_selected,"$key_show")|| column==@@(dte_selected,"$show_text")|| column==@@(dte_selected,"$info_text") )
+                            {
+                                field=@@(dt,'$'+column)
+                                class=""
+
+                                if parse.num(field)>0
+                                {
+                                    class="text-end"
+                                    field=format(parse.num(field),@FORMAT_DET_PRES)
+                                }
+                                #$ 
+                                td(class="#<class>"){"#<field>"}
+                            }
+                            
+                        }
+                   } 
+                }
+                
+
+            }
+        }
+        
+        #!
+    }
+    #$
+    div(class="container-fluid")
+    {
+        script(src="#<@JS_OPS>"){""}
+        #!
+        do uie.printMainBar(@null,"Operaciones",@false,"")
+
+        #$ 
+        form(method="GET" action="." id="form_search")
+        {
+            div(class="row")
+            {
+                div(class="col-md-6")
+                {
+                    #!
+                    do uie.dbSelect(select)
+                    #$
+                }
+            }
+        }
+        
+        #!
+        do print_table()
+        #$
+
+        script
+        {
+            $'
+            var dte=document.getElementById("dte");
+            var form=document.getElementById("form_search");
+            if(dte)dte.addEventListener("change",(e)=>{if(form)form.submit();});
+
+            ops.url_descartar="#<@OPS_EDIT>";
+            '
+        }
+    }
+    
+    
+}
