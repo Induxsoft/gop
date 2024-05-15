@@ -16,10 +16,11 @@ module ""
 
      ref data=@("&./data")
     ref ref_de_gasto=@item(data,0)
+    
     if isnull(ref_de_gasto) && @("$./txt_ref_gasto")!=""{ref ref_de_gasto=from.json(@("$./txt_ref_gasto"))}
     
     ref dte_selected=@("&./dte_selected")
-
+    // do rise_error(0,to.json)
     ref gop_movs=@("&./gop_movs")
     if isnull(gop_movs) && @("$./txt_gop_mov")!=""{ref gop_movs=from.json(@("$./txt_gop_mov"))}
 
@@ -49,9 +50,8 @@ module ""
         }
         @"value_field":"clave"
         @"text_field":"valor"
-        @"selected":@("$./ejercicio")
+        @"selected":@("$parameters/ejercicio")
     }
-    // ref ref_de_gasto=@("&./ref_de_gasto")
 
    
     buttons::
@@ -64,6 +64,8 @@ module ""
     point buttons to buttons
 
     source=replace(@OPS_OPER_GOP,"{id}",@("$parameters/_entity_id"))+"?dte="+@("$parameters/dte")+"&rgasto=1&ref_gasto=@search"
+
+    @meses<"13">:"Extraordinario"
     #$
     div(class="container-fluid")
     {
@@ -74,6 +76,7 @@ module ""
             input(type="hidden" class="induxsoft-form-control" id="txt_gop_mov" name="txt_gop_mov")
             input(type="hidden" class="induxsoft-form-control" id="act" name="act" value="gop_mov" )
             input(type="hidden" class="induxsoft-form-control" id="txt_ref_gasto" name="txt_ref_gasto")
+            
             #!
             do uie.printMainBar(buttons,"Movimientos",@false,@OPS_OPER)
             #$ 
@@ -83,6 +86,7 @@ module ""
 
         form(method="GET" action="." id="form_search")
         {
+            input(type="hidden" class="induxsoft-form-control" id="txt_ejercicio" name="txt_ejercicio" value="#<@('$parameters/ejercicio')>")
             div(class="row")
             {
                 div(class="col-md-6")
@@ -138,11 +142,11 @@ module ""
             {
                 "edit-tr"(style="width:100%")
                 {
-                    "edit-th"(type="NoEditable" field="uorg" style="width:8%;height:0!important" button="true"){"U. organizacional"}
-                    "edit-th"(type="NoEditable" field="partida" style="width:8%;height:0!important" button="true"){"Partida"}
-                    "edit-th"(type="NoEditable"  field="fperiodo" style="width:8%;height:0 !important"){"Periodo"}
-                    "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" field="comprometido" style="width:8%;height:0!important"){"Comprometido"}
-                    "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" field="ejercido" style="width:8%;height:0 !important"){"Ejercido"}
+                    "edit-th"(type="Text" field="uorg" style="width:8%;height:0!important" button="true"){"U. organizacional"}
+                    "edit-th"(type="Text" field="partida" style="width:8%;height:0!important" button="true"){"Partida"}
+                    "edit-th"(type="Select" options="#<to.json(@meses)>" keyfield="periodo" "default"="Seleccione un periodo" field="fperiodo" style="width:8%;height:0 !important"){"Periodo"}
+                    "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" "default"="0" field="comprometido" style="width:8%;height:0!important"){"Comprometido"}
+                    "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" "default"="0" field="ejercido" style="width:8%;height:0 !important"){"Ejercido"}
                 }
             }
         }
@@ -167,7 +171,7 @@ module ""
 
         "input-key"(name="partida" 
         id="ik_partida_pre" "data-key"="sys_pk" "data-search"="id" "data-text"="partida"
-        "data-value"="{}" "data-source"="#<@URL_BUSCAR_PARTIDA_PRE>" columns="id,partida" colcaptions="Id,Partida"
+        "data-value"="{}" "data-source"="." columns="id,partida" colcaptions="Id,Partida"
         "hidden-input"="false"
         "control-styles"="
         #container{ display: none !important; }
@@ -186,6 +190,7 @@ module ""
             var dte=document.getElementById("dte");
             var form=document.getElementById("form_search");
             if(dte)dte.addEventListener("change",(e)=>{if(form)form.submit();});
+            ops.url_partida="#<@URL_BUSCAR_PARTIDA_PRE>";
             '
         }
     }

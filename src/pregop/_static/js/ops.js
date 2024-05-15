@@ -15,6 +15,7 @@ var ops=
         this.txt_ref_gasto=document.getElementById("txt_ref_gasto");
         this.dte=document.getElementById("dte");
         this.ejercicio=document.getElementById("ejercicio");
+        this.txt_ejercicio=document.getElementById("txt_ejercicio");
 
         this.ik_unidad_org=document.getElementById("ik_unidad_org");
         this.ik_partida_pre=document.getElementById("ik_partida_pre");
@@ -28,32 +29,118 @@ var ops=
             ops.count_search++;
         });
         
+        if(this.ejercicio)this.ejercicio.addEventListener("change",
+        ()=>
+        {
+            ops.changeDataSource(ops.getCurrentRow());
+            if(this.txt_ejercicio && this.form_search)
+            {
+                this.txt_ejercicio.value=this.ejercicio.value;
+                this.form_search.submit()
+            }
+        });
+
         setTimeout(() => {
             if(this.table_movs && this.ik_unidad_org && this.ik_partida_pre)
             {
                 this.table_movs.setInputKey("uorg",this.ik_unidad_org);
                 this.table_movs.setInputKey("partida",this.ik_partida_pre);
-                
-                this.ik_unidad_org.addEventListener('change', (data)=>
+
+                this.ik_unidad_org.addEventListener('change', ()=>
                 {
+                    var data=ops.ik_unidad_org.getValue();
                     ops.setFieldsTable(data);
                 });
                 this.ik_partida_pre.addEventListener("change",
                 ()=>
                 {
-                    ops.setFieldsTable(data);
+                    var data=ops.ik_partida_pre.getValue();
+                    ops.setFieldsTable(data,true);
                 });
+
+                ops.setTableEvents();
             } 
         }, 300);
         
     },
-    setFieldsTable(data)
+    setTableEvents()
     {
-        console.log(data);
+       
+        if (this.table_movs)
+        {
+            const T = this.table_movs;
+            const E = T.EdiTable.Const.Events;
+            T.Events[E.FieldUpdated] = (e) => { }
+            T.Events[E.BeforeUpdateCell] = (e) => { }
+            T.Events[E.EnterCell] = (e) => 
+            { 
+                ops.changeDataSource(ops.getCurrentRow());
+            }
+        }
+    },
+    changeDataSource(row)
+    {
+        var url_partida=ops.url_partida + "&iunidad="+(row.pkuorg??"")+"&ejercicio="+this.ejercicio.value;
+        if(this.ik_partida_pre)this.ik_partida_pre.setAttribute("data-source",url_partida);
+    },
+    getCurrentRow()
+    {
+        var index=this.table_movs.CurrentRowIndex();
+        var row=this.table_movs.DataArray[index];
+        
+        if(!row)row={};
+        
+        row["_index_"]=index;
+
+        return row;
+    },
+    setFieldsTable(data,ispartida=false)
+    {
+        var row=ops.getCurrentRow();
+        if(ispartida)
+        {
+            row["partida"]=data.partida??"";
+            row["pkpartida"]=data.sys_pk??0;
+        }
+        else
+        {
+            row["uorg"]=data.descripcion??"";
+            row["pkuorg"]=data.sys_pk??0;
+
+            this.changeDataSource(row);
+        }
+        
+        this.table_movs.DataArray[row["_index_"]]=row;
+        this.table_movs._printRows();
     },
     AddRow()
     {
         if(this.table_movs)this.table_movs.AddRow();
+    },
+    validateTable()
+    {
+        for (let i = 0; i < this.table_movs.DataArray.length; i++) 
+        {
+            var itm = this.table_movs.DataArray[i];
+            var row=i+1;
+            if((itm.pkuorg??0)<1 || ((itm.pkpartida??0)<1)) 
+            {
+                alert(`Debe completar la fila ${row}`);
+                return false;
+            }
+            if((itm.periodo??0)<1) 
+            {
+                alert(`Fila ${row} le falta definir el periodo`);
+                return false;
+            }
+            if((itm.comprometido??0)<1 && (itm.ejercido??0)<1)
+            {
+                alert(`Fila ${row} le falta definir la cantidad comprometido o ejercido`);
+                return false;
+            }
+        }
+
+        return true;
     },
     form_gop_mov()
     {
@@ -62,6 +149,8 @@ var ops=
             alert("Debe llenar la tabla");
             return false;
         }
+
+        if(!ops.validateTable())return false;
 
         var ref_gasto=this.ref_gasto?.getValue()??null;
         if(!ref_gasto || Object.keys(ref_gasto).length<1)
@@ -89,7 +178,7 @@ var ops=
         }
 
         var row=this.table_movs.DataArray[index];
-        if((row.sys_pk??0)>0)
+        if((row?.sys_pk??0)>0)
         {
             alert("No se puede eliminar la fila seleccionada");
             return;
@@ -101,9 +190,10 @@ var ops=
         var r=confirm("¿Esta seguro de descartar?");
         if(!r)return;
         
-        var data={id:id}
+        var data={sys_pk:id}
         var url=ops.url_descartar.replace("{id}",id);
         if(params.trim()!="")url=url.includes("?")?"&":"?"+params;
+        url=url + "?dte="+this.dte.value;
 
         this.service(url,data,"descartar");
     },

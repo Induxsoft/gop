@@ -4,12 +4,13 @@ module ""
 {
     #include "pregop/pregop.dkh"
 
-    @list_query_gop_mov="SELECT gm.sys_pk,gp.sys_pk pkpartida,u.descripcion unidad, gp.partida,gm.periodo,gm.comprometido,gm.ejercido,gm.referencia,p.ejercicio,gm.dte,gm.dte_id
+    @list_query_gop_mov="SELECT gm.sys_pk,gp.sys_pk pkpartida,u.descripcion uorg, u.sys_pk pkuorg,
+    gp.partida,gm.periodo,gm.comprometido,gm.ejercido,gm.referencia,p.ejercicio,gm.dte,gm.dte_id
     FROM gop_mov gm
     INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
     INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
     INNER JOIN rh_unidad_org u ON p.ref_unidad=u.sys_pk
-    WHERE gm.dte=@dte AND gm.dte_id=@dte_id"
+    WHERE gm.dte=@dte AND gm.dte_id=@dte_id and p.ejercicio=@ejercicio"
 
     getEjercicio::&db
     {
@@ -86,7 +87,14 @@ module ""
         {
             case "descartar"
             {
-                // code...
+                new table
+                {
+                    @"presupuestado":0
+                    @"sys_pk":@@(data,"#sys_pk")
+                    @"sys_timestamp*":now()
+                }
+                do dbr.update(db,getTable(params),table,"sys_pk=@sys_pk",table)
+                return data
                 break
             }
             case "gop_mov"
@@ -103,19 +111,45 @@ module ""
                     for i = 0; i < @count(partidas)
                     {
                         ref partida=@item(partidas,i)
-                        using gop_mov
+
+                        if @@(partida,"#sys_pk")>0
                         {
-                            @"sys_pk":@@(partida,"#pkpartida")
-                            @"referencia":@@(ref_gasto,"$sys_guid")
-                            @"periodo":@@(partida,"#periodo")
-                            @"comprometido":@@(partida,"#comprometido")
-                            @"det":@@(ref_gasto,"$dte")
-                            @"det_id":@@(ref_gasto,"#sys_pk")
-                            @"usuario":@@(@http_context,"$session/user/uid")
-                            @"notas":@@(data,"$concepto")
-                            @"ejercicio":@@(ref_gasto,"$ejercicio")
+                            params<"pkmgop">:@@(partida,"#sys_pk")
+
+                            new mp
+                            {
+                                @"comprometido":@@(partida,"#comprometido")
+                                @"ejercido":@@(partida,"#ejercido")
+                            }
+                            do dbr.update(db,"gop_mov",mp,"sys_pk=@pkmgop",params)
                         }
-                        res=pregop.partida.movimiento(db,gop_mov)
+                        else 
+                        {
+                            using gop_mov
+                            {
+                                @"sys_pk":@@(partida,"#pkpartida")
+                                @"referencia":@@(ref_gasto,"$sys_guid")
+                                @"periodo":@@(partida,"#periodo")
+                                @"det":@@(ref_gasto,"$dte")
+                                @"det_id":@@(ref_gasto,"#sys_pk")
+                                @"usuario":@@(@http_context,"$session/user/uid")
+                                @"notas":@@(ref_gasto,"$concepto")
+                                @"ejercicio":@@(ref_gasto,"$ejercicio")
+                            }
+                            
+                            if @@(partida,"#comprometido")>0
+                            {
+                                gop_mov<"comprometido">:@@(partida,"#comprometido")
+                                res=pregop.partida.movimiento(db,gop_mov)
+                            }
+
+                            if @@(partida,"#ejercido")>0
+                            {
+                                do field.remove(gop_mov,"comprometido")
+                                gop_mov<"ejercido">:@@(partida,"#ejercido")
+                                res=pregop.partida.movimiento(db,gop_mov)
+                            }
+                        }
                     }
                     new table
                     {
@@ -124,7 +158,10 @@ module ""
                         @"sys_timestamp*":now()
                     }
                     do dbr.update(db,getTable(params),table,"sys_pk=@sys_pk",table)
+
                 do dbr.commit(db)
+
+                @url_redir=@OPS_OPER + "?dte="+@@(params,"$dte")
             }
             default
             {
@@ -140,9 +177,11 @@ module ""
 
         exception
         {
+            error=last_error()
             if dbr.in_transaction(db){do dbr.rollback(db)}
             do prepareView(db,params,data)
-            do rise_error(500,last_error())
+            do GenListQuery(params,@@(data,"&selects"),data)
+            do rise_error(500,error)
         }
     }
     
@@ -208,18 +247,19 @@ module ""
         table=getTable(params)
         
         ref data=dbr.rec(db,"select * from "+table+" where sys_pk=@_entity_id",params)
-        do PrepareParams(params,data)
-        if isnull(data)
-        {
-            if @@(params,"$ref_gasto")!=""{params<"filter_text">:@@(params,"$ref_gasto")}
-        }
         
-        // do rise_error(0,@@(params,"$filter_text"))
+        if @@(params,"$ref_gasto")!=""{params<"filter_text">:@@(params,"$ref_gasto")}
+        else{do PrepareParams(params,data)}
+
         ref entity= list(db,params)
         
         if @@(params,"#rgasto"){return @@(entity,"&data")}
         
         params<"dte_id">:@@(data,"#sys_pk")
+        
+        if @@(params,"$ejercicio")=="" && @@(params,"$txt_ejercicio")==""{params<"ejercicio">:date_str(now(),"yyyy")}
+        else if @@(params,"$txt_ejercicio")!=""{params<"ejercicio">:@@(params,"$txt_ejercicio")}
+        
 
         ref gop_movs=dbr.list(db,ftext(@list_query_gop_mov),params)
         do periodo(gop_movs)

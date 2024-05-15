@@ -1,0 +1,12 @@
+#include "dkli.dkh"
+#!
+module ""
+{
+    isnum::n
+    {
+        do eval(n)
+        return @true
+        exception{}
+        return @false
+    }
+}
