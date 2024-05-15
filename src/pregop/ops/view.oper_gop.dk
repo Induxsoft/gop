@@ -52,7 +52,7 @@ module ""
         @"text_field":"valor"
         @"selected":@("$parameters/ejercicio")
     }
-
+    if isnull(ref_de_gasto){ref ref_de_gasto=record.create()}
    
     buttons::
     {
