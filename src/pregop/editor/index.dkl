@@ -19,7 +19,9 @@ program
 
     #$ div
 	{
-		#! include "modals.dk"
+		#! 
+		#include "./modals.dk"
+		
 		#$ link(rel="stylesheet" href="#<@CSS_MAIN>")
 		link(rel="stylesheet" href="#<@CSS_EDITOR>")
 
