@@ -191,6 +191,56 @@ var editor =
                 if (control) control.classList.remove('hidde-control');
             });
         }
+        editor.showControlsBtn();
+    },
+    showControlsBtn()
+    {
+        if(editor.presupuesto)
+        {
+            var btn_aprobar=document.getElementById("btn_aprobar");
+            var btn_cerrar=document.getElementById("btn_cerrar");
+            
+            if(btn_aprobar)btn_aprobar.classList.add("hidde-control");
+            if(btn_cerrar)btn_cerrar.classList.add("hidde-control");
+            
+            switch(editor.presupuesto?.status??0)
+            {
+                case editor.status_por_aprobar:
+                    if(btn_aprobar)
+                    {
+                        btn_aprobar.classList.remove("hidde-control");
+                        btn_aprobar.setAttribute("onclick","editor.Action('','PUT',{act:'aprobar'})");
+                    }
+                    break;
+                case editor.status_aprobado:
+                    if(btn_cerrar)
+                    {
+                        btn_cerrar.classList.remove("hidde-control");
+                        btn_cerrar.setAttribute("onclick","editor.Action('','PUT',{act:'cerrar'})");
+                    }
+                    break;
+            }
+        }
+    },
+    Action(endpoint, method="PUT", values=null)
+    {
+        if(endpoint.trim()=="")
+        {
+             endpoint = editor.services['gop_presupuesto'];
+            endpoint = endpoint.replace('@presupuesto', this.presupuesto.sys_pk);
+        }
+        main.request(endpoint, method, values,
+            success => 
+            { 
+                this.presupuesto = success;
+                this.printPresupuesto(this.presupuesto);
+                this.getPartidas(this.presupuesto.sys_pk);
+                
+                editor.showControlsBtn();
+            },
+            failure => { alert('No se pudo completar el proceso.\n\n' + (failure.message??failure)); },
+            false
+        );
     },
     selectTabTable(btnTab)
     {
@@ -234,7 +284,7 @@ var editor =
                     main.clearValues('mdl_au_controls'); 
                     main.closeModal('modal_add_unidades');
                 },
-                failure => { alert('No fue posible agregar la unidad.\n\n' + failure); }, 
+                failure => { alert('No fue posible agregar la unidad.\n\n' + (failure.message??failure)); }, 
                 false
             );
         }
@@ -251,7 +301,7 @@ var editor =
                 main.clearValues('mdl_au_controls'); 
                 main.closeModal('modal_add_unidades');
             },
-            failure => { alert('No fue posible actualizar la unidad.\n\n' + failure); },
+            failure => { alert('No fue posible actualizar la unidad.\n\n' + (failure.message??failure)); },
             false
         );
     },
@@ -266,7 +316,7 @@ var editor =
                 this.tableUnidades.DataArray = success;
                 this.printUnidades(); 
             },
-            failure => { alert('No fue posible obtener la unidades.\n\n' + failure); },
+            failure => { alert('No fue posible obtener la unidades.\n\n' + (failure.message??failure)); },
             false
         );
     },
@@ -326,7 +376,7 @@ var editor =
 
         main.request(endpoint, 'DELETE', null,
             success => { /*this.getUnidades();*/ },
-            failure => { alert('No fue posible eliminar la unidad.\n\n' + failure); },
+            failure => { alert('No fue posible eliminar la unidad.\n\n' + (failure.message??failure)); },
             true
         );
     },
@@ -389,7 +439,7 @@ var editor =
                 main.clearValues('mdl_ap_controls'); 
                 main.closeModal('modal_presupuesto');
             },
-            failure => { alert('No se pudo completar el proceso.\n\n' + failure); },
+            failure => { alert('No se pudo completar el proceso.\n\n' + (failure.message??failure)); },
             false
         );
     },
@@ -448,18 +498,11 @@ var editor =
                     </div>
                 `;
             });
+
         }
         else
         {
-            template = `
-                <small class="text-secondary w-100">La unidad aún no cuenta con presupuesto</small>
-                <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2 my-3" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
-                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
-                    </svg>
-                    Agregar presupuesto
-                </button>
-            `;
+            template =editor.template_add;
         }
 
         setTimeout(()=>{
@@ -530,7 +573,10 @@ var editor =
                 this.partidasBackup = [];
                 this.printPartidas();
             },
-            failure => { alert('No fue posible eliminar el presupuesto.\n\n' + failure); },
+            failure => 
+            {
+                alert('No fue posible eliminar el presupuesto.\n\n' + (failure.message??failure)); 
+            },
             false
         );
     },
@@ -594,7 +640,7 @@ var editor =
                 this.setPartidasBackup();
             },
             failure => { 
-                alert('No fue posible obtener las partidas.\n\n' + failure); 
+                alert('No fue posible obtener las partidas.\n\n' + (failure.message??failure)); 
                 this.tablePartidas.DataArray = [];
                 this.printPartidas();
                 this.setPartidasBackup();
@@ -690,7 +736,7 @@ var editor =
                 this.setPartidasBackup();
                 this.showDirtyControls(false);
             },
-            failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + failure); },
+            failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + (failure.message??failure)); },
             false
         );
     },

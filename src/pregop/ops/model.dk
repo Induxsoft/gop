@@ -187,7 +187,8 @@ module ""
     
     list::&db,&params
     {
-        
+        do dbr.apps.action.grant("GP20")
+
         new entity{}
         do prepareView(db,params,entity)
         

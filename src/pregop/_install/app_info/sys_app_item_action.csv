@@ -1,1 +1,6 @@
 "id","title","shorttitle","icon16x16","href","_blank","appid","itemtype","req_context_item_id","act_type"
+GP11,Crear presupuestos,Crear presupuestos,,"",0,pregop.editor,DET03C,0,action
+GP12,Editar presupuestos,Editar presupuestos,,"",0,pregop.editor,DET03C,0,action
+GP13,Eliminar presupuestos,Eliminar presupuestos,,"",0,pregop.editor,DET03C,0,action
+GP14,Aprobar presupuestos,Aprobar presupuestos,,"",0,pregop.editor,DET03C,0,action
+GP15,Cerrar presupuestos,Cerrar presupuestos,,"",0,pregop.editor,DET03C,0,action

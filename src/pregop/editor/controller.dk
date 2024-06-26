@@ -25,7 +25,7 @@ module "controller"
             @table_name = "gop_presupuesto"
             point @list to gop.obtenerPresupuestos
             point @read to gop.obtenerPresupuesto
-            // point @create to gop.crearPresupuesto
+            point @create to gop.crearPresupuesto
             point @update to gop.actualizarPresupuesto
             point @delete to gop.eliminarPresupuesto
             break

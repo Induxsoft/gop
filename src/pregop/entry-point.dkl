@@ -8,6 +8,9 @@ module "Controller configs"
 	#include "dbr.dkh"
 	#include "config.dk"
 	#include "crudl/crudl.dk"
+	#include "dbr.apps.dkl"
+	#include "dbr.events.dkl"
+	#include "dbr.security.dkl"
 
 	@base_path = "pregop"
 	@path_root= ""
@@ -18,6 +21,8 @@ module "Controller configs"
 	do crudl.routes.entity("/editor/","editor")
 	do crudl.routes.entity("/gestion/","gestion")
 	do crudl.routes.entity("/ops/","ops")
+	
+	do errordet(@false)
 	
 	@dbmvc_path="crudl/"
 	

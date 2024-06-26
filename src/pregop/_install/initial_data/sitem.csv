@@ -1,0 +1,11 @@
+﻿itemid,description,itemparent
+pregop,Presupuestos de gastos de operación,\0
+pregop.editor,Presupuesto,pregop
+GP10,Presupuesto de gastos de operación,pregop.editor
+GP11,Crear presupuestos,pregop.editor
+GP12,Editar presupuestos,pregop.editor
+GP13,Eliminar presupuestos,pregop.editor
+GP14,Aprobar presupuestos,pregop.editor
+GP15,Cerrar presupuestos,pregop.editor
+pregop.ops,Operaciones presupuestadas,pregop
+GP20,Operaciones por presupuestar y afectación por operación,pregop.ops

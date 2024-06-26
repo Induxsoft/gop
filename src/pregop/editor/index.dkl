@@ -16,6 +16,12 @@ program
 	ref unidades = @('&./unidades')
 	ref stts = @('&./status')
 	ref dvss = @('&./divisa')
+	
+	message_pvg=@("$parameters/message_pvg")
+	if trim(message_pvg)!=""
+	{
+		@TEMPLATE_ADD=replace(@TEMPLATE_ERROR_PVG,"@message",message_pvg)
+	}
 
     #$ div
 	{
@@ -101,6 +107,9 @@ program
 						}
 						div(class="d-flex flex-wrap align-items-center" id="presupuesto_controls")
 						{
+							button(id="btn_aprobar" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print m-1 hidde-control"){"Aprobar"}
+							button(id="btn_cerrar" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print m-1 hidde-control"){"Cerrar"}
+
 							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Editar presupuesto" id="edit_pre" "data-bs-toggle"="modal" "data-bs-target"="#modal_presupuesto"){
 								$"#<@@(@icons,'edit')>"
 								small{$""}
@@ -272,6 +281,10 @@ program
 			editor.unidades = #<to.json(unidades)>;
 			editor.currenty = #<current_year>;
 			editor.view_detail_preg="#<@VIEW_DETAIL_PREG>";
+			editor.template_add=`#<@TEMPLATE_ADD>`;
+			editor.status_aprobado=#<@STATUS_APROBADO>;
+			editor.status_cerrado=#<@STATUS_CERRADO>;
+			editor.status_por_aprobar=#<@STATUS_POR_APROBAR>;
 		'}
 	}
 }

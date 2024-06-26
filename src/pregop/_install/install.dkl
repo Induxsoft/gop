@@ -101,6 +101,22 @@ program "instalador"
         }
     }
 
+    if file.exists(sitem_file)
+    {
+        do print("\nIMPORTANDO PRIVILEGIOS")
+
+        ref sitemData = CsvRead(sitem_file,"")
+        do dbr.vars.ImportPrivs(database,sitemData)
+
+        if list.count(permissions_to_import) == 0
+        {
+            for i = 0; i < list.count(sitemData); i+1
+            {
+                ref item = list.obj(sitemData,i)
+                do list.add(permissions_to_import,@@(item,"$itemid"))
+            }
+        }
+    }
     if file.exists(categories_file)
     {
         do print("\nESTABLECIENDO CATEGORIAS")

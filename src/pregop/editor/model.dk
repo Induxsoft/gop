@@ -32,6 +32,7 @@ module "model"
     }
     function gop.crearPartida(&db, &params, &data)
     {
+        
         @use_transaction = @false
         do dbr.begin(db)
 
@@ -180,10 +181,68 @@ module "model"
     }
     function gop.crearPresupuesto(&db, &params, &data)
     {
-        do rise_error(0, "crear")
+        @use_transaction = @false
+            do dbr.apps.action.pre("GP11")
+        do dbr.begin(db)
+        
+        ref entity=entity.create(db,params,data)
+        
+            do dbr.apps.action.pos(entity)
+        do dbr.commit(db)
+            do dbr.apps.action.ext(entity)
+        
+        exception
+        {
+            if dbr.in_transaction(db){ do dbr.rollback(db) }
+            do dbr.apps.action.log()
+            do rise_error(last_error_code(),last_error())
+        }
+        
+        return entity
+    }
+    function  changeStatus(&db,&params,&data)
+    {
+        @use_transaction = @false
+        do dbr.begin(db)
+        
+            if @@(data,"$act")=="aprobar"
+            {
+                do dbr.apps.action.pre("GP14")
+                params<"status">:@STATUS_APROBADO
+            }
+            if @@(data,"$act")=="cerrar"
+            {
+                do dbr.apps.action.pre("GP15")
+                params<"status">:@STATUS_CERRADO
+            }
+
+            do dbr.execute(db,"update gop_presupuesto set status=@status where sys_pk=@_entity_id",params)
+
+            ref entity= gop.obtenerPresupuesto(db,params)
+        
+            do dbr.apps.action.pos(entity)
+        do dbr.commit(db)
+            do dbr.apps.action.ext(entity)
+        
+        return entity
+
+        exception
+        {
+            if dbr.in_transaction(db){ do dbr.rollback(db) }
+            do dbr.apps.action.log()
+            do rise_error(last_error_code(),last_error())
+        }
     }
     function gop.actualizarPresupuesto(&db, &params, &data)
     {
+        @use_transaction = @false
+            do dbr.apps.action.pre("GP12")
+
+        if @@(data,"$act")!=""
+        {
+            return changeStatus(db,params,data)
+        }
+
         ref new_data = record.create()
         @use_transaction = @false
 
@@ -208,8 +267,9 @@ module "model"
             do changePkParentToGuid(partidas)
         }
 
+        
         do dbr.begin(db)
-
+        
         ref res = entity.create(db,params,new_data)
         if not(isnull(partidas))
         {
@@ -217,38 +277,48 @@ module "model"
             do removeAllPartidas(db, pk_presupuesto)
             do insertPartidas(db, partidas, pk_presupuesto)
         }
-
+        
+            do dbr.apps.action.pos(res)
         do dbr.commit(db)
-
+            do dbr.apps.action.ext(res)
+        
         return res
-
         exception
-    	{
-            if dbr.in_transaction(db) { do dbr.rollback(db) }
-    		do rise_error(500,last_error())
-    	}
+        {
+            if dbr.in_transaction(db){ do dbr.rollback(db) }
+            do dbr.apps.action.log()
+            do rise_error(last_error_code(),last_error())
+        }
+
+
     }
     function gop.eliminarPresupuesto(&db, &params)
     {
         @use_transaction = @false
+
+            do dbr.apps.action.pre("GP13")
         do dbr.begin(db)
         
-        if field.exist(params, "_entity_id")
-        {
-            new prm { @"pk_presupuesto": @@(params, "#_entity_id") }
-            do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk_presupuesto", prm)
-            do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk_presupuesto;", prm)
-        }
-        do entity.delete(db, params)
+            if field.exist(params, "_entity_id")
+            {
+                new prm { @"pk_presupuesto": @@(params, "#_entity_id") }
+                do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk_presupuesto", prm)
+                do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk_presupuesto;", prm)
+            }
+            do entity.delete(db, params)
         
+            do dbr.apps.action.pos(params)
         do dbr.commit(db)
-        return @null
+            do dbr.apps.action.ext(params)
         
+        return @null
+
         exception
-    	{
-            if dbr.in_transaction(db) { do dbr.rollback(db) }
-    		do rise_error(500,last_error())
-    	}
+        {
+            if dbr.in_transaction(db){ do dbr.rollback(db) }
+            do dbr.apps.action.log()
+            do rise_error(last_error_code(),last_error())
+        }
     }
     function removeAllPartidas(&db, pk_presupuesto)
     {
@@ -345,16 +415,29 @@ module "model"
         sql = ftext("SELECT * FROM gop_presupuesto_status where #<@keyfield>=@_entity_id limit 1;")
         return dbr.rec(db, sql, params)
     }
+    function validatePrivileges(&db,&params,idpg,message)
+    {
+        if trim(idpg)==""{return}
 
+        do dbr.apps.action.grant(idpg)
+
+        exception{params<"message_pvg">:message + last_error()}
+    }
     // =============== RH_UNIDAD_ORG
     function gop.obtenerUnidades(&db, &params)
     {
+        
+        if trim(@@(params,"$_entity_id"))==""
+        {
+            do dbr.apps.action.grant("GP10")
+        }
+
         query = "SELECT * FROM rh_unidad_org;"
         ref res = record.create()
         if @add_others
         {
             res<"unidades*">: dbr.list(db, query, params)
-            res<"status*">: dbr.list(db, 'SELECT * FROM gop_presupuesto_status;', @null)
+            res<"status*">: dbr.list(db, 'SELECT * FROM gop_presupuesto_status where id not in(3,4);', @null)
             res<"divisa*">: dbr.list(db, 'SELECT * FROM divisa;', @null)
         }
         else

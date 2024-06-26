@@ -34,7 +34,22 @@ program
     @VIEW_DETAIL_PREG="/!/pregop/gestion/?parent={id}"
     @MODEL_EDITOR="pregop/editor/model.dk"
 
+    @TEMPLATE_ADD='<small class="text-secondary w-100">La unidad aún no cuenta con presupuesto</small>
+                <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2 my-3" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+                    </svg>
+                    Agregar presupuesto
+                </button>'
+
+    @TEMPLATE_ERROR_PVG='<div class="alert alert-danger">@message</div>'
+
     @NUM_EJERCICIO = 10
+
+    @STATUS_APROBADO= 3
+    @STATUS_CERRADO= 4
+    @STATUS_POR_APROBAR= 2
+
     new @meses
     {
         @"1":"Enero"
