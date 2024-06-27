@@ -5,7 +5,7 @@ var presupuesto =
     excludeAnualFields: [],
     events: null,
     onCalculeBranch: null,
-
+    IsDirtyTable:null,
     init()
     {
         // this.table = document.querySelector('#tablaPresupuestos');
@@ -117,6 +117,8 @@ var presupuesto =
                     this.valideAuthBalance();
                 }
             }
+
+            if(this.IsDirtyTable)this.IsDirtyTable();
         }
 
         // Después de agregar una nueva fila

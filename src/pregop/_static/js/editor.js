@@ -85,6 +85,11 @@ var editor =
             presupuesto.sumFields = ['autorizado','reserva','anual','p01','p02','p03','p04','p05','p06','p07','p08','p09','p10','p11','p12'];
             presupuesto.excludeAnualFields = ['autorizado', 'anual'];
             presupuesto.onCalculeBranch = dataArray => this.updatePresupuestoData(dataArray);
+            presupuesto.IsDirtyTable=()=>
+            {
+                const isDirty = this.isDirtyPresupuesto();
+                this.showDirtyControls(isDirty);
+            }
         }
         if (this.tableSubUnids)
         {
@@ -606,11 +611,12 @@ var editor =
     {
         let isDirty = false;
 
-        if (!isDirty && this.tablePartidas.DataArray && this.partidasBackup) {
+        if (!isDirty && this.tablePartidas.DataArray && this.partidasBackup) 
+        {
             let partidas = JSON.parse(JSON.stringify(this.tablePartidas.DataArray));
             isDirty = (JSON.stringify(this.tablePartidas.TableArray(partidas)) !== JSON.stringify(this.partidasBackup));
         }
-
+        
         return isDirty;
     },
     showDirtyControls(isDirty=true)
@@ -726,7 +732,7 @@ var editor =
         if (this.presupuesto['monto_planeado'] != undefined) data['monto_planeado'] = Number(this.presupuesto['monto_planeado']);
 
         data['partidas'] = this.tablePartidas.DataArray;
-        console.log(data);
+        // console.log(data);
         let endpoint = editor.services['gop_presupuesto'];
         endpoint = endpoint.replace('@presupuesto', this.presupuesto.sys_pk);
         
@@ -734,6 +740,7 @@ var editor =
             success => { 
                 this.presupuesto = success;
                 this.setPartidasBackup();
+                this.getPartidas(this.presupuesto.sys_pk);
                 this.showDirtyControls(false);
             },
             failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + (failure.message??failure)); },

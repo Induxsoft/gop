@@ -15,7 +15,7 @@ module "model"
     function gop.obtenerPartidas(&db, &params)
     {
         query = "
-        SELECT p.sys_pk, p.sys_guid, p.ref_presupuesto, IFNULL(p.id,'') id, p.padre, p.partida, IFNULL(p.autorizado,0) autorizado,
+        SELECT p.sys_pk,p.sys_recver,p.sys_dtcreated,p.sys_timestamp, p.sys_guid, p.ref_presupuesto, IFNULL(p.id,'') id, p.padre, p.partida, IFNULL(p.autorizado,0) autorizado,
             IFNULL(p.reserva,0) reserva, IFNULL(p.p01,0) p01, IFNULL(p.p02,0) p02, IFNULL(p.p03,0) p03, IFNULL(p.p04,0) p04,
             IFNULL(p.p05,0) p05, IFNULL(p.p06,0) p06, IFNULL(p.p07,0) p07, IFNULL(p.p08,0) p08, IFNULL(p.p09,0) p09,
             IFNULL(p.p10,0) p10, IFNULL(p.p11,0) p11, IFNULL(p.p12,0) p12, IFNULL(notas,'') notas
@@ -266,15 +266,15 @@ module "model"
             do field.remove(data, "partidas")
             do changePkParentToGuid(partidas)
         }
-
         
         do dbr.begin(db)
         
-        ref res = entity.create(db,params,new_data)
+        ref res = entity.update(db,params,new_data)
+
         if not(isnull(partidas))
         {
             pk_presupuesto = @@(res, "#sys_pk")
-            do removeAllPartidas(db, pk_presupuesto)
+            // do removeAllPartidas(db, pk_presupuesto)
             do insertPartidas(db, partidas, pk_presupuesto)
         }
         
@@ -283,6 +283,7 @@ module "model"
             do dbr.apps.action.ext(res)
         
         return res
+        
         exception
         {
             if dbr.in_transaction(db){ do dbr.rollback(db) }
@@ -292,6 +293,7 @@ module "model"
 
 
     }
+
     function gop.eliminarPresupuesto(&db, &params)
     {
         @use_transaction = @false
@@ -326,6 +328,7 @@ module "model"
         do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk", prm)
         do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk", prm)
     }
+    
     function insertPartidas(&db, &partidas, pk_presupuesto)
     {
         if not(isnull(partidas)) && list.count(partidas) > 0
@@ -337,21 +340,36 @@ module "model"
                  * Si tiene padre lo guardamos temporalmente en el campo info para
                  * asignarselo a todos en una sola consulta
                  */
+                do field.remove(partida,"anual")
+                if @@(partida,"#sys_pk")<1
+                {
+                    do field.remove(partida,"sys_pk")
+                    do field.remove(partida,"sys_guid")
+                }
+
                 partida<"sys_info">: @@(partida, "padre")
                 partida<"padre*">: @null
+                partida<"sys_recver">:@@(partida,"#sys_recver")
 
-                do field.remove(partida, "anual")
-                do field.remove(partida, "sys_pk")
-                partida<"sys_recver">:0
-                partida<"sys_dtcreated*">: dbr.sql("NOW()")
-                partida<"sys_timestamp*">: dbr.sql("NOW()")
+                if trim(@@(partida,"$sys_info"))==""{do field.remove(partida,"sys_info")}
+
                 partida<"ref_presupuesto">: pk_presupuesto
                 if @@(partida,"$id")=="" { partida<"id">: @@(partida, "$sys_guid") }
                 partida<"partida">: @@(partida, "$partida")
 
-                do parseNumbersPartida(partida)
+                if field.exist(partida,"sys_timestamp"){do field.remove(partida,"sys_timestamp")}
+                if field.exist(partida,"sys_guid"){do field.remove(partida,"sys_guid")}
+                if field.exist(partida,"sys_dtcreated"){do field.remove(partida,"sys_dtcreated")}
 
-                do dbr.insert(db, "gop_partida", partida)
+                do parseNumbersPartida(partida)
+                
+                do dbr.save(db,"gop_partida", partida)
+
+                // exception
+                // {
+                //     // do rise_error(0,last_error())
+                //     do rise_error(0,to.json(partida))
+                // }
             }
 
             new prm { @"presupuesto": pk_presupuesto }
@@ -379,7 +397,11 @@ module "model"
                     for j = 0; j < list.count(partidas)
                     {
                         ref p2 = list.obj(partidas, j)
-                        if @@(p, "$padre") == @@(p2, "$sys_pk") { guid_padre = @@(p2 ,"$sys_guid") }
+                        if @@(p, "$padre") == @@(p2, "$sys_pk") 
+                        { 
+                            guid_padre = @@(p2 ,"$sys_guid") 
+                            break
+                        }
                     }
                     p<"padre">: guid_padre
                 }
