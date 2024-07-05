@@ -47,13 +47,12 @@ module "controller"
             point @delete to gop.eliminarUnidad
             break
         }
-        // case "view-dpresupuesto"
-        // {
-        //     point @read to dpresupuestoByears
-        //     @add_others = @false
-        //     @form_view="view-detail-presupuesto.dk"
-        //     break
-        // }
+        case "change-pda-status"
+        {
+            point @create to gop.partida.changeStatus
+            point @update to gop.partida.changeStatus
+            break
+        }
         default
         {
             @table_name = "rh_unidad_org"
@@ -61,7 +60,7 @@ module "controller"
             point @list to gop.obtenerUnidades
             point @read to gop.obtenerUnidad
             @form_view = "form.dk"
-            @list_view="index.dkl"
+            @list_view = "editor.dk"
             break
         }
     }

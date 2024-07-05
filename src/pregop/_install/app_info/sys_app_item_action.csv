@@ -1,6 +1,12 @@
 "id","title","shorttitle","icon16x16","href","_blank","appid","itemtype","req_context_item_id","act_type"
-GP11,Crear presupuestos,Crear presupuestos,,"",0,pregop.editor,DET03C,0,action
-GP12,Editar presupuestos,Editar presupuestos,,"",0,pregop.editor,DET03C,0,action
-GP13,Eliminar presupuestos,Eliminar presupuestos,,"",0,pregop.editor,DET03C,0,action
-GP14,Aprobar presupuestos,Aprobar presupuestos,,"",0,pregop.editor,DET03C,0,action
-GP15,Cerrar presupuestos,Cerrar presupuestos,,"",0,pregop.editor,DET03C,0,action
+GP11,Crear presupuesto,Crear,,"",0,pregop.editor,DET03C,0,action
+GP12,Editar presupuesto,Editar,,"",0,pregop.editor,DET03C,1,action
+GP13,Eliminar presupuesto,Eliminar,,"",0,pregop.editor,DET03C,1,action
+GP14,Aactivar presupuesto,Activar,,"",0,pregop.editor,DET03C,1,action
+GP15,Cerrar presupuesto,Cerrar,,"",0,pregop.editor,DET03C,1,action
+GP16,Detener presupuesto,Detener,,"",0,pregop.editor,DET03C,1,action
+GP17,Establecer partida revisada,Revisada,,"",0,pregop.editor,DET035,1,action
+GP18,Cancelar partida,Cancelar,,"",0,pregop.editor,DET035,1,action
+GP19,Autorizar partida,Autorizar,,"",0,pregop.editor,DET035,1,action
+GP1A,Establecer partida prevista,Prevista,,"",0,pregop.editor,DET035,1,action
+GP1B,Establecer partida en revisión,Revisión,,"",0,pregop.editor,DET035,1,action

@@ -2,10 +2,16 @@
 pregop,Presupuestos de gastos de operación,\0
 pregop.editor,Presupuesto,pregop
 GP10,Presupuesto de gastos de operación,pregop.editor
-GP11,Crear presupuestos,pregop.editor
-GP12,Editar presupuestos,pregop.editor
-GP13,Eliminar presupuestos,pregop.editor
-GP14,Aprobar presupuestos,pregop.editor
-GP15,Cerrar presupuestos,pregop.editor
+GP11,Crear presupuesto,pregop.editor
+GP12,Editar presupuesto,pregop.editor
+GP13,Eliminar presupuesto,pregop.editor
+GP14,Aprobar presupuesto,pregop.editor
+GP15,Cerrar presupuesto,pregop.editor
+GP16,Detener presupuesto,pregop.editor
+GP17,Establecer partida revisada,pregop.editor
+GP18,Cancelar partida,pregop.editor
+GP19,Autorizar partida,pregop.editor
+GP1A,Establecer partida prevista,pregop.editor
+GP1B,Establecer partida en revisión,pregop.editor
 pregop.ops,Operaciones presupuestadas,pregop
 GP20,Operaciones por presupuestar y afectación por operación,pregop.ops

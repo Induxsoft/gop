@@ -105,19 +105,38 @@ program
 								h6(class="m-0" id="unidad_selected"){$""}
 							}
 						}
-						div(class="d-flex flex-wrap align-items-center" id="presupuesto_controls")
+						
+						div(class="d-flex align-items-center gap-2" id="presupuesto_controls")
 						{
-							button(id="btn_aprobar" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print m-1 hidde-control"){"Aprobar"}
-							button(id="btn_cerrar" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print m-1 hidde-control"){"Cerrar"}
+							// table tabs
+							div(class="d-flex justify-content-end align-items-center my-1 d-none" id="table_tabs")
+							{
+								div(style="background-color:var(--color-gray); padding: 4px;")
+								{
+									button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="unidades_main_container"){$"Resumen"}
+									button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_presupuesto" table="partidas_main_container"){$"Presupuesto"}
+								}
+							}
 
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Editar presupuesto" id="edit_pre" "data-bs-toggle"="modal" "data-bs-target"="#modal_presupuesto"){
-								$"#<@@(@icons,'edit')>"
-								small{$""}
+							div(class="d-flex flex-wrap align-items-center gap-1" id="")
+							{
+								a(href="#" id="btn_seguimiento_presupuesto" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-shadow no-print hidde-control"){"Seguimiento"}
+
+								div(class="d-flex align-items-center justify-content-start gap-1 my-1")
+								{
+									button(id="btn_activar" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-shadow no-print hidde-control"){"Activar"}
+									button(id="btn_detener" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-shadow no-print hidde-control"){"Detener"}
+									button(id="btn_cerrar" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-shadow no-print hidde-control"){"Cerrar"}
+								}
+
+								button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Editar presupuesto" id="edit_pre" "data-bs-toggle"="modal" "data-bs-target"="#modal_presupuesto"){
+									$"#<@@(@icons,'edit')>"
+								}
+								button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Eliminar presupuesto" id="delete_pre" onclick="editor.deletePresupuesto()"){
+									$"#<@@(@icons,'delete')>"
+								}
 							}
-							button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Eliminar presupuesto" id="delete_pre" onclick="editor.deletePresupuesto()"){
-								$"#<@@(@icons,'delete')>"
-								small{$""}
-							}
+
 							div(class="d-flex align-items-center gap-1")
 							{
 								small(class="fz-8 text-secondary"){$"Ejercicio:"}
@@ -141,61 +160,90 @@ program
 				// Partidas
 				div
 				{
-					// table tabs
-					div(class="d-flex justify-content-end m-2 align-items-center d-none" id="table_tabs")
-					{
-						div(style="background-color:var(--color-gray); padding: 4px;")
-						{
-							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="unidades_main_container"){$"Resumen"}
-							button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_presupuesto" table="partidas_main_container"){$"Presupuesto"}
-						}
-					}
 					// Tables
-					div(id="tables")
+					div(class="" id="tables")
 					{
 						// Table partidas
 						div(id="partidas_main_container" class='t-table d-none')
 						{
 							// Barra de controles
-							div(class="d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white")
+							div(class="d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white py-1 px-2")
 							{
-								div(class="d-flex")
+								div(class="d-flex align-items-center")
 								{
-									button(class="btn btn-sm rounded-0 d-flex align-items-center justify-content-center gap-2 no-shadow" title="Disminuir identación" onclick="editor.indentPartidaRow(false)"){
-										svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-right" viewBox="0 0 16 16"){
-											path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m10.646 2.146a.5.5 0 0 1 .708.708L11.707 8l1.647 1.646a.5.5 0 0 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2zM2 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
+									div(class="d-flex align-items-center justify-content-start gap-1" id="partida_info")
+									{
+										span(class="fw-bold" id="pda_title"){$"Item"}
+										small(class="" id="pda_status_text"){$""}
+									}
+
+									small(class="text-muted mx-2"){$"|"}
+
+									div(class="d-flex align-items-center justify-content-start hidde-control" id="table_partidas_control")
+									{
+										##
+										btn_table_cls = "control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow"
+										##
+
+										button(class="#<btn_table_cls>" title="Disminuir identación" onclick="editor.indentPartidaRow(false)"){
+											svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-right" viewBox="0 0 16 16"){
+												path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m10.646 2.146a.5.5 0 0 1 .708.708L11.707 8l1.647 1.646a.5.5 0 0 1-.708.708l-2-2a.5.5 0 0 1 0-.708l2-2zM2 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
+											}
+										}
+										button(class="#<btn_table_cls>" title="Agregar identación" onclick="editor.indentPartidaRow(true)"){
+											svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-left" viewBox="0 0 16 16"){
+												path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m.646 2.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L4.293 8 2.646 6.354a.5.5 0 0 1 0-.708M7 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m-5 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
+											}
+										}
+										button(class="#<btn_table_cls>" title="Agregar fila" onclick="editor.addRowPartida()"){
+											$"#<@@(@icons,'add_row')>"
+										}
+										button(class="#<btn_table_cls>" title="Eliminar fila" onclick="editor.deleteRowPartida()"){
+											$"#<@@(@icons,'remove_row')>"
+										}
+										button(class="#<btn_table_cls>" title="Insertar fila" onclick="editor.insertRowPartida()"){
+											$"#<@@(@icons,'insert_row')>"
 										}
 									}
-									button(class="btn btn-sm rounded-0 d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar identación" onclick="editor.indentPartidaRow(true)"){
-										svg(xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#000" class="bi bi-text-indent-left" viewBox="0 0 16 16"){
-											path(d="M2 3.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5m.646 2.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708l-2 2a.5.5 0 0 1-.708-.708L4.293 8 2.646 6.354a.5.5 0 0 1 0-.708M7 6.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m0 3a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5m-5 3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5")
-										}
-									}
-									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Agregar fila" onclick="editor.addRowPartida()"){
-										$"#<@@(@icons,'add_row')>"
-									}
-									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Eliminar fila" onclick="editor.deleteRowPartida()"){
-										$"#<@@(@icons,'remove_row')>"
-									}
-									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow" title="Insertar fila" onclick="editor.insertRowPartida()"){
-										$"#<@@(@icons,'insert_row')>"
+
+									div(class="d-flex align-items-center justify-content-start gap-1" id="status_partidas_control")
+									{
+										##
+										btn_status_cls = "btn btn-xs btn-main-action btn-status border-secondary rounded-0 no-shadow hidde-control"
+										##
+
+										button(class="#<btn_status_cls>" id="pda_prevista" status="#<@stt_pda_prevista>" onclick="editor.changePartidaStatus(this)"){$"Prevista"}
+										button(class="#<btn_status_cls>" id="pda_revision" status="#<@stt_pda_revision>" onclick="editor.changePartidaStatus(this)"){$"En revisión"}
+										button(class="#<btn_status_cls>" id="pda_revisada" status="#<@stt_pda_revisada>" onclick="editor.changePartidaStatus(this)"){$"Revisada"}
+										button(class="#<btn_status_cls>" id="pda_autorizar" status="#<@stt_pda_autorizada>" onclick="editor.changePartidaStatus(this)"){$"Autorizar"}
+										button(class="#<btn_status_cls>" id="pda_cancelar" status="#<@stt_pda_cancelada>" onclick="editor.changePartidaStatus(this)"){$"Cancelar"}
 									}
 								}
-								div(class="d-flex align-items-center" id="partidas_control")
+
+								// div(class="d-flex align-items-center justify-content-center gap-1")
+								// {
+								// 	#!
+								// 	go foreach.fobj(value:cfg) with(@cfg_pda_stt_color)
+								// 	{
+								// 		#$ small(class="badge text-wrap #<@@(cfg,'$class')>" style="background-color: #<@@(cfg,'$color')>;"){$"#<@@(cfg,'$text')>"}
+								// 	}
+								// 	#$
+								// }
+
+								div(class="d-flex align-items-center justify-content-start" id="partidas_control")
 								{
-									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Guardar cambios" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
-										$"#<@@(@icons,'save')>"
-										small{$""}
+									button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow" title="Modificar partidas" id="enable_edit_partidas" onclick="editor.togglePartidasControl(true)"){
+										$"#<@@(@icons,'edit')>"
+										small{$"Modificar"}
 									}
-									button(class="control btn btn-sm d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Descartar cambios" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
+									button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Guardar cambios" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
+										$"#<@@(@icons,'save')>"
+										small{$"Guardar"}
+									}
+									button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Descartar cambios" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
 										$"#<@@(@icons,'discard')>"
 										small{$"Descartar"}
 									}
-								}
-								div(class="d-flex")
-								{
-									span(class="flex-grow-1"){""}
-									a(href="#" id="btn_seguimiento_presupuesto" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-print no-hidden"){"Seguimiento"}
 								}
 							}
 							// Tabla de partidas
@@ -203,18 +251,17 @@ program
 							{
 								div(style="max-height: 80vh;display: flex;")
 								{
-									"edit-table"(id="treePartidas" "show-tree"="true" parentkey="padre" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
+									"edit-table"(id="treePartidas" "show-tree"="true" readonly="" parentkey="padre" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
 									{
 										"edit-thead"
 										{
 											"edit-tr"
 											{
 												"edit-th"(type="Text" field="partida"){$"Partida"}
-
 												"edit-th"(type="Number" field="autorizado" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
 												"edit-th"(type="NoEditable" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
-												
 												"edit-th"(type="Number" field="reserva" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true" "textalign"="end"){$"Reserva"}
+
 												"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
 												"edit-th"(type="Number" field="p02" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Febrero"}
 												"edit-th"(type="Number" field="p03" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Marzo"}
@@ -282,9 +329,19 @@ program
 			editor.currenty = #<current_year>;
 			editor.view_detail_preg="#<@VIEW_DETAIL_PREG>";
 			editor.template_add=`#<@TEMPLATE_ADD>`;
-			editor.status_aprobado=#<@STATUS_APROBADO>;
-			editor.status_cerrado=#<@STATUS_CERRADO>;
-			editor.status_por_aprobar=#<@STATUS_POR_APROBAR>;
+
+			editor.stt_ppto_borrador=#<@stt_ppto_borrador>;
+			editor.stt_ppto_detenido=#<@stt_ppto_detenido>;
+			editor.stt_ppto_activo=#<@stt_ppto_activo>;
+			editor.stt_ppto_cerrado=#<@stt_ppto_cerrado>;
+
+			editor.stt_pda_prevista=#<@stt_pda_prevista>;
+			editor.stt_pda_revision=#<@stt_pda_revision>;
+			editor.stt_pda_revisada=#<@stt_pda_revisada>;
+			editor.stt_pda_autorizada=#<@stt_pda_autorizada>;
+			editor.stt_pda_cancelada=#<@stt_pda_cancelada>;
+			editor.cfg_pda_status="#<@cfg_pda_status>";
+			editor.cfg_pda_stt_color = #<to.json(@cfg_pda_stt_color)>;
 		'}
 	}
 }

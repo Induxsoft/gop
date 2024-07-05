@@ -5,181 +5,30 @@ program "instalador"
     #include "functions.dkh"
     #include "serialize.dkh"
     #include "dbr.dkh"
-    #include "dbm.dkl"
-    #include "dbr.vars.dkl"
-    #include "dbr.security.dkl"
-    #include "dbr.apps.dkl"
 
-    // PREPARACIÓN DE VARIABLES
-    ref args = commandline("=")
-    src = _get(@_run_settings,"$SourceCodeFile")
-
-    path_install = dir.name(src)
-    path_ddm = path.concat(path_install,"ddm")
-    path_initial_data = path.concat(path_install,"initial_data")
-    path_app_info = path.concat(path_install,"app_info")
-
-    qname = trim(@@(args,"$db"))
-    if qname == "" { qname = trim(@@(args,"$bd")) }
-    if qname == "" { do rise_error(99,"Debe de indicar un nombre cualificado de conexión `db`.") }
-
-    categories_file = path.concat(path_app_info,"sys_app_category.csv")
-    catalogs_file = path.concat(path_app_info,"sys_app_catalog.csv")
-    shortcuts_file = path.concat(path_app_info,"sys_app_shortcut.csv")
-    item_type_file = path.concat(path_app_info,"sys_app_item_type.csv")
-    item_action_file = path.concat(path_app_info,"sys_app_item_action.csv")
-    // Archivo de permisos
-    sitem_file = path.concat(path_initial_data,"sitem.csv")
-
-    model_name = file.name(dir.name(path_install)) + ".ddm"
-    model_file = path.concat(path_ddm, model_name)
-
-    // Archivos de datos iniciales (Orden de instalación)
-    ref files_to_import = from.json('[
+    // Archivos de datos iniciales (Orden de importación)
+    // deben estar en la carpeta _install/initial_data
+    ref @files_to_import = from.json('[
         "divisa.csv",
         "gop_presupuesto_status.csv",
+        "gop_partida_status.csv"
     ]')
-	// Lista de permisos iniciales
-    ref permissions_to_import = from.json('[]')
 
-    // DECLARACIÓN DE FUNCIONES
-    ref lib_csv = _import_library("devkron.serialize.csv.dll")
-    do _map_function(lib_csv,"devkron.serialize.csv.csvHelper","CsvRead","CsvRead","System.String,System.String","*")
-    do _map_function(lib_csv,"devkron.serialize.csv.csvHelper","CsvWrite","CsvWrite","System.String,*System.Object","void")
+    // Lista de privilegios iniciales (arreglo de id de privilegios)
+    // Si se omite [] -> se registra todo el contenido del fichero de privilegios.
+    ref @permissions_to_import = from.json('[]')
 
-    reconnect::&db,qn
-    {
-        if isnull(db) || not(dbr.is_open(db)) { ref db = dbr.open(qn) }
-        do dbr.rec(db,"select 1 as success;",@null)
-        exception
-        {
-            do clear_exceptions()
-            ref db:dbr.open(qn)
-        }
-    }
-
-    //* ======================================== [ EJECUCIÓN DEL PROGRAMA ]
-
-    //#region Instalar modelo (.ddm) del paquete.
-    if not(file.exists(model_file)) { do rise_error(99,"No se encontró el modelo: _install/ddm/" + model_name) }
-
-    fext = file.extension(model_file)
-    ref data_model = @null
-
-    if fext == ".json" { ref data_model = from.json(file.rtext(model_file)) }
-    else if fext == ".ddm" { ref data_model = getTableSchema(model_file) }
-    else { do rise_error(1,"El tipo de archivo del modelo no esta soportado.") }
-
-    ref database = dbr.open(qname)
-    if not(dbr.is_open(database)) { do rise_error(99,"No fue posible abrir la conexión. Verifique el nombre cualificado de conexión.") }
-
-    if not(dbm.existLogTables(database))
-    {
-        do dbm.inferModel(qname)
-        do print("-- ------------------------- --")
-    }
-
-    do print("\nINSTALANDO MODELO")
-    if not(dbm.installModel(database,model_name,data_model)) { do rise_error(99,"No se instaló el modelo") }
+    // Id del grupo de tareas (recomendado: prefijo del paquete), si se omite se calculará automáticamente.
+    // https://docs.induxsoft.net/es/productos/v12/devops/official-v12-packs.dkl
+    /**
+    * Los programas deben estar en la ruta: _install\tasks
+    * Ejemplo:
+    * _install\tasks
+    *    - importar.productos.dkl -> Archivo de programa
+    *    - importar.productos.json -> Configuración de parámetros del archivo de programas
+    */
+    @jobs_group_id = "GP"
     
-    do reconnect(database,qname)
-    //#endregion
-    
-    if dir.exists(path_initial_data) && list.count(files_to_import) > 0
-    {
-        do print("\nIMPORTANDO DATOS INICIALES")
-
-        for i = 0; i < list.count(files_to_import)
-        {
-            file = path.concat(path_initial_data,trim(list.str(files_to_import,i)))
-            if file.exists(file)
-            {
-                ref CsvData = CsvRead(file,"")
-                table_name = file.justname(file)
-                do dbr.vars.ImportList(database,CsvData,table_name)
-            }
-        }
-    }
-
-    if file.exists(sitem_file)
-    {
-        do print("\nIMPORTANDO PRIVILEGIOS")
-
-        ref sitemData = CsvRead(sitem_file,"")
-        do dbr.vars.ImportPrivs(database,sitemData)
-
-        if list.count(permissions_to_import) == 0
-        {
-            for i = 0; i < list.count(sitemData); i+1
-            {
-                ref item = list.obj(sitemData,i)
-                do list.add(permissions_to_import,@@(item,"$itemid"))
-            }
-        }
-    }
-    if file.exists(categories_file)
-    {
-        do print("\nESTABLECIENDO CATEGORIAS")
-
-        ref categoriesData = CsvRead(categories_file,"")
-        do dbr.apps.category.import(database,categoriesData)
-    }
-
-    if file.exists(catalogs_file)
-    {
-        do print("\nESTABLECIENDO APLICACIONES")
-
-        ref catalogsData = CsvRead(catalogs_file,"")
-        do dbr.apps.import(database,catalogsData)
-    }
-
-    if file.exists(shortcuts_file)
-    {
-        do print("\nESTABLECIENDO SHORTCUTS")
-
-        ref shortcutsData = CsvRead(shortcuts_file,"")
-        do dbr.apps.shortcut.import(database,shortcutsData)
-    }
-
-    if file.exists(item_type_file)
-    {
-        do print("\nETABLECIENDO ENTIDADES")
-
-        ref itemsData = CsvRead(item_type_file,"")
-        do dbr.apps.itemtype.import(database,itemsData)
-    }
-
-    if file.exists(item_action_file)
-    {
-        do print("\nESTABLECIENDO ACCIONES")
-
-        ref actionsData = CsvRead(item_action_file,"")
-        do dbr.apps.itemaction.import(database,actionsData)
-    }
-
-    if file.exists(sitem_file)
-    {
-        do print("\nIMPORTANDO PRIVILEGIOS")
-
-        ref sitemData = CsvRead(sitem_file,"")
-        do dbr.vars.ImportPrivs(database,sitemData)
-    }
-    
-    if list.count(permissions_to_import) > 0
-    {
-        do print("\nNUEVOS PRIVILEGIOS AL GRUPO DE ADMINISTRADORES")
-
-        admins_groupid = dbr.security.admins(database)
-        do dbr.security.assign(database,admins_groupid,permissions_to_import)
-    }
-
-    if dbr.is_open(database){ do dbr.close(database) }
-
-    exception
-    {
-        if isset("database") {
-            if dbr.is_open(database){ do dbr.close(database) }
-        }
-        do print(last_error())
-    }
+    /*************************************************************************************/
+    #include "v12.install.lib.dk"
 }

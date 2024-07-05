@@ -1,19 +1,19 @@
 ﻿#include "dkli.dkh"
 #!
-
 module "Controller configs"
 {
 	#include "functions.dkh"
 	#include "serialize.dkh"
 	#include "dbr.dkh"
-	#include "config.dk"
 	#include "crudl/crudl.dk"
 	#include "dbr.apps.dkl"
 	#include "dbr.events.dkl"
 	#include "dbr.security.dkl"
+	#include "./config.dk"
+	#include "./_lib/lib.dk"
 
 	@base_path = "pregop"
-	@path_root= ""
+	@path_root = ""
 	
 	//No modifique a menos que sepa lo que está haciendo
 

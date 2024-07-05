@@ -1,6 +1,7 @@
 var presupuesto = 
 {
     table: null,
+    coldef: null,
     sumFields: [],
     excludeAnualFields: [],
     events: null,
@@ -16,6 +17,8 @@ var presupuesto =
     },
     setTableEvents()
     {
+        if (this.coldef === null) this.coldef = JSON.parse(JSON.stringify(this.table.Columns));
+
         // Antes de mover la fila
         this.table.Events[this.events.BeforeMoveRow] = (e) =>
         {
@@ -55,23 +58,22 @@ var presupuesto =
         // Antes de enfocar una celda
         this.table.Events[this.events.EnterCell] = (e) =>
         {
+            let coldef = this.table.GetColumnDefOfTd(e.td);
+            let row = this.table.RowIndexOfTd(e.td);
+            let col = this.table.ColIndexOfTd(e.td);
+            let obj = this.table.DataArray[row];
+            
+            if (!coldef || !obj) return;
+            this.validateStatus(col,obj,coldef);
             /**
              * Si se va a actualizar una celda sumable y la fila de la celda a editar tiene hijos se cancela
              */
-            let coldef = this.table.GetColumnDefOfTd(e.td);
-            if (!coldef) return;
-
             const isSumable = this.sumFields.includes(coldef.field);
             let columTypes = this.table.EdiTable.Const.Columns.Types;
-            if (isSumable)
-            {
-                let obj=e.sender.DataArray[e.sender.RowIndexOfTd(e.td)];
-                if (obj)
-                {
-                    const options = this.table._getTreeOptions();
-                    const hasChilds = e.sender.DataArray.find(data => (obj[options.key]??'___') == data[options.parentkey]);
-                    coldef.type = ((hasChilds || coldef.field == 'anual') ? columTypes.NoEditable : columTypes.Number);
-                }
+            if (isSumable) {
+                const options = this.table._getTreeOptions();
+                const hasChilds = e.sender.DataArray.find(data => (obj[options.key]??'___') == data[options.parentkey]);
+                coldef.type = ((hasChilds || coldef.field == 'anual') ? columTypes.NoEditable : columTypes.Number);
             }
         }
 
@@ -161,11 +163,10 @@ var presupuesto =
         // Definir la función que obtiene los Tds para validar el saldo autorizado
         this.table.onTdPaint = (td, row, col, field) => 
         {
-            if (field == 'autorizado')
-            {
-                let obj = this.table.DataArray[row];
-                this.alertAuthBalance(td, obj);
-            }
+            let obj = this.table.DataArray[row];
+
+            if (col == 0) this.coloringStatusRows(td, obj);
+            if (field == 'autorizado') this.alertAuthBalance(td, obj);
         }
 
         this.valideAuthBalance();
@@ -239,6 +240,12 @@ var presupuesto =
             calcule(node, (node[opts.childs]??[]));
         }
     },
+    coloringStatusRows(td, data)
+    {
+        if (!td || !data || !editor.cfg_pda_stt_color) return;
+        let color = editor.cfg_pda_stt_color[data.istatus].color;
+        td.style.borderLeft = `.4em solid ${color}`;
+    },
     alertAuthBalance(td, data)
     {
         if (td && data)
@@ -259,6 +266,33 @@ var presupuesto =
             let obj = this.table.DataArray[i];
             if (td && obj) this.alertAuthBalance(td, obj);
         });
+    },
+    validateStatus(col, data, coldef)
+    {
+        // DOC: https://docs.induxsoft.net/es/productos/v12/devops/packs/pregop/enums/gop_status_partida.md
+        let sys_pk = Number(data?.sys_pk??0);
+        let istatus = Number(data?.istatus??404);
+        
+        switch (istatus) {
+            case editor.stt_pda_prevista:
+                coldef.readonly = (coldef.field === "autorizado");
+                break;
+            case editor.stt_pda_revision:
+            case editor.stt_pda_revisada:
+                coldef.readonly = (coldef.field !== "autorizado");
+                break;
+            case editor.stt_pda_autorizada:
+            case editor.stt_pda_cancelada:
+                coldef.readonly = true;
+                break;
+            default:
+                if (sys_pk != 0 && !isNaN(sys_pk)) {
+                    coldef.readonly = true;
+                    console.warn("status no definido.");
+                }
+                else coldef.readonly = false;
+                break;
+        }
     }
 }
 document.addEventListener('DOMContentLoaded', () => {

@@ -2,11 +2,38 @@
 #!
 module ""
 {
-    isnum::n
+    function between(value, min, max)
+    {
+        return value >= min && value <= max
+    }
+
+    function ifempty(s,d)
+    {
+        if trim(str(s)) == "" { return str(d) }
+        return str(s)
+    }
+
+    function isempty(s)
+    {
+        return trim(str(s)) == ""
+    }
+
+    function isnum(n)
     {
         do eval(n)
         return @true
-        exception{}
+        exception { do pop_exception() }
+        return @false
+    }
+
+    function allow_status(config, status, allow)
+    {
+        ref list = split(trim(str(config)),',')
+        for i = 0; i < list.count(list)
+        {
+            ref kv = split(list.str(list,i),':')
+            if trim(list.str(kv,0)) == str(status) && trim(list.str(kv,1)) == str(allow) { return @true }
+        }
         return @false
     }
 }

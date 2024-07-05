@@ -1,6 +1,6 @@
 #include "dkli.dkh"
 #!
-module "model"
+module ""
 {
     @table_name = "rh_unidad_org"
 
@@ -12,27 +12,135 @@ module "model"
     }
 
     // =============== GOP_PARTIDA
+    @query_partida_presupuestal = "
+    SELECT
+        p.sys_pk,
+        p.sys_guid,
+        p.sys_recver,
+        p.sys_dtcreated,
+        p.sys_timestamp,
+        p.ref_presupuesto,
+        IFNULL(p.id,'') id,
+        p.padre,
+        p.partida,
+        e.id AS istatus,
+        e.const AS cstatus,
+        IFNULL(p.autorizado,0) autorizado,
+        IFNULL(p.reserva,0) reserva,
+        IFNULL(p.p01,0) p01, IFNULL(p.p02,0) p02, IFNULL(p.p03,0) p03, IFNULL(p.p04,0) p04,
+        IFNULL(p.p05,0) p05, IFNULL(p.p06,0) p06, IFNULL(p.p07,0) p07, IFNULL(p.p08,0) p08,
+        IFNULL(p.p09,0) p09, IFNULL(p.p10,0) p10, IFNULL(p.p11,0) p11, IFNULL(p.p12,0) p12,
+        IFNULL(notas,'') notas
+    FROM gop_partida p
+        INNER JOIN gop_partida_status e ON p.status = e.id
+    WHERE #<conditions>
+    "
+
     function gop.obtenerPartidas(&db, &params)
     {
-        query = "
-        SELECT p.sys_pk,p.sys_recver,p.sys_dtcreated,p.sys_timestamp, p.sys_guid, p.ref_presupuesto, IFNULL(p.id,'') id, p.padre, p.partida, IFNULL(p.autorizado,0) autorizado,
-            IFNULL(p.reserva,0) reserva, IFNULL(p.p01,0) p01, IFNULL(p.p02,0) p02, IFNULL(p.p03,0) p03, IFNULL(p.p04,0) p04,
-            IFNULL(p.p05,0) p05, IFNULL(p.p06,0) p06, IFNULL(p.p07,0) p07, IFNULL(p.p08,0) p08, IFNULL(p.p09,0) p09,
-            IFNULL(p.p10,0) p10, IFNULL(p.p11,0) p11, IFNULL(p.p12,0) p12, IFNULL(notas,'') notas
-        FROM gop_partida p 
-        WHERE IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto );"
-
-        return dbr.list(db, query, params)
+        conditions = "IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto) ORDER BY p.padre, p.sys_pk"
+        return dbr.list(db,ftext(@query_partida_presupuestal),params)
     }
+
     function gop.obtenerPartida(&db, &params)
     {
         sql = "SELECT * FROM gop_partida where #<@keyfield>=@_entity_id limit 1;"
         
         return dbr.rec(db, sql, params)
     }
+
+    function gop.partida.changeStatusOfChildren(db,pk_partida,status)
+    {
+        new params
+        {
+            @"lastuser": @@(@http_context,"$session/user/uid")
+            @"padre": pk_partida
+            @"status": status
+        }
+        ref children = dbr.list(db,"SELECT sys_pk FROM gop_partida WHERE padre = @padre",params)
+        for i = 0; i < list.count(children)
+        {
+            params<"child"> : @@(list.obj(children,i),"#sys_pk")
+            sql = "
+            UPDATE gop_partida SET
+                sys_timestamp = NOW(),
+                sys_lastuser = @lastuser,
+                sys_recver = (IFNULL(sys_recver,0) + 1),
+                status = @status
+            WHERE sys_pk = @child"
+            do dbr.execute(db,sql,params)
+
+            do gop.partida.changeStatusOfChildren(db,@@(params,"#child"),@@(params,"#status"))
+        }
+
+        do _free(params)
+        do _free(children)
+    }
+
+    function gop.partida.changeStatus(&db,&params,&data)
+    {
+        sql_partida = "
+        SELECT
+            pda.padre,
+            pda.status,
+            ppto.ref_unidad,
+            (IFNULL(pda.re,0)+IFNULL(pda.e01,0)+IFNULL(pda.e02,0)+IFNULL(pda.e03,0)+IFNULL(pda.e04,0)+IFNULL(pda.e05,0)+IFNULL(pda.e06,0)+IFNULL(pda.e07,0)+IFNULL(pda.e08,0)+IFNULL(pda.e09,0)+IFNULL(pda.e10,0)+IFNULL(pda.e11,0)+IFNULL(pda.e12,0)) AS ejercido
+        FROM gop_partida pda
+            INNER JOIN gop_presupuesto ppto ON pda.ref_presupuesto = ppto.sys_pk
+        WHERE pda.sys_pk=@_entity_id AND pda.ref_presupuesto=@presupuesto
+        "
+        ref entity = dbr.rec(db,sql_partida,params)
+
+        ref action = @@(@cfg_pda_stt_color,"&"+@@(params,"$status"))
+        if @@(params,"#status") < @@(entity,"#status") { ref action:@@(@cfg_pda_stt_color,"&"+@@(entity,"$status")) }
+
+        if isnull(action) { do rise_error(500,"Acción no definida") }
+        if @@(entity,"#padre") > 0 { do rise_error(500,"No es posible cambiar el estado, esta acción solo esta disponible para 'Partidas Raíz'.") }
+        if not(allow_status(@cfg_pda_status,@@(entity,"#status"),@@(params,"#status"))) {
+            do rise_error(500,"No es posible cambiar al estado indicado debido al estado en el que se encuentra actualmente.")
+        }
+        if @@(entity,"#status") == @stt_pda_autorizado && @@(entity,"#ejercido") > 0 {
+            do rise_error(500,"No es posible cambiar al estado indicado debido a que ya se han realizado afectaciones al ejercido de la partida.")
+        }
+        
+        params<"lastuser"> : @@(@http_context,"$session/user/uid")
+        act_code = @@(action,"$code")+":DET060:"+@@(entity,"$ref_unidad")
+
+        @use_transaction = @false
+
+        do dbr.apps.action.pre(act_code)
+        do dbr.begin(db)
+
+        do gop.partida.changeStatusOfChildren(db,@@(params,"#_entity_id"),@@(params,"#status"))
+
+        sql = "
+        UPDATE gop_partida SET
+            sys_timestamp = NOW(),
+            sys_lastuser = @lastuser,
+            sys_recver = (IFNULL(sys_recver,0) + 1),
+            status = @status
+        WHERE sys_pk = @_entity_id"
+        do dbr.execute(db,sql,params)
+
+        conditions = "p.sys_pk=@_entity_id AND p.ref_presupuesto=@presupuesto"
+        ref entity:dbr.rec(db,ftext(@query_partida_presupuestal),params)
+
+        do dbr.apps.action.pos(entity)
+        do dbr.commit(db)
+        do dbr.apps.action.ext(entity)
+
+        return entity
+
+        exception
+        {
+            if dbr.in_transaction(db){ do dbr.rollback(db) }
+            if isset("@@_action_context"){ do dbr.apps.action.log() }
+            do rise_error(last_error_code(),last_error())
+        }
+    }
+
     function gop.crearPartida(&db, &params, &data)
     {
-        
         @use_transaction = @false
         do dbr.begin(db)
 
@@ -51,6 +159,7 @@ module "model"
     		do rise_error(500,last_error())
     	}
     }
+
     function gop.actualizarPartida(&db,&params,&data)
     {
         ref updateAsc = dbr.rec(db, "SELECT * FROM gop_partida p WHERE p.sys_pk=@sys_pk AND 
@@ -88,6 +197,7 @@ module "model"
     		do rise_error(500,last_error())
     	}
     }
+
     function gop.eliminarPartida(&db, &params)
     {
         @use_transaction = @false
@@ -103,6 +213,7 @@ module "model"
     		do rise_error(500,last_error())
     	}
     }
+
     function updateParent(&db,childPK)
     {
         new prm { @"child": childPK }
@@ -135,6 +246,7 @@ module "model"
             do updateParent(db, @@(parent, "#sys_pk"))
         }
     }
+
     function deleteChilds(&db, parentPK)
     {
         new prm { @"pk": parentPK }
@@ -155,11 +267,24 @@ module "model"
     // =============== GOP_PRESUPUESTO
     function gop.obtenerPresupuestos(&db, &params)
     {
+        do dbr.apps.action.grant("GP11")
+
         query = "SELECT * FROM gop_presupuesto;"
         return dbr.list(db, query, params)
+
+        exception
+        {
+            do errordet(@false)
+            code = last_error_code()
+            error = last_error()
+            do dbr.apps.action.log()
+            do rise_error(code,error)
+        }
     }
     function gop.obtenerPresupuesto(&db, &params)
     {
+        do dbr.apps.action.grant("GP11:DET060:"+@@(params,"$_entity_id"))
+
         if field.exist(params,"_key") { @keyfield = @@(params,"$_key") }
 
         sql = ftext("
@@ -178,18 +303,41 @@ module "model"
         if isnull(res) { do rise_error(0, "Elemento no encontrado") }
 
         return res
+
+        exception
+        {
+            do errordet(@false)
+            code = last_error_code()
+            error = last_error()
+            do dbr.apps.action.log()
+            do rise_error(code,error)
+        }
     }
-    function gop.crearPresupuesto(&db, &params, &data)
+
+    function gop.crearPresupuesto(&db,&params,&data)
     {
         @use_transaction = @false
-            do dbr.apps.action.pre("GP11")
+        do dbr.apps.action.pre("GP12")
         do dbr.begin(db)
+
+        ref presupuesto = record.copy(data,"*")
+        using presupuesto
+        {
+            @"sys_user": @@(@http_context,"$session/user/uid")
+            @"status": @stt_ppto_borrador
+            @"monto_autorizado": 0.00
+            @"monto_planeado": 0.00
+            @"monto_comprometido": 0.00
+            @"monto_ejercido": 0.00
+        }
         
-        ref entity=entity.create(db,params,data)
+        ref entity = entity.create(db,params,presupuesto)
         
-            do dbr.apps.action.pos(entity)
+        do dbr.apps.action.pos(entity)
         do dbr.commit(db)
-            do dbr.apps.action.ext(entity)
+        do dbr.apps.action.ext(entity)
+
+        return entity
         
         exception
         {
@@ -197,101 +345,128 @@ module "model"
             do dbr.apps.action.log()
             do rise_error(last_error_code(),last_error())
         }
-        
-        return entity
     }
-    function  changeStatus(&db,&params,&data)
+
+    function changeStatus(&db,&params,&data)
     {
+        ref entity = dbr.rec(db,"SELECT status, ref_unidad FROM gop_presupuesto WHERE sys_pk = @_entity_id",params)
+
+        new action
+        {
+            @"activar": "GP14:DET060:"+@@(entity,"$ref_unidad")
+            @"cerrar": "GP15:DET060:"+@@(entity,"$ref_unidad")
+            @"detener": "GP16:DET060:"+@@(entity,"$ref_unidad")
+        }
+
+        act_text = @@(data,"$act")
+
+        if act_text == "activar" { params<"status"> : @stt_ppto_activo }
+        if act_text == "cerrar" { params<"status"> : @stt_ppto_cerrado }
+        if act_text == "detener" { params<"status"> : @stt_ppto_detenido }
+
+        if @@(params,"#status") < @@(entity,"#status")
+        {
+            if @@(entity,"#status") == @stt_ppto_activo { act_text = "activar" }
+            if @@(entity,"#status") == @stt_ppto_cerrado { act_text = "cerrar" }
+            if @@(entity,"#status") == @stt_ppto_detenido { act_text = "detener" }
+        }
+
+        act_code = @@(action,act_text)
+
+        if act_code == "" { do rise_error(500,"No es posible continuar. Acción '"+act_text+"'' no esta definida.") }
+        if not(allow_status(@cfg_ppto_status,@@(entity,"#status"),@@(params,"#status"))) {
+            do rise_error(500,"No es posible cambiar al estado indicado debido al estado en el que se encuentra actualmente.")
+        }
+
         @use_transaction = @false
+
+        do dbr.apps.action.pre(act_code)
         do dbr.begin(db)
-        
-            if @@(data,"$act")=="aprobar"
-            {
-                do dbr.apps.action.pre("GP14")
-                params<"status">:@STATUS_APROBADO
-            }
-            if @@(data,"$act")=="cerrar"
-            {
-                do dbr.apps.action.pre("GP15")
-                params<"status">:@STATUS_CERRADO
-            }
 
-            do dbr.execute(db,"update gop_presupuesto set status=@status where sys_pk=@_entity_id",params)
+        params<"lastuser"> : @@(@http_context,"$session/user/uid")
 
-            ref entity= gop.obtenerPresupuesto(db,params)
+        sql = "
+        UPDATE gop_presupuesto SET
+            sys_timestamp = NOW(),
+            sys_lastuser = @lastuser,
+            sys_recver = (IFNULL(sys_recver,0) + 1),
+            status = @status
+        WHERE sys_pk = @_entity_id"
+        do dbr.execute(db,sql,params)
+
+        ref entity:gop.obtenerPresupuesto(db,params)
         
-            do dbr.apps.action.pos(entity)
+        do dbr.apps.action.pos(entity)
         do dbr.commit(db)
-            do dbr.apps.action.ext(entity)
+        do dbr.apps.action.ext(entity)
         
         return entity
 
         exception
         {
             if dbr.in_transaction(db){ do dbr.rollback(db) }
-            do dbr.apps.action.log()
+            if isset("@@_action_context"){ do dbr.apps.action.log() }
             do rise_error(last_error_code(),last_error())
         }
     }
-    function gop.actualizarPresupuesto(&db, &params, &data)
-    {
-        @use_transaction = @false
-            do dbr.apps.action.pre("GP12")
 
-        if @@(data,"$act")!=""
-        {
-            return changeStatus(db,params,data)
-        }
+    function gop.actualizarPresupuesto(&db,&params,&data)
+    {
+        if @@(data,"$act")!="" { return changeStatus(db,params,data) }
 
         ref new_data = record.create()
-        @use_transaction = @false
+        if field.exist(data,"sys_pk"){ new_data<"sys_pk">: @@(data,"#sys_pk") }
+        if field.exist(data,"sys_recver"){ new_data<"sys_recver">: @@(data,"#sys_recver") }
 
-        if field.exist(data, "sys_pk"){ new_data<"sys_pk">: @@(data, "#sys_pk") }
-        if field.exist(data, "sys_recver"){ new_data<"sys_recver">: @@(data, "#sys_recver") }
-        if field.exist(data, "titulo"){ new_data<"titulo">: @@(data, "$titulo") }
-        if field.exist(data, "notas"){ new_data<"notas">: @@(data, "$notas") }
-        if field.exist(data, "status"){ new_data<"status">: @@(data, "#status") }
-        if field.exist(data, "divisa"){ new_data<"divisa">: @@(data, "#divisa") }
+        if field.exist(data,"titulo"){ new_data<"titulo">: @@(data,"$titulo") }
+        if field.exist(data,"notas"){ new_data<"notas">: @@(data,"$notas") }
+        if field.exist(data,"status"){ new_data<"status">: @@(data,"#status") }
+        if field.exist(data,"divisa"){ new_data<"divisa">: @@(data,"#divisa") }
 
-        if field.exist(data, "monto_autorizado"){ new_data<"monto_autorizado">: @@(data, "#monto_autorizado") }
-        if field.exist(data, "monto_planeado"){ new_data<"monto_planeado">: @@(data, "#monto_planeado") }
-        if field.exist(data, "monto_comprometido"){ new_data<"monto_comprometido">: @@(data, "#monto_comprometido") }
-        if field.exist(data, "monto_ejercido"){ new_data<"monto_ejercido">: @@(data, "#monto_ejercido") }
+        if field.exist(data,"monto_autorizado"){ new_data<"monto_autorizado">: @@(data,"#monto_autorizado") }
+        if field.exist(data,"monto_planeado"){ new_data<"monto_planeado">: @@(data,"#monto_planeado") }
+        if field.exist(data,"monto_comprometido"){ new_data<"monto_comprometido">: @@(data,"#monto_comprometido") }
+        if field.exist(data,"monto_ejercido"){ new_data<"monto_ejercido">: @@(data,"#monto_ejercido") }
 
+        ref presu = dbr.rec(db,"SELECT status FROM gop_presupuesto WHERE sys_pk = @sys_pk",new_data)
         ref partidas = @null
 
-        if field.exist(data, "partidas")
+        if @@(presu,"#status") == @stt_ppto_cerrado { do rise_error(500,"No es posible realizar cambios debido al estado en el que se encuentra actualmente.") }
+        if field.exist(data,"partidas")
         {
-            ref partidas = from.json(to.json(@@(data, "&partidas")))
-            do field.remove(data, "partidas")
+            if @@(presu,"#status") == @stt_ppto_detenido { do rise_error(500,"No es posible realizar afectaciones debido al estado en el que se encuentra actualmente.") }
+
+            ref partidas = from.json(to.json(@@(data,"&partidas")))
+            do field.remove(data,"partidas")
             do changePkParentToGuid(partidas)
         }
         
+        @use_transaction = @false
+
+        do dbr.apps.action.pre("GP12")
         do dbr.begin(db)
         
         ref res = entity.update(db,params,new_data)
 
         if not(isnull(partidas))
         {
-            pk_presupuesto = @@(res, "#sys_pk")
+            pk_presupuesto = @@(res,"#sys_pk")
             // do removeAllPartidas(db, pk_presupuesto)
-            do insertPartidas(db, partidas, pk_presupuesto)
+            do insertPartidas(db,partidas,pk_presupuesto)
         }
         
-            do dbr.apps.action.pos(res)
+        do dbr.apps.action.pos(res)
         do dbr.commit(db)
-            do dbr.apps.action.ext(res)
+        do dbr.apps.action.ext(res)
         
         return res
         
         exception
         {
             if dbr.in_transaction(db){ do dbr.rollback(db) }
-            do dbr.apps.action.log()
+            if isset("@@_action_context"){ do dbr.apps.action.log() }
             do rise_error(last_error_code(),last_error())
         }
-
-
     }
 
     function gop.eliminarPresupuesto(&db, &params)
@@ -335,41 +510,68 @@ module "model"
         {
             for i = 0; i < list.count(partidas)
             {
-                ref partida = list.obj(partidas, i)
+                ref partida = list.obj(partidas,i)
                 /*
                  * Si tiene padre lo guardamos temporalmente en el campo info para
                  * asignarselo a todos en una sola consulta
                  */
                 do field.remove(partida,"anual")
-                if @@(partida,"#sys_pk")<1
+                _save = @true
+
+                using partida
+                {
+                    @"sys_pk": @@(partida,"#sys_pk")
+                    @"sys_info": @@(partida,"$padre")
+                    @"sys_recver": @@(partida,"#sys_recver")
+                    @"padre*": @null
+                    @"ref_presupuesto": pk_presupuesto
+                    @"id": ifempty(@@(partida,"$id"),@@(partida,"$sys_guid"))
+                }
+
+                if @@(partida,"#sys_pk") < 1
                 {
                     do field.remove(partida,"sys_pk")
                     do field.remove(partida,"sys_guid")
+                    partida<"sys_user"> : @@(@http_context,"$session/user/uid")
+                    partida<"status"> : @stt_pda_prevista
+                    partida<"autorizado"> : 0.00
+                }
+                else
+                {
+                    status = @@(partida,"#istatus")
+                    
+                    if status == @stt_pda_prevista { do field.remove(partida,"autorizado") }
+                    else if status == @stt_pda_revision || status == @stt_pda_revisada
+                    {
+                        do field.remove(partida,"reserva")
+                        do field.remove(partida,"rc")
+                        do field.remove(partida,"re")
+                        for periodo = 1; periodo <= 12
+                        {
+                            p = "p"+padleft(periodo,2,"0")
+                            c = "c"+padleft(periodo,2,"0")
+                            e = "e"+padleft(periodo,2,"0")
+                            do field.remove(partida,p)
+                            do field.remove(partida,c)
+                            do field.remove(partida,e)
+                        }
+                    }
+                    else if status == @stt_pda_autorizada || status == @stt_pda_cancelada { _save = @false }
                 }
 
-                partida<"sys_info">: @@(partida, "padre")
-                partida<"padre*">: @null
-                partida<"sys_recver">:@@(partida,"#sys_recver")
+                if _save
+                {
+                    if field.exist(partida,"sys_guid") { do field.remove(partida,"sys_guid") }
+                    if field.exist(partida,"sys_dtcreated") { do field.remove(partida,"sys_dtcreated") }
+                    if field.exist(partida,"sys_timestamp") { do field.remove(partida,"sys_timestamp") }
+                    if trim(@@(partida,"$sys_info"))=="" { do field.remove(partida,"sys_info") }
+                    if field.exist(partida,"status") { do field.remove(partida,"status") }
+                    if field.exist(partida,"istatus") { do field.remove(partida,"istatus") }
+                    if field.exist(partida,"cstatus") { do field.remove(partida,"cstatus") }
 
-                if trim(@@(partida,"$sys_info"))==""{do field.remove(partida,"sys_info")}
-
-                partida<"ref_presupuesto">: pk_presupuesto
-                if @@(partida,"$id")=="" { partida<"id">: @@(partida, "$sys_guid") }
-                partida<"partida">: @@(partida, "$partida")
-
-                if field.exist(partida,"sys_timestamp"){do field.remove(partida,"sys_timestamp")}
-                if field.exist(partida,"sys_guid"){do field.remove(partida,"sys_guid")}
-                if field.exist(partida,"sys_dtcreated"){do field.remove(partida,"sys_dtcreated")}
-
-                do parseNumbersPartida(partida)
-                
-                do dbr.save(db,"gop_partida", partida)
-
-                // exception
-                // {
-                //     // do rise_error(0,last_error())
-                //     do rise_error(0,to.json(partida))
-                // }
+                    do parseNumbersPartida(partida)
+                    do dbr.save(db,"gop_partida",partida)
+                }
             }
 
             new prm { @"presupuesto": pk_presupuesto }
@@ -448,7 +650,6 @@ module "model"
     // =============== RH_UNIDAD_ORG
     function gop.obtenerUnidades(&db, &params)
     {
-        
         if trim(@@(params,"$_entity_id"))==""
         {
             do dbr.apps.action.grant("GP10")

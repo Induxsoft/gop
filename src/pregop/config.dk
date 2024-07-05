@@ -1,7 +1,66 @@
 #include "dkli.dkh"
 #!
-program
+module "config.dk"
 {
+    if not(isset("@http_context")) && isset("@crud_context") { ref @http_context = @@(@crud_context,"&http") }
+
+    // Enumeración de posibles estados del presupuesto.
+    @stt_ppto_borrador = 1
+    @stt_ppto_detenido = 2
+    @stt_ppto_activo = 3
+    @stt_ppto_cerrado = 4
+    // Enumeración de posibles estados de la partida
+    @stt_pda_prevista = 1
+    @stt_pda_revision = 2
+    @stt_pda_revisada = 3
+    @stt_pda_autorizada = 4
+    @stt_pda_cancelada = 99
+    // Configuración de transición de status para los `presupuestos`. "estado:permitido".
+    @cfg_ppto_status = "1:3, 2:3, 3:2, 3:4, 4:3"
+    // Configuración de transición de status de las `partidas presupuestales`. "estado:permitido".
+    @cfg_pda_status = "1:2, 2:1, 2:3, 2:99, 3:2, 3:4, 3:99, 4:3"
+
+    new @cfg_pda_stt_color
+    {
+        member @"1"
+        {
+            @"code": "GP1A"
+            @"color": "#FFFFFF"
+            @"text": "Prevista"
+            @"class": "text-dark border"
+        }
+        member @"2"
+        {
+            @"code": "GP1B"
+            @"color": "#FFC107"
+            @"text": "En revisión"
+        }
+        member @"3"
+        {
+            @"code": "GP17"
+            @"color": "#FFEF00"
+            @"text": "Revisada"
+            @"class": "text-dark"
+        }
+        member @"4"
+        {
+            @"code": "GP19"
+            @"color": "#198754"
+            @"text": "Autorizada"
+        }
+        member @"99"
+        {
+            @"code": "GP18"
+            @"color": "#6C757D"
+            @"text": "Cancelada"
+        }
+    }
+
+    //[deprecated]
+    @STATUS_APROBADO = 3
+    @STATUS_CERRADO = 4
+    @STATUS_POR_APROBAR = 2
+
     // _STATIC RESOURCES
     @CSS_EDITOR = "/$/pregop/css/editor.css"
     @CSS_MAIN = "/$/pregop/css/main.css"
@@ -27,6 +86,7 @@ program
         @"rh_unidad": "/!/pregop/editor/@unidad/rh_unidad_org"
         @"divisa": "/!/pregop/editor/?_view=divisa"
         @"gop_presupuesto_status": "/!/pregop/editor/?_view=gop_presupuesto_status"
+        @"change_pda_status": "/!/pregop/editor/@partida/change-pda-status/?status=@status&presupuesto=@presupuesto"
     }
 
     @EDITOR = "/!/pregop/editor/"
@@ -34,21 +94,19 @@ program
     @VIEW_DETAIL_PREG="/!/pregop/gestion/?parent={id}"
     @MODEL_EDITOR="pregop/editor/model.dk"
 
-    @TEMPLATE_ADD='<small class="text-secondary w-100">La unidad aún no cuenta con presupuesto</small>
-                <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2 my-3" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
-                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
-                    </svg>
-                    Agregar presupuesto
-                </button>'
+    @TEMPLATE_ADD='
+    <small class="text-secondary w-100">La unidad aún no cuenta con presupuesto</small>
+    <button class="btn btn-sm btn-primary py-1 d-flex align-items-center gap-2 my-3" data-bs-toggle="modal" data-bs-target="#modal_presupuesto">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" class="bi bi-plus" viewBox="0 0 16 16">
+            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/>
+        </svg>
+        Agregar presupuesto
+    </button>
+    '
 
     @TEMPLATE_ERROR_PVG='<div class="alert alert-danger">@message</div>'
 
     @NUM_EJERCICIO = 10
-
-    @STATUS_APROBADO= 3
-    @STATUS_CERRADO= 4
-    @STATUS_POR_APROBAR= 2
 
     new @meses
     {

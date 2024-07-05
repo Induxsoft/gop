@@ -128,9 +128,22 @@ var editor =
                 this.updateUnidad(data);
             };
         }
+
         if (this.tablePartidas && presupuesto)
         {
-            presupuesto.events = this.tablePartidas.EdiTable.Const.Events;
+            let table = this.tablePartidas;
+            const events = table.EdiTable.Const.Events;
+
+            table.Events[events.RowChanged] = (e) =>
+            {
+                let obj = table.DataArray[e.index];
+                if (obj) {
+                    this.printPartidaInfo(obj);
+                    this.showPdaBtnStatus(obj);
+                }
+            }
+
+            presupuesto.events = events;
             presupuesto.setTableEvents();
         }
     },
@@ -181,6 +194,31 @@ var editor =
         const row = this.tablePartidas.GetTrByIndex(this.tablePartidas.CurrentRowIndex());
         if (row) this.tablePartidas.RowIndent(row, add);
     },
+    showPdaBtnStatus(partida)
+    {
+        const container = document.querySelector("#status_partidas_control");
+        const buttons = container.querySelectorAll(".btn-status");
+
+        const AllowStatus = (a,b) => {
+            let config = (editor?.cfg_pda_status??"").trim().split(",");
+            let allow = false;
+            for (let i = 0; i < config.length; i++) {
+                const kv = config[i].trim().split(":");
+                // console.log(a,b,kv);
+                if (kv[0]==a && kv[1]==b) {
+                    allow = true;
+                    break
+                }
+            }
+            return allow;
+        }
+
+        let isRoot = (Number(partida?.padre??0) === 0);
+        buttons.forEach(btn => {
+            let show = (isRoot && AllowStatus(partida.istatus,btn.getAttribute("status")));
+            btn.classList.toggle("hidde-control", !show);
+        });
+    },
     showControls(listIds=[], containerId)
     {
         const container = document.querySelector('#'+containerId);
@@ -202,22 +240,31 @@ var editor =
     {
         if(editor.presupuesto)
         {
-            var btn_aprobar=document.getElementById("btn_aprobar");
+            var btn_activar=document.getElementById("btn_activar");
+            var btn_detener=document.getElementById("btn_detener");
             var btn_cerrar=document.getElementById("btn_cerrar");
             
-            if(btn_aprobar)btn_aprobar.classList.add("hidde-control");
+            if(btn_activar)btn_activar.classList.add("hidde-control");
+            if(btn_detener)btn_detener.classList.add("hidde-control");
             if(btn_cerrar)btn_cerrar.classList.add("hidde-control");
             
             switch(editor.presupuesto?.status??0)
             {
-                case editor.status_por_aprobar:
-                    if(btn_aprobar)
+                case editor.stt_ppto_borrador:
+                case editor.stt_ppto_detenido:
+                case editor.stt_ppto_cerrado:
+                    if(btn_activar)
                     {
-                        btn_aprobar.classList.remove("hidde-control");
-                        btn_aprobar.setAttribute("onclick","editor.Action('','PUT',{act:'aprobar'})");
+                        btn_activar.classList.remove("hidde-control");
+                        btn_activar.setAttribute("onclick","editor.Action('','PUT',{act:'activar'})");
                     }
                     break;
-                case editor.status_aprobado:
+                case editor.stt_ppto_activo:
+                    if(btn_detener)
+                    {
+                        btn_detener.classList.remove("hidde-control");
+                        btn_detener.setAttribute("onclick","editor.Action('','PUT',{act:'detener'})");
+                    }
                     if(btn_cerrar)
                     {
                         btn_cerrar.classList.remove("hidde-control");
@@ -231,7 +278,7 @@ var editor =
     {
         if(endpoint.trim()=="")
         {
-             endpoint = editor.services['gop_presupuesto'];
+            endpoint = editor.services['gop_presupuesto'];
             endpoint = endpoint.replace('@presupuesto', this.presupuesto.sys_pk);
         }
         main.request(endpoint, method, values,
@@ -257,10 +304,17 @@ var editor =
         const showTable = document.querySelector('#'+(btnTab.getAttribute('table')??'___'));
         
         if (showTable) {
+            const controls = document.querySelector('#presupuesto_controls');
             showTable.classList.remove('d-none');
             
-            if (showTable.id === "unidades_main_container") this.printResumen();
-            else this.printPresupuesto(this.presupuesto);
+            if (showTable.id === "unidades_main_container") {
+                controls.classList.add("hidde-control");
+                this.printResumen();
+            }
+            else {
+                controls.classList.remove("hidde-control");
+                this.printPresupuesto(this.presupuesto);
+            }
         }
     },
 
@@ -458,7 +512,7 @@ var editor =
 
         main.request(endpoint, 'GET', null,
             success => { 
-                this.showControls(['edit_pre','delete_pre'], 'presupuesto_controls');
+                this.showControls(['btn_seguimiento_presupuesto','edit_pre','delete_pre'], 'presupuesto_controls');
                 this.presupuesto = success;
                 this.printPresupuesto();
                 this.getPartidas(this.presupuesto.sys_pk);
@@ -472,14 +526,22 @@ var editor =
                     this.partidasBackup = [];
                     this.printPartidas();
                 }
-                else alert('No fue posible obtener el presupuesto.\n\n' + failure); 
+                else alert('No fue posible obtener el presupuesto.\n\n' + (failure.message ?? JSON.stringify(failure))); 
             },
             false
         );
     },
+    enableTablesSection(presupuesto)
+    {
+        const tables_section = document.getElementById("tables");
+        
+        let disabled = (presupuesto.status == this.stt_ppto_detenido || presupuesto.status == this.stt_ppto_cerrado)
+        tables_section.classList.toggle("disabled-all",disabled);
+    },
     printPresupuesto(presupuesto)
     {
         if (!presupuesto) presupuesto = this.presupuesto;
+        this.enableTablesSection(presupuesto);
 
         const container = document.querySelector('#presupuesto_container');
         container.style.opacity = 0;
@@ -518,6 +580,7 @@ var editor =
     printResumen()
     {
         const container = document.querySelector('#presupuesto_container');
+        
         container.style.opacity = 0;
         let template = '';
         
@@ -621,11 +684,11 @@ var editor =
     },
     showDirtyControls(isDirty=true)
     {
-        let showControls = [];
+        /* let showControls = [];
         if (isDirty) {
             showControls = ['disc_pre','save_pre'];
         }
-        this.showControls(showControls, 'partidas_control');
+        this.showControls(showControls, 'partidas_control'); */
     },
     load_presupuesto_modal()
     {
@@ -716,6 +779,36 @@ var editor =
     {
         this.partidasBackup = JSON.parse(JSON.stringify(this.tablePartidas.DataArray));
     },
+    togglePartidasControl(editMode)
+    {
+        if (!this.tablePartidas) {
+            console.error("La tabla de las partidas no esta definida");
+            return
+        }
+
+        const presupuesto_controls = document.getElementById("presupuesto_controls");
+        const table_partidas_control = document.getElementById("table_partidas_control");
+        const status_partidas_control = document.getElementById("status_partidas_control");
+
+        if (editMode) {
+            presupuesto_controls.classList.add("hidde-control");
+            table_partidas_control.classList.remove("hidde-control");
+            status_partidas_control.classList.add("hidde-control");
+            this.showControls(["save_pre","disc_pre"],"partidas_control");
+            // this.tablePartidas.CanMoveRow = true;
+            this.tablePartidas.ReadOnly = false;
+        }
+        else
+        {
+            presupuesto_controls.classList.remove("hidde-control");
+            table_partidas_control.classList.add("hidde-control");
+            status_partidas_control.querySelectorAll(".btn-status").forEach((btn) => { btn.classList.add("hidde-control") });
+            status_partidas_control.classList.remove("hidde-control");
+            this.showControls(["enable_edit_partidas"],"partidas_control");
+            // this.tablePartidas.CanMoveRow = false;
+            this.tablePartidas.ReadOnly = true;
+        }
+    },
     savePartidasPresupuesto()
     {
         if (!this.presupuesto) {
@@ -760,8 +853,63 @@ var editor =
             this.updatePresupuestoData(tree);
             this.printPartidas();
         }
-        this.showDirtyControls(false);
+        // this.showDirtyControls(false);
+        this.togglePartidasControl(false);
     },
+    changePartidaStatus(btnStatus)
+    {
+        if (!this.presupuesto) {
+            console.error("No se encontro el presupuesto de la partida");
+            return
+        }
+        if (!this.tablePartidas) {
+            console.error("La tabla de las partidas no esta definida");
+            return
+        }
+
+        let array = (this.tablePartidas?.DataArray??[]);
+        let index = this.tablePartidas.CurrentRowIndex();
+        
+        if (index < 0) {
+            alert("Es necesario seleccionar un elemento de la lista.");
+            return
+        }
+
+        let partida = array[index];
+        let params = { status: Number(btnStatus.getAttribute("status")), presupuesto: this.presupuesto.sys_pk }
+
+        let endpoint = (editor.services["change_pda_status"]).replace("@partida",(partida?.sys_pk??0));
+        endpoint = InduxsoftCrudlModel.UrlReplace(endpoint,params);
+
+        btnStatus.disabled = true;
+        main.request(endpoint,"PUT",null,
+            (success) => {
+                this.getPartidas(this.presupuesto.sys_pk);
+                this.printPartidaInfo(success);
+                this.showPdaBtnStatus(success);
+                btnStatus.disabled = false;
+            },
+            (failure) => {
+                alert(failure.message ?? JSON.stringify(failure));
+                btnStatus.disabled = false;
+            },
+            false
+        );
+    },
+    printPartidaInfo(partida)
+    {
+        const pda_title = document.getElementById("pda_title");
+        const pda_status = document.getElementById("pda_status_text");
+        const cfg_status = editor.cfg_pda_stt_color[partida.istatus] ?? {};
+        let clases = ["badge","text-wrap",...(cfg_status?.class??"").split(" ")];
+
+        pda_title.textContent = partida?.partida ?? "Item";
+        pda_status.textContent = cfg_status?.text ?? "";
+
+        pda_status.removeAttribute("class");
+        clases.forEach(cls => { if (cls.trim()!="") pda_status.classList.add(cls); });
+        pda_status.style.backgroundColor = cfg_status?.color ?? "";
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

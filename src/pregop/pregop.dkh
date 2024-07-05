@@ -78,10 +78,16 @@ module ":pregop"
             pda.sys_pk,
             IFNULL(pda.padre,0) padre,
             IFNULL((select ifnull(count(sys_pk),0) from gop_partida where padre=pda.sys_pk),0) hijos,
-            pda.ref_presupuesto
+            pda.ref_presupuesto,
+            stt_ppto.id AS stt_ppto_id,
+            stt_ppto.const AS stt_ppto_text,
+            stt_pda.id AS stt_pda_id,
+            stt_pda.const AS stt_pda_text
         FROM gop_partida AS pda
             INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
-        WHERE pda.sys_pk = @pda_sys_pk AND ppto.status = 3
+            INNER JOIN gop_presupuesto_status AS stt_ppto ON ppto.status = stt_ppto.id
+            INNER JOIN gop_partida_status AS stt_pda ON pda.status = stt_pda.id
+        WHERE pda.sys_pk = @pda_sys_pk
         "
 
         new params
@@ -97,11 +103,13 @@ module ":pregop"
 
         ref partida=dbr.rec(db,sql_partida,params)
 
-        if isnull(partida) { do rise_error(0,ftext("Partida no encontrada, compruebe Id de la partida y estado del presupuesto")) }
+        if isnull(partida) { do rise_error(500,ftext("Partida no encontrada, compruebe Id de la partida.")) }
+        if @@(partida,"#stt_ppto_id") != 3 { do rise_error(500,"No es posible realizar la afectación debido al estado actual del presupuesto. Estado requerido 'Activo'.") }
+        if @@(partida,"#stt_pda_id") != 4 { do rise_error(500,"No es posible realizar la afectación debido al estado actual de la partida. Estado requerido 'Autorizado'.") }
 
-        if not(dbr.in_transaction(db)) { do rise_error(0,"No se pueden afectar partidas fuera del contexto de una transacción de bases de datos")}
+        if not(dbr.in_transaction(db)) { do rise_error(500,"No se pueden afectar partidas fuera del contexto de una transacción de bases de datos")}
         
-        if @@(montos,"#_levels")<1 && @@(partida,"#hijos")>0 { do rise_error(0,"No se puede afectar una partida que tiene sub-partidas de forma directa")}
+        if @@(montos,"#_levels")<1 && @@(partida,"#hijos")>0 { do rise_error(500,"No se puede afectar una partida que tiene sub-partidas de forma directa")}
 
         im_first=@@(montos,"#_levels")<1
 
