@@ -2,10 +2,10 @@
 pregop,Presupuestos de gastos de operación,\0
 pregop.editor,Presupuesto,pregop
 GP10,Presupuesto de gastos de operación,pregop.editor
-GP11,Crear presupuesto,pregop.editor
-GP12,Editar presupuesto,pregop.editor
+GP11,Consultar presupuesto,pregop.editor
+GP12,Crear o Editar presupuesto,pregop.editor
 GP13,Eliminar presupuesto,pregop.editor
-GP14,Aprobar presupuesto,pregop.editor
+GP14,Activar presupuesto,pregop.editor
 GP15,Cerrar presupuesto,pregop.editor
 GP16,Detener presupuesto,pregop.editor
 GP17,Establecer partida revisada,pregop.editor

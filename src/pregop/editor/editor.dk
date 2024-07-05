@@ -118,7 +118,7 @@ program
 								}
 							}
 
-							div(class="d-flex flex-wrap align-items-center gap-1" id="")
+							div(class="d-flex flex-wrap align-items-center gap-1" id="presupuesto_actions")
 							{
 								a(href="#" id="btn_seguimiento_presupuesto" class="btn btn-sm border-secondary induxsoft-corners btn-main-action no-shadow no-print hidde-control"){"Seguimiento"}
 

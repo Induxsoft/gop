@@ -114,6 +114,7 @@ var editor =
             {
                 this.unidadSelected = this.tableUnidades.DataArray[e.sender.CurrentRowIndex()];
                 if (textSelected) textSelected.textContent = (this.unidadSelected?.descripcion ?? '');
+                this.presupuesto = null;
                 this.getUnidad(this.unidadSelected.sys_pk, true);
                 this.getPresupuesto(this.unidadSelected.sys_pk);
                 this.showControls(['btn_add_unidad', 'btn_edit_unidad', 'btn_delete_unidad'], 'unidad_controls');
@@ -238,40 +239,39 @@ var editor =
     },
     showControlsBtn()
     {
-        if(editor.presupuesto)
+        if(!editor.presupuesto) return;
+
+        const btn_activar=document.getElementById("btn_activar");
+        const btn_detener=document.getElementById("btn_detener");
+        const btn_cerrar=document.getElementById("btn_cerrar");
+        
+        if(btn_activar)btn_activar.classList.add("hidde-control");
+        if(btn_detener)btn_detener.classList.add("hidde-control");
+        if(btn_cerrar)btn_cerrar.classList.add("hidde-control");
+        
+        switch(editor.presupuesto?.status??0)
         {
-            var btn_activar=document.getElementById("btn_activar");
-            var btn_detener=document.getElementById("btn_detener");
-            var btn_cerrar=document.getElementById("btn_cerrar");
-            
-            if(btn_activar)btn_activar.classList.add("hidde-control");
-            if(btn_detener)btn_detener.classList.add("hidde-control");
-            if(btn_cerrar)btn_cerrar.classList.add("hidde-control");
-            
-            switch(editor.presupuesto?.status??0)
-            {
-                case editor.stt_ppto_borrador:
-                case editor.stt_ppto_detenido:
-                case editor.stt_ppto_cerrado:
-                    if(btn_activar)
-                    {
-                        btn_activar.classList.remove("hidde-control");
-                        btn_activar.setAttribute("onclick","editor.Action('','PUT',{act:'activar'})");
-                    }
-                    break;
-                case editor.stt_ppto_activo:
-                    if(btn_detener)
-                    {
-                        btn_detener.classList.remove("hidde-control");
-                        btn_detener.setAttribute("onclick","editor.Action('','PUT',{act:'detener'})");
-                    }
-                    if(btn_cerrar)
-                    {
-                        btn_cerrar.classList.remove("hidde-control");
-                        btn_cerrar.setAttribute("onclick","editor.Action('','PUT',{act:'cerrar'})");
-                    }
-                    break;
-            }
+            case editor.stt_ppto_borrador:
+            case editor.stt_ppto_detenido:
+            case editor.stt_ppto_cerrado:
+                if(btn_activar)
+                {
+                    btn_activar.classList.remove("hidde-control");
+                    btn_activar.setAttribute("onclick","editor.Action('','PUT',{act:'activar'})");
+                }
+                break;
+            case editor.stt_ppto_activo:
+                if(btn_detener)
+                {
+                    btn_detener.classList.remove("hidde-control");
+                    btn_detener.setAttribute("onclick","editor.Action('','PUT',{act:'detener'})");
+                }
+                if(btn_cerrar)
+                {
+                    btn_cerrar.classList.remove("hidde-control");
+                    btn_cerrar.setAttribute("onclick","editor.Action('','PUT',{act:'cerrar'})");
+                }
+                break;
         }
     },
     Action(endpoint, method="PUT", values=null)
@@ -304,7 +304,7 @@ var editor =
         const showTable = document.querySelector('#'+(btnTab.getAttribute('table')??'___'));
         
         if (showTable) {
-            const controls = document.querySelector('#presupuesto_controls');
+            const controls = document.querySelector('#presupuesto_actions');
             showTable.classList.remove('d-none');
             
             if (showTable.id === "unidades_main_container") {
@@ -506,21 +506,24 @@ var editor =
     {
         if (!unidadPK) return;
 
+        const presupuesto_controls = document.getElementById("presupuesto_controls");
         let endpoint = editor.services['gop_presupuesto'];
         endpoint = endpoint.replace('@presupuesto', unidadPK) + '?_key=ref_unidad';
         endpoint += '&e=' + this.ejercicio_select.value;
 
         main.request(endpoint, 'GET', null,
             success => { 
-                this.showControls(['btn_seguimiento_presupuesto','edit_pre','delete_pre'], 'presupuesto_controls');
                 this.presupuesto = success;
+                presupuesto_controls.classList.remove("hidde-control");
+                this.showControls(['btn_seguimiento_presupuesto','edit_pre','delete_pre'], 'presupuesto_controls');
                 this.printPresupuesto();
                 this.getPartidas(this.presupuesto.sys_pk);
             },
             failure => {
                 if (failure?.message?.includes('Elemento no encontrado')) {
-                    this.showControls([], 'presupuesto_controls');
                     this.presupuesto = null;
+                    presupuesto_controls.classList.add("hidde-control");
+                    this.showControls([], 'presupuesto_controls');
                     this.printPresupuesto();
                     this.tablePartidas.DataArray = [];
                     this.partidasBackup = [];
@@ -533,6 +536,8 @@ var editor =
     },
     enableTablesSection(presupuesto)
     {
+        if (!presupuesto) return;
+        
         const tables_section = document.getElementById("tables");
         
         let disabled = (presupuesto.status == this.stt_ppto_detenido || presupuesto.status == this.stt_ppto_cerrado)
@@ -569,7 +574,7 @@ var editor =
         }
         else
         {
-            template =editor.template_add;
+            template = editor.template_add;
         }
 
         setTimeout(()=>{

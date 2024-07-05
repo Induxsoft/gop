@@ -99,7 +99,7 @@ module ""
         if not(allow_status(@cfg_pda_status,@@(entity,"#status"),@@(params,"#status"))) {
             do rise_error(500,"No es posible cambiar al estado indicado debido al estado en el que se encuentra actualmente.")
         }
-        if @@(entity,"#status") == @stt_pda_autorizado && @@(entity,"#ejercido") > 0 {
+        if @@(entity,"#status") == @stt_pda_autorizada && @@(entity,"#ejercido") > 0 {
             do rise_error(500,"No es posible cambiar al estado indicado debido a que ya se han realizado afectaciones al ejercido de la partida.")
         }
         
@@ -317,7 +317,7 @@ module ""
     function gop.crearPresupuesto(&db,&params,&data)
     {
         @use_transaction = @false
-        do dbr.apps.action.pre("GP12")
+        do dbr.apps.action.pre("GP12:DET060:"+@@(data,"$ref_unidad"))
         do dbr.begin(db)
 
         ref presupuesto = record.copy(data,"*")
@@ -342,7 +342,7 @@ module ""
         exception
         {
             if dbr.in_transaction(db){ do dbr.rollback(db) }
-            do dbr.apps.action.log()
+            if isset("@@_action_context"){ do dbr.apps.action.log() }
             do rise_error(last_error_code(),last_error())
         }
     }
@@ -428,7 +428,7 @@ module ""
         if field.exist(data,"monto_comprometido"){ new_data<"monto_comprometido">: @@(data,"#monto_comprometido") }
         if field.exist(data,"monto_ejercido"){ new_data<"monto_ejercido">: @@(data,"#monto_ejercido") }
 
-        ref presu = dbr.rec(db,"SELECT status FROM gop_presupuesto WHERE sys_pk = @sys_pk",new_data)
+        ref presu = dbr.rec(db,"SELECT status, ref_unidad FROM gop_presupuesto WHERE sys_pk = @sys_pk",new_data)
         ref partidas = @null
 
         if @@(presu,"#status") == @stt_ppto_cerrado { do rise_error(500,"No es posible realizar cambios debido al estado en el que se encuentra actualmente.") }
@@ -443,7 +443,7 @@ module ""
         
         @use_transaction = @false
 
-        do dbr.apps.action.pre("GP12")
+        do dbr.apps.action.pre("GP12:DET060:"+@@(presu,"$ref_unidad"))
         do dbr.begin(db)
         
         ref res = entity.update(db,params,new_data)
@@ -473,20 +473,20 @@ module ""
     {
         @use_transaction = @false
 
-            do dbr.apps.action.pre("GP13")
+        do dbr.apps.action.pre("GP13")
         do dbr.begin(db)
         
-            if field.exist(params, "_entity_id")
-            {
-                new prm { @"pk_presupuesto": @@(params, "#_entity_id") }
-                do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk_presupuesto", prm)
-                do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk_presupuesto;", prm)
-            }
-            do entity.delete(db, params)
-        
-            do dbr.apps.action.pos(params)
+        if field.exist(params, "_entity_id")
+        {
+            new prm { @"pk_presupuesto": @@(params, "#_entity_id") }
+            do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk_presupuesto", prm)
+            do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk_presupuesto;", prm)
+        }
+        do entity.delete(db, params)
+    
+        do dbr.apps.action.pos(params)
         do dbr.commit(db)
-            do dbr.apps.action.ext(params)
+        do dbr.apps.action.ext(params)
         
         return @null
 
@@ -565,7 +565,6 @@ module ""
                     if field.exist(partida,"sys_dtcreated") { do field.remove(partida,"sys_dtcreated") }
                     if field.exist(partida,"sys_timestamp") { do field.remove(partida,"sys_timestamp") }
                     if trim(@@(partida,"$sys_info"))=="" { do field.remove(partida,"sys_info") }
-                    if field.exist(partida,"status") { do field.remove(partida,"status") }
                     if field.exist(partida,"istatus") { do field.remove(partida,"istatus") }
                     if field.exist(partida,"cstatus") { do field.remove(partida,"cstatus") }
 
