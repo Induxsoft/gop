@@ -1,6 +1,6 @@
 #include "dkli.dkh"
 #!
-module ""
+module "Presupuestos de Gastos de Operacion"
 {
     @table_name = "rh_unidad_org"
 
@@ -84,15 +84,22 @@ module ""
             pda.padre,
             pda.status,
             ppto.ref_unidad,
+            IFNULL(pda.autorizado,0) AS autorizado,
+            (IFNULL(pda.reserva,0)+IFNULL(pda.p01,0)+IFNULL(pda.p02,0)+IFNULL(pda.p03,0)+IFNULL(pda.p04,0)+IFNULL(pda.p05,0)+IFNULL(pda.p06,0)+IFNULL(pda.p07,0)+IFNULL(pda.p08,0)+IFNULL(pda.p09,0)+IFNULL(pda.p10,0)+IFNULL(pda.p11,0)+IFNULL(pda.p12,0)) AS planeado,
             (IFNULL(pda.re,0)+IFNULL(pda.e01,0)+IFNULL(pda.e02,0)+IFNULL(pda.e03,0)+IFNULL(pda.e04,0)+IFNULL(pda.e05,0)+IFNULL(pda.e06,0)+IFNULL(pda.e07,0)+IFNULL(pda.e08,0)+IFNULL(pda.e09,0)+IFNULL(pda.e10,0)+IFNULL(pda.e11,0)+IFNULL(pda.e12,0)) AS ejercido
         FROM gop_partida pda
             INNER JOIN gop_presupuesto ppto ON pda.ref_presupuesto = ppto.sys_pk
         WHERE pda.sys_pk=@_entity_id AND pda.ref_presupuesto=@presupuesto
         "
-        ref entity = dbr.rec(db,sql_partida,params)
+        back = @false
 
+        ref entity = dbr.rec(db,sql_partida,params)
         ref action = @@(@cfg_pda_stt_color,"&"+@@(params,"$status"))
-        if @@(params,"#status") < @@(entity,"#status") { ref action:@@(@cfg_pda_stt_color,"&"+@@(entity,"$status")) }
+        
+        if @@(params,"#status") < @@(entity,"#status") {
+            ref action:@@(@cfg_pda_stt_color,"&"+@@(entity,"$status"))
+            back = @true
+        }
 
         if isnull(action) { do rise_error(500,"Acción no definida") }
         if @@(entity,"#padre") > 0 { do rise_error(500,"No es posible cambiar el estado, esta acción solo esta disponible para 'Partidas Raíz'.") }
@@ -101,6 +108,9 @@ module ""
         }
         if @@(entity,"#status") == @stt_pda_autorizada && @@(entity,"#ejercido") > 0 {
             do rise_error(500,"No es posible cambiar al estado indicado debido a que ya se han realizado afectaciones al ejercido de la partida.")
+        }
+        if @@(params,"#status") == @stt_pda_autorizada && @@(entity,"#autorizado") < @@(entity,"#planeado") {
+            do rise_error(500,"No es posible autorizar la partida, el importe autorizado debe ser igual o mayor al monto planeado.")
         }
         
         params<"lastuser"> : @@(@http_context,"$session/user/uid")
@@ -128,6 +138,7 @@ module ""
         do dbr.apps.action.pos(entity)
         do dbr.commit(db)
         do dbr.apps.action.ext(entity)
+        do gop.partida.notify(db,entity,back)
 
         return entity
 
@@ -517,6 +528,7 @@ module ""
                  */
                 do field.remove(partida,"anual")
                 _save = @true
+                _notify = @false
 
                 using partida
                 {
@@ -535,6 +547,8 @@ module ""
                     partida<"sys_user"> : @@(@http_context,"$session/user/uid")
                     partida<"status"> : @stt_pda_prevista
                     partida<"autorizado"> : 0.00
+
+                    _notify = @true
                 }
                 else
                 {
@@ -569,7 +583,8 @@ module ""
                     if field.exist(partida,"cstatus") { do field.remove(partida,"cstatus") }
 
                     do parseNumbersPartida(partida)
-                    do dbr.save(db,"gop_partida",partida)
+                    ref entity = dbr.save(db,"gop_partida",partida)
+                    if _notify { do gop.partida.notify(db,entity,@false) }
                 }
             }
 
@@ -776,5 +791,114 @@ module ""
         }
     }
 
- 
+    function user_in_group(&obj,&list)
+    {
+        for i = 0; i < list.count(list)
+        {
+            if to.json(list.obj(list,i)) == to.json(record.copy(obj,"group")) { return @true }
+        }
+        return @false
+    }
+    function gop.partida.notify(&db,&partida,back)
+    {
+        notify_owner = @false
+        notif_title = ""
+        sitem_back_id = ""
+        sitem_forward_id = ""
+        
+        status = parse.num(ifempty(@@(partida,"$istatus"),@@(partida,"$status")))
+        switch status
+        {
+            case @stt_pda_prevista
+            {
+                notif_title = "Nueva partida presupuestal!"
+                if back { notify_owner = @true }
+                sitem_forward_id = "GP1B" //Establecer partida en revisión
+                break
+            }
+            case @stt_pda_revision
+            {
+                notif_title = "Nueva partida por revisar!"
+                sitem_back_id = "GP1B" //Establecer partida en revisión
+                sitem_forward_id = "GP17" //Establecer partida revisada
+                break
+            }
+            case @stt_pda_revisada
+            {
+                notif_title = "Nueva partida por autorizar!"
+                sitem_back_id = "GP17" //Establecer partida revisada
+                sitem_forward_id = "GP19" //Autorizar partida
+                break
+            }
+            case @stt_pda_autorizada
+            {
+                notif_title = "Partida presupuestal autorizada!"
+                notify_owner = @true
+                break
+            }
+            case @stt_pda_cancelada
+            {
+                notif_title = "Partida presupuestal cancelada!"
+                notify_owner = @true
+                break
+            }
+        }
+
+        if back { notif_title = "Partida presupuestal devuelta!" }
+        new params
+        {
+            @"partida": @@(partida,"#sys_pk")
+            @"itemid": ifstr(back, sitem_back_id, sitem_forward_id)
+            @"det": "DET060" //(Unidad organizacional)
+        }
+        // Clave primaria de la unidad organizacional de la partida.
+        params<"detid"> : dbr.num(db,"select b.ref_unidad from gop_partida a inner join gop_presupuesto b on a.ref_presupuesto = b.sys_pk where a.sys_pk = @partida",params)
+        
+        sql_get_grupos = "
+        SELECT pf.`usergroup` AS `group`
+        FROM sitem AS st
+            INNER JOIN `profile` AS pf ON pf.item = st.sys_pk
+            INNER JOIN usergroup AS gp ON pf.`usergroup` = gp.sys_pk
+        WHERE st.itemid = @itemid;
+        "
+        sql_get_usuarios = "
+        SELECT gp.users AS `user`, gp.`groups` AS `group`
+        FROM det_usr AS du
+            INNER JOIN sitem_det_usr AS pu ON du.sys_pk = pu.ref_det_usr
+            INNER JOIN user_usergroup_ AS gp ON du.ref_user = gp.users
+        WHERE
+            du.ref_det = @det
+            AND du.detid = @detid
+            AND pu.itemid = @itemid
+        "
+
+        ref notif_to = dbr.list(db,sql_get_grupos,params)
+        ref grupos = from.json(to.json(notif_to))
+        ref usuarios = dbr.list(db,sql_get_usuarios,params)
+        
+        go foreach.lobj(value:obj) with(usuarios)
+        {
+            if not(user_in_group(obj,grupos)) { do list.add(notif_to,record.copy(obj,"user")) }
+        }
+
+        if notify_owner {
+            ref owner = dbr.rec(db,"SELECT sys_user AS `user` FROM gop_partida WHERE sys_pk = @partida",params)
+            do list.add(notif_to,owner)
+        }
+
+        if list.count(notif_to) == 0 { return }
+
+        partida_link = @EDITOR
+
+        new notification
+        {
+            @"title": notif_title
+            @"sender": "pregop"
+            @"body": @@(partida,"$partida")
+            @"href": "/?go="+url_encode(partida_link)
+            @"target": "_self"
+            @"to*": notif_to
+        }
+        do dbr.notif.send(db,notification)
+    }
 }

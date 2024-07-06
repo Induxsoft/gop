@@ -118,6 +118,8 @@ var editor =
                 this.getUnidad(this.unidadSelected.sys_pk, true);
                 this.getPresupuesto(this.unidadSelected.sys_pk);
                 this.showControls(['btn_add_unidad', 'btn_edit_unidad', 'btn_delete_unidad'], 'unidad_controls');
+                this.printPartidaInfo(null);
+                this.showPdaBtnStatus(null);
             };
             this.tableUnidades.Events[this.tableUnidades.EdiTable.Const.Events.BeforeMoveRow] = (e) =>
             {
@@ -135,14 +137,14 @@ var editor =
             let table = this.tablePartidas;
             const events = table.EdiTable.Const.Events;
 
-            table.Events[events.RowChanged] = (e) =>
-            {
-                let obj = table.DataArray[e.index];
-                if (obj) {
-                    this.printPartidaInfo(obj);
-                    this.showPdaBtnStatus(obj);
-                }
-            }
+            // table.Events[events.RowChanged] = (e) =>
+            // {
+            //     let obj = table.DataArray[e.index];
+            //     if (obj) {
+            //         this.printPartidaInfo(obj);
+            //         this.showPdaBtnStatus(obj);
+            //     }
+            // }
 
             presupuesto.events = events;
             presupuesto.setTableEvents();
@@ -199,6 +201,11 @@ var editor =
     {
         const container = document.querySelector("#status_partidas_control");
         const buttons = container.querySelectorAll(".btn-status");
+
+        if (!partida) {
+            buttons.forEach(btn => btn.classList.toggle("hidde-control",true));
+            return
+        }
 
         const AllowStatus = (a,b) => {
             let config = (editor?.cfg_pda_status??"").trim().split(",");
@@ -355,7 +362,7 @@ var editor =
 
         main.request(endpoint, 'PUT', unidad,
             success => { 
-                console.log(success);
+                // console.log(success);
                 this.getUnidades();
                 main.clearValues('mdl_au_controls'); 
                 main.closeModal('modal_add_unidades');
@@ -810,6 +817,7 @@ var editor =
             status_partidas_control.querySelectorAll(".btn-status").forEach((btn) => { btn.classList.add("hidde-control") });
             status_partidas_control.classList.remove("hidde-control");
             this.showControls(["enable_edit_partidas"],"partidas_control");
+            this.printPartidaInfo(null);
             // this.tablePartidas.CanMoveRow = false;
             this.tablePartidas.ReadOnly = true;
         }
@@ -839,7 +847,8 @@ var editor =
                 this.presupuesto = success;
                 this.setPartidasBackup();
                 this.getPartidas(this.presupuesto.sys_pk);
-                this.showDirtyControls(false);
+                // this.showDirtyControls(false);
+                this.togglePartidasControl(false);
             },
             failure => { alert('No fue posible guardar las partidas del presupuesto.\n\n' + (failure.message??failure)); },
             false
@@ -905,7 +914,14 @@ var editor =
     {
         const pda_title = document.getElementById("pda_title");
         const pda_status = document.getElementById("pda_status_text");
-        const cfg_status = editor.cfg_pda_stt_color[partida.istatus] ?? {};
+
+        if (!partida) {
+            pda_title.textContent = "Item";
+            pda_status.textContent = "";
+            return
+        }
+
+        let cfg_status = editor.cfg_pda_stt_color[partida.istatus] ?? {};
         let clases = ["badge","text-wrap",...(cfg_status?.class??"").split(" ")];
 
         pda_title.textContent = partida?.partida ?? "Item";

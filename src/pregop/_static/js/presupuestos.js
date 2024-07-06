@@ -19,6 +19,15 @@ var presupuesto =
     {
         if (this.coldef === null) this.coldef = JSON.parse(JSON.stringify(this.table.Columns));
 
+        this.table.Events[this.events.RowChanged] = (e) =>
+        {
+            let obj = this.table.DataArray[e.index];
+            if (obj) {
+                editor.printPartidaInfo(obj);
+                editor.showPdaBtnStatus(obj);
+            }
+        }
+
         // Antes de mover la fila
         this.table.Events[this.events.BeforeMoveRow] = (e) =>
         {
@@ -65,6 +74,16 @@ var presupuesto =
             
             if (!coldef || !obj) return;
             this.validateStatus(col,obj,coldef);
+            
+            if (this.table.DataArray.length==1)
+            {
+                const pda_title = document.getElementById("pda_title");
+                if (pda_title.textContent.trim()=="" || pda_title.textContent.trim()=="Item") {
+                    editor.printPartidaInfo(obj);
+                    editor.showPdaBtnStatus(obj);
+                }
+            }
+
             /**
              * Si se va a actualizar una celda sumable y la fila de la celda a editar tiene hijos se cancela
              */

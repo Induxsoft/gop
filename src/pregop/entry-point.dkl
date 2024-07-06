@@ -9,6 +9,7 @@ module "Controller configs"
 	#include "dbr.apps.dkl"
 	#include "dbr.events.dkl"
 	#include "dbr.security.dkl"
+	#include "dbr.notif.dkl"
 	#include "./config.dk"
 	#include "./_lib/lib.dk"
 
