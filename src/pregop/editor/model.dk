@@ -135,6 +135,9 @@ module "Presupuestos de Gastos de Operacion"
         conditions = "p.sys_pk=@_entity_id AND p.ref_presupuesto=@presupuesto"
         ref entity:dbr.rec(db,ftext(@query_partida_presupuestal),params)
 
+        nota = "Cambio de estado a " + @@(entity,"$cstatus")
+        do gop.partida.saveLog(db,nota,@@(entity,"#sys_pk"))
+
         do dbr.apps.action.pos(entity)
         do dbr.commit(db)
         do dbr.apps.action.ext(entity)
@@ -791,6 +794,18 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
+    function gop.partida.savelog(db,text,pk_partida)
+    {
+        new log
+        {
+            @"sys_user": @@(@http_context,"$session/user/uid")
+            @"nota": text
+            @"usuario": @@(@http_context,"$session/user/name")
+            @"ref_partida": pk_partida
+        }
+        do dbr.save(db,"gop_partida_log",log)
+    }
+
     function user_in_group(&obj,&list)
     {
         for i = 0; i < list.count(list)
@@ -888,7 +903,7 @@ module "Presupuestos de Gastos de Operacion"
 
         if list.count(notif_to) == 0 { return }
 
-        partida_link = @EDITOR
+        partida_link = path.concat(@GOP_PARTIDA,@@(partida,"$sys_pk"))
 
         new notification
         {

@@ -56,6 +56,8 @@ module "config.dk"
         }
     }
 
+    @default_max_rows = 250
+
     //[deprecated]
     @STATUS_APROBADO = 3
     @STATUS_CERRADO = 4
@@ -67,6 +69,7 @@ module "config.dk"
     @JS_MAIN = "/$/pregop/js/main.js"
     @JS_PRESUPUESTOS = "/$/pregop/js/presupuestos.js"
     @JS_EDITOR = "/$/pregop/js/editor.js"
+    @JS_PARTIDA = "/$/pregop/js/gop_partida.js"
     @JS_OPS = "/$/pregop/js/ops.js"
     
     @FORMAT_DET_PRES="$ #,#.00"
@@ -90,7 +93,9 @@ module "config.dk"
     }
 
     @EDITOR = "/!/pregop/editor/"
-    @GESTION="/!/pregop/gestion/"
+    @GOP_PARTIDA = "/!/pregop/gop_partida/"
+    @GOP_PARTIDA_LOG = "/!/pregop/gop_partida_log/"
+    @GESTION = "/!/pregop/gestion/"
     @VIEW_DETAIL_PREG="/!/pregop/gestion/?parent={id}"
     @MODEL_EDITOR="pregop/editor/model.dk"
 

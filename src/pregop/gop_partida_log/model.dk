@@ -1,0 +1,61 @@
+#include "dkli.dkh"
+#!
+module ":gop.partida.log"
+{
+    @table_name = "gop_partida_log"
+    @keyfield = "sys_pk"
+
+    @list_query = "
+    SELECT
+        DATE_FORMAT(sys_dtcreated,'%Y-%m-%d %H:%i:%s') AS created_at,
+        usuario,
+        nota
+    FROM #<@table_name>
+    WHERE NOT IFNULL(sys_deleted,0)
+        AND ref_partida = @partida
+    ORDER BY sys_dtcreated DESC
+    LIMIT #<@default_max_rows>
+    "
+    @read_query = "
+    SELECT
+        DATE_FORMAT(sys_dtcreated,'%Y-%m-%d %H:%i:%s') AS created_at,
+        usuario,
+        nota
+    FROM #<@table_name>
+    WHERE #<@keyfield> = @_entity_id
+    "
+
+    list::&db,&params
+    {
+        if @@(params,"#limit") > 0 { @default_max_rows = @@(params,"#limit") }
+        return entity.list(db,params)
+    }
+
+    create::&db,&params,&data
+    {
+        new log
+        {
+            @"sys_user": @@(@http_context,"$session/user/uid")
+            @"nota": trim(@@(data,"$nota"))
+            @"usuario": @@(@http_context,"$session/user/name")
+            @"ref_partida": @@(data,"#ref_partida")
+        }
+        return entity.create(db,params,log)
+    }
+
+    update::&db,&params,&data
+    {
+        new log
+        {
+            @"sys_lastuser": @@(@http_context,"$session/user/uid")
+            @"nota": trim(@@(data,"$nota"))
+            @"usuario": @@(@http_context,"$session/user/name")
+            @"ref_partida": @@(data,"#ref_partida")
+        }
+        return entity.update(db,params,data)
+    }
+
+    point @list to gop.partida.log.list
+    point @create to gop.partida.log.create
+    point @update to gop.partida.log.update
+}

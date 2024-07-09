@@ -175,6 +175,8 @@ program
 									{
 										span(class="fw-bold" id="pda_title"){$"Item"}
 										small(class="" id="pda_status_text"){$""}
+										
+										button(class="btn btn-xs btn-main-action border-secondary rounded-0 no-shadow hidde-control" id="pda_detail"){$"Detalle"}
 									}
 
 									small(class="text-muted mx-2"){$"|"}
@@ -328,6 +330,7 @@ program
 			editor.unidades = #<to.json(unidades)>;
 			editor.currenty = #<current_year>;
 			editor.view_detail_preg="#<@VIEW_DETAIL_PREG>";
+			editor.url_gop_partida = "#<@GOP_PARTIDA>";
 			editor.template_add=`#<@TEMPLATE_ADD>`;
 
 			editor.stt_ppto_borrador=#<@stt_ppto_borrador>;

@@ -136,6 +136,9 @@ var editor =
         {
             let table = this.tablePartidas;
             const events = table.EdiTable.Const.Events;
+            const pda_detail = document.getElementById("pda_detail");
+
+            if (pda_detail) pda_detail.addEventListener("click", (e) => this.showPartidaDetail());
 
             // table.Events[events.RowChanged] = (e) =>
             // {
@@ -794,7 +797,7 @@ var editor =
     togglePartidasControl(editMode)
     {
         if (!this.tablePartidas) {
-            console.error("La tabla de las partidas no esta definida");
+            console.warn("La tabla de las partidas no esta definida");
             return
         }
 
@@ -873,11 +876,11 @@ var editor =
     changePartidaStatus(btnStatus)
     {
         if (!this.presupuesto) {
-            console.error("No se encontro el presupuesto de la partida");
+            console.warn("No se encontro el presupuesto de la partida");
             return
         }
         if (!this.tablePartidas) {
-            console.error("La tabla de las partidas no esta definida");
+            console.warn("La tabla de las partidas no esta definida");
             return
         }
 
@@ -914,10 +917,12 @@ var editor =
     {
         const pda_title = document.getElementById("pda_title");
         const pda_status = document.getElementById("pda_status_text");
+        const pda_detail = document.getElementById("pda_detail");
 
         if (!partida) {
             pda_title.textContent = "Item";
             pda_status.textContent = "";
+            pda_detail.classList.add("hidde-control");
             return
         }
 
@@ -926,10 +931,36 @@ var editor =
 
         pda_title.textContent = partida?.partida ?? "Item";
         pda_status.textContent = cfg_status?.text ?? "";
+        pda_detail.classList.remove("hidde-control");
 
         pda_status.removeAttribute("class");
         clases.forEach(cls => { if (cls.trim()!="") pda_status.classList.add(cls); });
         pda_status.style.backgroundColor = cfg_status?.color ?? "";
+    },
+    showPartidaDetail()
+    {
+        if (!this.tablePartidas) {
+            console.warn("La tabla de las partidas no esta definida");
+            return
+        }
+
+        let array = (this.tablePartidas?.DataArray??[]);
+        let index = this.tablePartidas.CurrentRowIndex();
+        
+        if (index < 0) {
+            alert("Es necesario seleccionar un elemento de la lista.");
+            return
+        }
+
+        let obj = array[index];
+        let pk = (Number(obj?.sys_pk??0) || 0);
+
+        if (pk <= 0) {
+            alert("Es necesario guardar la partida para acceder a sus detalles.");
+            return
+        }
+
+        window.location.href = "/!/pregop/gop_partida/"+pk+"/"
     }
 }
 

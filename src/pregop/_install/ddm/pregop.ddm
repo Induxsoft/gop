@@ -127,6 +127,13 @@ model "presupuestos operativos"
 			field "ref_presupuesto"
 		}
 	}
+	// Bitácora/Historial de la partida.
+	entity "gop_partida_log":"TableModel"
+	{
+		@"nota" memo required
+		@"usuario" string(50) required
+		@"ref_partida" ref: "gop_partida" required
+	}
 	// Registro de movimientos que afectan el presupuesto
 	entity "gop_mov": "TableModel"
 	{

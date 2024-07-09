@@ -1,0 +1,295 @@
+#include "dkli.dkh"
+#!
+module "form.dk"
+{
+    #include "functions.dkh"
+    #include "serialize.dkh"
+    #include "uielements.v12.dkl"
+    #include "pregop/config.dk"
+
+    do @context.begin(@crud_context)
+
+    ref entity = ifnull(@("&./entity"),record.create())
+
+	@_entities_type = @("$parameters/_entities_type")
+	@_entity_id = @("$parameters/_entity_id")
+
+	is_new = (@_entity_id == "_new")
+    enable_editing = (@@(entity,"#status")!=@stt_pda_autorizada || @@(entity,"#status")!=@stt_pda_cancelada)
+
+    new nav_config
+    {
+        @"title": @@(entity,"$partida")
+        @"buttons*": @null
+        @"urlexit": @EDITOR
+        member @"hidden" { @"print": @true }
+    }
+
+    function print_log_table()
+    {
+        ref bitacora = ifnull(@("&./logs"),list.create())
+        #$
+        table(class="table table-sm" id="tbl_logs")
+        {
+            thead(class="sticky-top bg-white")
+            {
+                tr
+                {
+                    th(scope="col"){$"Fecha"}
+                    th(scope="col"){$"Usuario"}
+                    th(scope="col"){$"Notas"}
+                }
+            }
+            tbody
+            {
+                #!
+                for i = 0; i < list.count(bitacora)
+                {
+                    ref obj = list.obj(bitacora,i)
+                    #$
+                    tr
+                    {
+                        td(class=""){$"#<@@(obj,'$created_at')>"}
+                        td(class=""){$"#<@@(obj,'$usuario')>"}
+                        td(class=""){$"#<@@(obj,'$nota')>"}
+                    }
+                }
+            }
+        }
+        #!
+    }
+
+    #$ div(class="container-fluid")
+    {
+        #! do uie.printV12FormBar(nav_config)
+        #$
+        style
+        {$'
+            .no-shadow { box-shadow: none !important; }
+            .btn.btn-xs { padding: .20rem .4rem; font-size: .725rem; border-radius: .1rem; }
+        '}
+        div(class="row" id="work_area")
+        {
+            div(class="alert alert-danger overflow-auto mb-2 #<ifstr(@('$error/message')!='','','d-none')>" id="form_alerts"){$"#<@('error/message')>"}
+
+            div(class="col-lg-6 col-md-6 mb-2")
+            {
+                form(method="POST" action="./" id="form-partida")
+                {
+                    input(type="hidden" name="sys_pk" value="#<@@(entity, '#sys_pk')>")
+                    input(type="hidden" name="sys_recver" value="#<@@(entity, '#sys_recver')>")
+                    input(type="hidden" name="ref_presupuesto" value="#<@@(entity,'#ref_presupuesto')>")
+                    ##
+                    do uie.print_from_url_field()
+                    ##
+
+                    div(class="d-flex align-items-center gap-2 w-100 mb-2")
+                    {
+                        // div(class="alert alert-primary rounded-0 w-100 py-0 px-1 m-0" role="alert"){$"#<@@(entity,'id')>"}
+                        span(class="flex-grow-1"){$""}
+                        div(class="d-flex align-items-center justify-content-end gap-2 #<ifstr(enable_editing,'','d-none')>" id="div_form_buttons")
+                        {
+                            button(class="btn btn-primary btn-sm rounded-0" type="button" id="btn_submit"){$"Modificar"}
+                            button(class="btn btn-secondary btn-sm rounded-0" type="reset" id="btn_cancel" hidden=""){$"Cancelar"}
+                        }
+                    }
+
+                    div(class="d-flex justify-content-between flex-wrap gap-2")
+                    {
+                        label(class="form-label")
+                        {
+                            b{$"Creó: "}
+                            input(class="form-control-plaintext py-0" type="text" name="" value="#<@@(entity,'$created_by')>" disabled="")
+                        }
+                        label(class="form-label")
+                        {
+                            b{$"Creación: "}
+                            input(class="form-control-plaintext py-0" type="datetime-local" name="" value="#<@@(entity,'$created_at')>" disabled="")
+                        }
+                        label(class="form-label")
+                        {
+                            b{$"Últ. act: "}
+                            input(class="form-control-plaintext py-0" type="datetime-local" name="" value="#<@@(entity,'$updated_at')>" disabled="")
+                        }
+                    }
+
+                    div(class="d-flex align-items-center gap-2")
+                    {
+                        label(class=""){ b{$"Estado: "} span(id="spn_status"){$"#<@@(entity,'$cstatus')>"} }
+                        input(type="hidden" name="status" value="#<@@(entity,'#status')>" id="txt_status")
+                        fieldset(class="d-flex align-items-center gap-2" id="status_control")
+                        {
+                            ##
+                            btn_status_cls = "btn btn-xs btn-light btn-status border rounded-0"
+                            ##
+
+                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_prevista>" hidden=""){$"Prevista"}
+                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_revision>" hidden=""){$"En revisión"}
+                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_revisada>" hidden=""){$"Revisada"}
+                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_autorizada>" hidden=""){$"Autorizar"}
+                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_cancelada>" hidden=""){$"Cancelar"}
+                        }
+                    }
+
+                    div(class="row")
+                    {
+                        div(class="col-lg-4 col-md-6 col-sm-6")
+                        {
+                            label(class="form-label fw-bolder"){$"ID:"}
+                            input(class="form-control form-control-sm rounded-0" type="text" name="id" value="#<@@(entity,'$id')>" id="txt_id" required="" disabled="")
+                        }
+                        div(class="col-lg-4 col-md-6 col-sm-6")
+                        {
+                            label(class="form-label fw-bolder"){$"Partida:"}
+                            input(class="form-control form-control-sm rounded-0" type="text" name="partida" value="#<@@(entity,'$partida')>" id="txt_partida" required="" disabled="")
+                        }
+                        div(class="col-lg-4 col-md-12")
+                        {
+                            label(class="form-label"){$"Padre:"}
+                            input(type="hidden" name="padre" value="#<@@(entity,'#padre')>" id="txt_padre")
+                            input(class="form-control form-control-sm rounded-0" type="text" name="" value="#<@@(entity,'$padre_text')>" disabled="")
+                        }
+
+                        div(class="col-4")
+                        {
+                            label(class="" "for"="txt_autorizado"){$"Autorizado:"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="autorizado" value="#<@@(entity,'#autorizado')>" min="0" step="0.0001" id="txt_autorizado" disabled="")
+                        }
+                        div(class="col-4")
+                        {
+                            label(class="" "for"="txt_anual"){$"Anual:"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="" value="0.0000" min="0" step="0.0001" id="txt_anual" disabled="")
+                        }
+                        div(class="col-4")
+                        {
+                            label(class="" "for"="txt_reserva"){$"Reserva:"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="reserva" value="#<@@(entity,'#reserva')>" min="0" step="0.0001" id="txt_reserva" disabled="")
+                        }
+
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Enero"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p01" value="#<@@(entity,'#p01')>" min="0" step="0.0001" id="txt_p01" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Febrero"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p02" value="#<@@(entity,'#p02')>" min="0" step="0.0001" id="txt_p02" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Marzo"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p03" value="#<@@(entity,'#p03')>" min="0" step="0.0001" id="txt_p03" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Abril"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p04" value="#<@@(entity,'#p04')>" min="0" step="0.0001" id="txt_p04" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Mayo"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p05" value="#<@@(entity,'#p05')>" min="0" step="0.0001" id="txt_p05" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Junio"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p06" value="#<@@(entity,'#p06')>" min="0" step="0.0001" id="txt_p06" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Julio"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p07" value="#<@@(entity,'#p07')>" min="0" step="0.0001" id="txt_p07" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Agosto"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p08" value="#<@@(entity,'#p08')>" min="0" step="0.0001" id="txt_p08" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Septiembre"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p09" value="#<@@(entity,'#p09')>" min="0" step="0.0001" id="txt_p09" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Octubre"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p10" value="#<@@(entity,'#p10')>" min="0" step="0.0001" id="txt_p10" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Noviembre"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p11" value="#<@@(entity,'#p11')>" min="0" step="0.0001" id="txt_p11" disabled="")
+                        }
+                        div(class="col-lg-3 col-md-4 col-sm-3 col-4")
+                        {
+                            label(class="" "for"="txt_p01"){$"Diciembre"}
+                            input(class="form-control form-control-sm rounded-0 induxsoft-num-field mw-100" type="number" name="p12" value="#<@@(entity,'#p12')>" min="0" step="0.0001" id="txt_p12" disabled="")
+                        }
+
+                        div(class="col-12")
+                        {
+                            label(class="form-label"){$"Notas:"}
+                            textarea(class="form-control rounded-0" name="notas" rows="5" id="txt_notas" disabled=""){$"#<@@(entity,'$notas')>"}
+                        }
+                    }
+                }
+            }
+            
+            div(class="col-lg-6 col-md-6 mb-2 overflow-auto" style="max-height:90vh;")
+            {
+                // div(class="card mb-2")
+                // {
+                //     div(class="card-header")
+                //     {
+                //         div(class="d-flex align-items-center")
+                //         {
+                //             h5(class="mb-0"){$"Adjuntos"}
+                            
+                //             span(class="flex-grow-1"){""}
+                //             input(class="form-control form-control-sm rounded-0 d-none" type="file" name="adjuntos" multiple="true" id="txt_adjuntos")
+                //             label(class="btn btn-primary btn-sm rounded-0" "for"="txt_adjuntos" title="Subir archivos"){$"Adjuntar"}
+                //         }
+                //     }
+                //     div(class="card-body")
+                //     {
+                //         div(class="overflow-auto w-100 d-flex gap-2" id="div_adjuntos" style="max-height:25vh;")
+                //         {$""
+                //             // ##
+                //             // do print_attachments(attachments)
+                //             // ##
+                //         }
+                //     }
+                // }
+
+                div(class="card")
+                {
+                    h5(class="card-header"){$"Bitácora"}
+                    div(class="card-body")
+                    {
+                        div(class="input-group input-group-sm mb-2")
+                        {
+                            input(class="form-control rounded-0" type="text" name="notes" id="txt_log" placeholder="Ingrese texto...")
+                            button(class="btn btn-primary rounded-0" type="button" id="btn_send_log"){$"Agregar"}
+                        }
+
+                        div(class="overflow-auto w-100" id="div_log" style="max-height:50vh;")
+                        {$""
+                            ##
+                            do print_log_table()
+                            ##
+                        }
+                    }
+                }
+            }
+        }
+
+        script(src="#<@JS_PARTIDA>"){$""}
+        script(type="text/javascript")
+        {$'
+            partida.formId = "form-partida";
+            partida.GET = #<to.json(@("&parameters"))>;
+            partida.cfg_status = "#<@cfg_pda_status>";
+        '}
+    }
+}

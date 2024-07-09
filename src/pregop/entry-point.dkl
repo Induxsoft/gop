@@ -5,6 +5,7 @@ module "Controller configs"
 	#include "functions.dkh"
 	#include "serialize.dkh"
 	#include "dbr.dkh"
+	#include "webcl.dkh"
 	#include "crudl/crudl.dk"
 	#include "dbr.apps.dkl"
 	#include "dbr.events.dkl"
@@ -22,6 +23,8 @@ module "Controller configs"
 	do crudl.routes.entity("/editor/","editor")
 	do crudl.routes.entity("/gestion/","gestion")
 	do crudl.routes.entity("/ops/","ops")
+	do crudl.routes.entity("/gop_partida/","gop_partida")
+	do crudl.routes.entity("/gop_partida_log/","gop_partida_log")
 	
 	do errordet(@false)
 	

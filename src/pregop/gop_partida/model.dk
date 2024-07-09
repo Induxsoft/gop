@@ -1,0 +1,217 @@
+#include "dkli.dkh"
+#!
+module ":gop.partida"
+{
+    @table_name = "gop_partida"
+    @keyfield = "sys_pk"
+    @sys_fields = "sys_pk,sys_guid,sys_dtcreated,sys_timestamp,sys_info,sys_user,sys_lastuser,sys_exported,sys_dtexported,sys_recver,sys_deleted,sys_lock"
+
+    @read_query = "
+    SELECT
+        p.sys_pk,
+        p.sys_guid,
+        p.sys_recver,
+        IFNULL(p.sys_user,'') AS created_by,
+        IFNULL(p.sys_lastuser,'') AS updated_by,
+        IFNULL(DATE_FORMAT(p.sys_dtcreated,'%Y-%m-%d %H:%i:%s'),'') AS created_at,
+        IFNULL(DATE_FORMAT(p.sys_timestamp,'%Y-%m-%d %H:%i:%s'),'') AS updated_at,
+        p.ref_presupuesto,
+        IFNULL(p.id,'') id,
+        p.padre,
+        IFNULL(p2.partida,'Ninguno') AS padre_text,
+        p.partida,
+        p.`status`,
+        e.const AS cstatus,
+        IFNULL(p.autorizado,0) autorizado,
+        IFNULL(p.reserva,0) reserva,
+        IFNULL(p.p01,0) p01, IFNULL(p.p02,0) p02, IFNULL(p.p03,0) p03, IFNULL(p.p04,0) p04,
+        IFNULL(p.p05,0) p05, IFNULL(p.p06,0) p06, IFNULL(p.p07,0) p07, IFNULL(p.p08,0) p08,
+        IFNULL(p.p09,0) p09, IFNULL(p.p10,0) p10, IFNULL(p.p11,0) p11, IFNULL(p.p12,0) p12,
+        IFNULL(p.notas,'') notas
+    FROM gop_partida AS p
+        LEFT JOIN gop_partida AS p2 ON p.padre = p2.sys_pk
+        INNER JOIN gop_partida_status AS e ON p.status = e.id
+    WHERE p.#<@keyfield> = @_entity_id
+    "
+
+    function logs(&db,&params)
+    {
+        qry_logs = ftext("
+        SELECT
+            DATE_FORMAT(sys_dtcreated,'%Y-%m-%d %H:%i:%s') AS created_at,
+            usuario,
+            nota
+        FROM gop_partida_log
+        WHERE NOT IFNULL(sys_deleted,0)
+            AND ref_partida = @_entity_id
+        ORDER BY sys_dtcreated DESC
+        LIMIT #<@default_max_rows>
+        ")
+        return dbr.list(db,qry_logs,params)
+    }
+
+    function prepareView(&db,&params,&data)
+    {
+        namespace "gop.partida"
+        
+        ref entity = ifnull(@@(data,"&entity"),entity.read(db,params))
+
+        using data
+        {
+            @"logs*": logs(db,params)
+        }
+    }
+
+    function list(&db,&params)
+    {
+        return list.create()
+    }
+
+    function read(&db,&params)
+    {
+        if not(isset("@just_read_entity")) { @just_read_entity = @false }
+        if @just_read_entity { return entity.read(db,params) }
+
+        new data
+        {
+            @"entity*": entity.read(db,params)
+        }
+        do gop.partida.prepareView(db,params,data)
+        return data
+    }
+
+    function blank(&db,&params)
+    {
+        ref data = record.create()
+        do gop.partida.prepareView(db,params,data)
+        return data
+    }
+
+    function save(&db,&params,&data)
+    {
+        namespace "gop.partida"
+
+        @use_transaction = @false
+        @just_read_entity = @true
+
+        status = @@(data,"#status")
+
+        if @@(params,"#_entity_id") == 0 { params<"_entity_id"> : @@(data,"#sys_pk") }
+        if status==@stt_pda_prevista { do field.remove(data,"autorizado") }
+        if status==@stt_pda_revision || status==@stt_pda_revisada { do field.remove(data,"reserva") }
+        if status==@stt_pda_autorizada || status==@stt_pda_cancelada { do rise_error(500,"No es posible guardar la partida debido al estado en el que se encuentra.") }
+        if @@(data,"#autorizado") < 0 { do rise_error(500,"<b>Autorizado:</b> No es posible registrar valores negativos.") }
+        if @@(data,"#reserva") < 0 { do rise_error(500,"<b>Reserva:</b> No es posible registrar valores negativos.") }
+        for mes=1; mes<=12
+        {
+            p = "p"+padleft(mes,2,"0")
+            if status==@stt_pda_revision || status==@stt_pda_revisada { do field.remove(data,p) }
+            if parse.num(@@(data,p)) < 0 { do rise_error(500,"<b>"+getMes(mes)+":</b> No es posible registrar valores negativos.") }
+        }
+        if dbr.num(db,"select count(sys_pk) from gop_partida where padre=@_entity_id",params) > 0 {
+            do rise_error(500,"No es posible continuar. Las partidas que tengan partidas hijas, únicamente pueden afectarse a através de ellas.")
+        }
+
+        has_parent = @true
+        if @@(data,"#padre") < 1 {
+            do field.remove(data,"padre")
+            has_parent = @false
+        }
+
+        do dbr.begin(db)
+
+        ref entity = entity.update(db,params,data)
+        if has_parent { do updateParent(db,@@(entity,"#sys_pk")) }
+        
+        sql_totales = "
+        SELECT
+            ref_presupuesto,
+            SUM(IFNULL(autorizado,0)) AS autorizado,
+            SUM((IFNULL(reserva,0)+IFNULL(p01,0)+IFNULL(p02,0)+IFNULL(p03,0)+IFNULL(p04,0)+IFNULL(p05,0)+IFNULL(p06,0)+IFNULL(p07,0)+IFNULL(p08,0)+IFNULL(p09,0)+IFNULL(p10,0)+IFNULL(p11,0)+IFNULL(p12,0))) AS planeado,
+            SUM((IFNULL(rc,0)+IFNULL(c01,0)+IFNULL(c02,0)+IFNULL(c03,0)+IFNULL(c04,0)+IFNULL(c05,0)+IFNULL(c06,0)+IFNULL(c07,0)+IFNULL(c08,0)+IFNULL(c09,0)+IFNULL(c10,0)+IFNULL(c11,0)+IFNULL(c12,0))) AS comprometido,
+            SUM((IFNULL(re,0)+IFNULL(e01,0)+IFNULL(e02,0)+IFNULL(e03,0)+IFNULL(e04,0)+IFNULL(e05,0)+IFNULL(e06,0)+IFNULL(e07,0)+IFNULL(e08,0)+IFNULL(e09,0)+IFNULL(e10,0)+IFNULL(e11,0)+IFNULL(e12,0))) AS ejercido
+        FROM gop_partida
+        WHERE padre IS NULL AND ref_presupuesto = @ref_presupuesto
+        "
+        ref totales = dbr.rec(db,sql_totales,entity)
+        
+        sql_update_presupuesto = "
+        UPDATE gop_presupuesto SET
+            monto_autorizado = @autorizado,
+            monto_planeado = @planeado,
+            monto_comprometido = @comprometido,
+            monto_ejercido = @ejercido
+        WHERE sys_pk = @ref_presupuesto
+        "
+        do dbr.execute(db,sql_update_presupuesto,totales)
+
+        do dbr.commit(db)
+
+        return entity
+
+        exception{ do catch(db,params,data) }
+    }
+
+    function delete(&db,&params)
+    {
+        do rise_error(500,"Acción no implementada")
+    }
+
+    function updateParent(&db, pk_child)
+    {
+        new params { @"child": pk_child }
+
+        ref parent = dbr.rec(db ,"
+            SELECT p1.sys_pk 
+            FROM gop_partida p1 
+                INNER JOIN gop_partida p2 ON p2.padre=p1.sys_pk 
+            WHERE p2.sys_pk=@child LIMIT 1;", params)
+
+        if not(isnull(parent))
+        {
+            do dbr.execute(db, "
+                UPDATE gop_partida AS parent
+                    INNER JOIN (
+                        SELECT p.padre, SUM(IFNULL(p.autorizado,0)) autorizado, SUM(IFNULL(p.reserva,0)) reserva,
+                            SUM(IFNULL(p.p01,0)) p01, SUM(IFNULL(p.p02,0)) p02, SUM(IFNULL(p.p03,0)) p03, SUM(IFNULL(p.p04,0)) p04,
+                            SUM(IFNULL(p.p05,0)) p05, SUM(IFNULL(p.p06,0)) p06, SUM(IFNULL(p.p07,0)) p07, SUM(IFNULL(p.p08,0)) p08,
+                            SUM(IFNULL(p.p09,0)) p09, SUM(IFNULL(p.p10,0)) p10, SUM(IFNULL(p.p11,0)) p11, SUM(IFNULL(p.p12,0)) p12
+                        FROM gop_partida p 
+                        WHERE p.padre=@sys_pk GROUP BY p.padre
+                        ) AS childs ON parent.sys_pk=childs.padre
+                SET parent.autorizado = childs.autorizado, parent.reserva = childs.reserva, 
+                    parent.p01 = childs.p01, parent.p02 = childs.p02, parent.p03 = childs.p03, 
+                    parent.p04 = childs.p04, parent.p05 = childs.p05, parent.p06 = childs.p06, 
+                    parent.p07 = childs.p07, parent.p08 = childs.p08, parent.p09 = childs.p09, 
+                    parent.p10 = childs.p10, parent.p11 = childs.p11, parent.p12 = childs.p12
+                WHERE parent.sys_pk=@sys_pk", parent)
+            
+            do updateParent(db, @@(parent, "#sys_pk"))
+        }
+    }
+
+    function catch(&db,&params,&data)
+    {
+        do errordet(@false)
+        if isnull(data){ ref data:record.create() }
+        if dbr.in_transaction(db){ do dbr.rollback(db) }
+
+        code = last_error_code()
+        error = last_error()
+
+        ref FormData = record.copy(data,"*")
+        do record.clear(data)
+        data<"form*"> : FormData
+
+        if isset("@@_action_context"){ do dbr.apps.action.log() }
+        do gop.partida.prepareView(db,params,data)
+        do rise_error(code,error)
+    }
+
+    point @list to gop.partida.list
+    point @read to gop.partida.read
+    point @blank to gop.partida.blank
+    point @create to gop.partida.save
+    point @update to gop.partida.save
+    point @delete to gop.partida.delete
+}
