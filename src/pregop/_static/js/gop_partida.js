@@ -27,10 +27,42 @@ var partida =
         });
 
         txt_log.addEventListener("keydown", (e) => { if (e.key === "Enter") this.sendLog(); });
-        btn_send_log.addEventListener("click", () => { this.sendLog(); });
+        btn_send_log.addEventListener("click", (e) => this.sendLog());
         
+        this.updateAnualField();
         this.showButtonStatus();
         this.toggleEditFieldsByStatus();
+    },
+
+    updateAnualField()
+    {
+        const txt_anual = document.getElementById("txt_anual");
+        const txt_reserva = document.getElementById("txt_reserva");
+        
+        if (!txt_reserva.hasChangeListener) {
+            txt_reserva.addEventListener("change", () => this.updateAnualField());
+            txt_reserva.hasChangeListener = true;
+        }
+        
+        let ImporteAnual = Number(txt_reserva.value);
+        for (let mes = 1; mes <= 12; mes++) {
+            const txt_periodo = document.getElementById(`txt_p${mes.toString().padStart(2,"0")}`);
+            if (!txt_periodo.hasChangeListener) {
+                txt_periodo.addEventListener("change", () => this.updateAnualField());
+                txt_periodo.hasChangeListener = true;
+            }
+            ImporteAnual = Math.add(ImporteAnual,Number(txt_periodo.value));
+        }
+
+        txt_anual.value = Math.RoundTo(ImporteAnual,4);
+    },
+
+    updateFormValues()
+    {
+        if (!this.form) return;
+        Array.from(this.elems).forEach(el => {
+            if ("defaultValue" in el) el.defaultValue = el.value;
+        });
     },
 
     toggleEdit(editMode)
@@ -53,7 +85,7 @@ var partida =
         this.elems["btn_cancel"].disabled = true;
         this.disableControls(["status_control"]);
 
-        let endpoint = this.path_concat(this.url_partida,this.GET["_entity_id"]);
+        let endpoint = this.url_partida+this.GET["_entity_id"]+"/";
         let fd = new FormData(this.form);
 
         const onSuccess = (data) => {
@@ -67,6 +99,7 @@ var partida =
             this.elems["sys_recver"].value = data.sys_recver;
             this.elems["btn_submit"].disabled = false;
             this.elems["btn_cancel"].disabled = false;
+            this.updateFormValues();
             this.toggleEdit(false);
         }
 
@@ -103,6 +136,7 @@ var partida =
             this.elems["status"].value = data.istatus;
             document.getElementById("spn_status").textContent = data.cstatus;
             
+            this.updateFormValues();
             this.printLastLog();
             this.showButtonStatus(data);
             this.toggleEditFieldsByStatus(data);
@@ -292,25 +326,6 @@ var partida =
             alert.innerHTML = "";
         }, (timeout * 1000));
     },
-
-    path_concat(p1, p2, ...px)
-    {
-        p1 = p1.toString().replaceAll("\\","/");
-        p2 = p2.toString().replaceAll("\\","/");
-
-        let l1 = p1.split("/");
-        let l2 = p2.split("/");
-        
-        let path = [...l1, ...l2];
-
-        for (let i = 0; i < px.length; i++) {
-            const p = px[i].toString().replaceAll("\\","/");
-            let l = p.split("/");
-            path = path.concat(l);
-        }
-
-        return path.join("/").replace(/\/+/g, '/');
-    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
