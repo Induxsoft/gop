@@ -83,7 +83,7 @@ module ":gop.partida.log"
         {
             case @stt_pda_revision
             {
-                _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_06","true"))
+                _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_07","true"))
                 notif_to_user = owner
 
                 if not(_notify) { break }
@@ -107,7 +107,28 @@ module ":gop.partida.log"
             }
             case @stt_pda_revisada
             {
-                _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_07","true"))
+                _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_08","true"))
+
+                if not(_notify) { break }
+                //GP17 - Establecer partida revisada
+                //GP19 - Establecer partida Autorizada
+                sql_ultima_nota = "
+                SELECT t1.sys_user, t1.usuario, t1.nota
+                FROM gop_partida_log AS t1
+                    INNER JOIN tuser AS t2 ON t1.sys_user = t2.userid
+                    INNER JOIN user_usergroup_ AS t3 ON t2.sys_pk = t3.users
+                    INNER JOIN `profile` AS t4 ON t3.`groups` = t4.`usergroup`
+                    INNER JOIN sitem AS t5 ON t4.item = t5.sys_pk
+                WHERE (t5.itemid = 'GP17' OR t5.itemid = 'GP19') AND t1.sys_user != @sys_user
+                ORDER BY t1.sys_dtcreated DESC
+                LIMIT 1;"
+                ref ult_nota = dbr.rec(db,sql_ultima_nota,nota)
+                notif_to_user = @@(ult_nota,"$sys_user")
+                break
+            }
+            case @stt_pda_autorizada
+            {
+                _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_09","true"))
 
                 if not(_notify) { break }
                 //GP17 - Establecer partida revisada
@@ -129,14 +150,14 @@ module ":gop.partida.log"
         }
 
         if not(_notify) { return }
-        if notif_to_user == "" { return }
+        if notif_to_user=="" { return }
 
         ref notif_to = list.create()
         new user { @"user": notif_to_user }
         do list.add(notif_to,user)
 
-        notif_title = "Nueva nota a: "+@@(partida,"$partida")
-        notif_body = @@(nota,"$usuario")+"> "+ifstr(length(@@(nota,"$nota"))>50, cut(@@(nota,"$nota"),50)+"...", @@(nota,"$nota"))
+        notif_title = "Nueva nota a partida presupuestal"
+        notif_body = @@(partida,"$partida") +":\r\n"+ @@(nota,"$usuario")+"> "+ifstr(length(@@(nota,"$nota"))>50, cut(@@(nota,"$nota"),50)+"...", @@(nota,"$nota"))
         notif_href = path.concat(@GOP_PARTIDA,@@(partida,"$sys_pk")+"/")
 
         new notification

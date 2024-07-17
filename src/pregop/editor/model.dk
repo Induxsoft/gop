@@ -817,6 +817,7 @@ module "Presupuestos de Gastos de Operacion"
     function gop.partida.notify(&db,&partida,back)
     {
         notify_owner = @false
+        notify_varname = ""
         notif_title = ""
         sitem_back_id = ""
         sitem_forward_id = ""
@@ -826,6 +827,7 @@ module "Presupuestos de Gastos de Operacion"
         {
             case @stt_pda_prevista
             {
+                notify_varname = "pregop_notif_01"
                 notif_title = "Nueva partida presupuestal!"
                 if back { notify_owner = @true }
                 sitem_forward_id = "GP1B" //Establecer partida en revisión
@@ -833,6 +835,7 @@ module "Presupuestos de Gastos de Operacion"
             }
             case @stt_pda_revision
             {
+                notify_varname = "pregop_notif_02"
                 notif_title = "Nueva partida por revisar!"
                 sitem_back_id = "GP1B" //Establecer partida en revisión
                 sitem_forward_id = "GP17" //Establecer partida revisada
@@ -840,6 +843,7 @@ module "Presupuestos de Gastos de Operacion"
             }
             case @stt_pda_revisada
             {
+                notify_varname = "pregop_notif_03"
                 notif_title = "Nueva partida por autorizar!"
                 sitem_back_id = "GP17" //Establecer partida revisada
                 sitem_forward_id = "GP19" //Autorizar partida
@@ -847,19 +851,28 @@ module "Presupuestos de Gastos de Operacion"
             }
             case @stt_pda_autorizada
             {
+                notify_varname = "pregop_notif_04"
                 notif_title = "Partida presupuestal autorizada!"
                 notify_owner = @true
                 break
             }
             case @stt_pda_cancelada
             {
+                notify_varname = "pregop_notif_05"
                 notif_title = "Partida presupuestal cancelada!"
                 notify_owner = @true
                 break
             }
         }
 
-        if back { notif_title = "Partida presupuestal devuelta!" }
+        if back {
+            notify_varname = "pregop_notif_06"
+            notif_title = "Partida presupuestal devuelta!"
+        }
+
+        if not(parse.bool(dbr.vars.getd(db,notify_varname,"true"))) { return }
+        if notify_varname=="" { return }
+
         new params
         {
             @"partida": @@(partida,"#sys_pk")

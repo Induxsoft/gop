@@ -136,12 +136,12 @@ module "form.dk"
                         div(class="col-lg-4 col-md-6 col-sm-6")
                         {
                             label(class="form-label fw-bolder"){$"ID:"}
-                            input(class="form-control form-control-sm rounded-0" type="text" name="id" value="#<@@(entity,'$id')>" id="txt_id" required="" disabled="")
+                            input(class="form-control form-control-sm rounded-0" type="text" name="id" value="#<@@(entity,'$id')>" id="txt_id" maxlength="36" required="" disabled="")
                         }
                         div(class="col-lg-4 col-md-6 col-sm-6")
                         {
                             label(class="form-label fw-bolder"){$"Partida:"}
-                            input(class="form-control form-control-sm rounded-0" type="text" name="partida" value="#<@@(entity,'$partida')>" id="txt_partida" required="" disabled="")
+                            input(class="form-control form-control-sm rounded-0" type="text" name="partida" value="#<@@(entity,'$partida')>" id="txt_partida" maxlength="255" required="" disabled="")
                         }
                         div(class="col-lg-4 col-md-12")
                         {
@@ -269,7 +269,7 @@ module "form.dk"
                     {
                         div(class="input-group input-group-sm mb-2")
                         {
-                            input(class="form-control rounded-0" type="text" name="notes" id="txt_log" placeholder="Ingrese texto...")
+                            input(class="form-control rounded-0" type="text" name="notes" id="txt_log" maxlength="1024" placeholder="Ingrese texto...")
                             button(class="btn btn-primary rounded-0" type="button" id="btn_send_log"){$"Agregar"}
                         }
 

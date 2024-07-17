@@ -95,9 +95,15 @@ module ":gop.partida"
         @use_transaction = @false
         @just_read_entity = @true
 
+        if @@(params,"#_entity_id") == 0 { params<"_entity_id"> : @@(data,"#sys_pk") }
+
+        ref presu = dbr.rec(db,"SELECT status, ref_unidad FROM gop_presupuesto WHERE sys_pk = @ref_presupuesto",data)
+
+        if @@(presu,"#status") == @stt_ppto_detenido || @@(presu,"#status") == @stt_ppto_cerrado
+        { do rise_error(500,"No es posible realizar afectaciones debido al estado en el que se encuentra actualmente el presupuesto.") }
+
         status = @@(data,"#status")
 
-        if @@(params,"#_entity_id") == 0 { params<"_entity_id"> : @@(data,"#sys_pk") }
         if status==@stt_pda_prevista { do field.remove(data,"autorizado") }
         if status==@stt_pda_revision || status==@stt_pda_revisada { do field.remove(data,"reserva") }
         if status==@stt_pda_autorizada || status==@stt_pda_cancelada { do rise_error(500,"No es posible guardar la partida debido al estado en el que se encuentra.") }
@@ -119,6 +125,7 @@ module ":gop.partida"
             has_parent = @false
         }
 
+        do dbr.apps.action.pre("GP12:DET060:"+@@(presu,"$ref_unidad"))
         do dbr.begin(db)
 
         ref entity = entity.update(db,params,data)
@@ -146,7 +153,9 @@ module ":gop.partida"
         "
         do dbr.execute(db,sql_update_presupuesto,totales)
 
+        do dbr.apps.action.pos(entity)
         do dbr.commit(db)
+        do dbr.apps.action.ext(entity)
 
         return entity
 

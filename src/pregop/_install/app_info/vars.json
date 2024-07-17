@@ -1,0 +1,189 @@
+[
+    {
+        "id": "pregop",
+        "caption": "Presupuestos de gastos de operación",
+        "help": "Variables del paquete: pregop",
+        "vars": [
+            {
+                "varname": "pregop_notif_01",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar nueva partida",
+                "varhelp": "Enviar notificación al crear una partida presupuestal.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_02",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar partida en revisión",
+                "varhelp": "Enviar notificación al poner en 'Revisión' una partida presupuestal.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_03",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar partida revisada",
+                "varhelp": "Enviar notificación al poner en 'Revisada' una partida presupuestal.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_04",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar partida autorizada",
+                "varhelp": "Enviar notificación al poner en 'Autorizada' una partida presupuestal.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_05",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar partida cancelada",
+                "varhelp": "Enviar notificación al poner en 'Cancelada' una partida presupuestal.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_06",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar partida rechazada",
+                "varhelp": "Enviar notificación al rechazar una partida presupuestal.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_07",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar notas de la partida 'En Revisión'",
+                "varhelp": "Enviar notificación de respuesta al escribir una nota cuando la partida está: 'En Revisión'.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_08",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar notas de la partida 'Revisada'",
+                "varhelp": "Enviar notificación de respuesta al escribir una nota cuando la partida está: 'Revisada' (por autorizarse).",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            },
+            {
+                "varname": "pregop_notif_09",
+                "vardefault": "1",
+                "varvalue": "1",
+                "varcaption": "Notificar notas de la partida 'Autorizada'",
+                "varhelp": "Enviar notificación de respuesta al escribir una nota cuando la partida está: 'Autorizada'.",
+                "vartype": "bool",
+                "varinput": {
+                    "control": "select",
+                    "source":{
+                        "type":"list",
+                        "values":[
+                            {"val":"1", "text":"Si"},
+                            {"val":"0", "text":"No"}
+                        ],
+                        "showfield":"text",
+                        "keyfield":"val"
+                    }
+                }
+            }
+        ]
+    }
+]
