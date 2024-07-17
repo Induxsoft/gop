@@ -33,26 +33,122 @@ module ":gop.partida.log"
 
     create::&db,&params,&data
     {
-        new log
+        @use_transaction = @false
+
+        do dbr.begin(db)
+
+        new nota
         {
             @"sys_user": @@(@http_context,"$session/user/uid")
             @"nota": trim(@@(data,"$nota"))
             @"usuario": @@(@http_context,"$session/user/name")
             @"ref_partida": @@(data,"#ref_partida")
         }
-        return entity.create(db,params,log)
+        ref reg = entity.create(db,params,nota)
+        do gop.partida.log.notify(db,nota)
+
+        do dbr.commit(db)
+        return reg
+
+        exception
+        {
+            do errordet(@false)
+            if dbr.in_transaction(db) { do dbr.rollback(db) }
+            do rise_error(last_error_code(),last_error())
+        }
     }
 
     update::&db,&params,&data
     {
-        new log
+        new nota
         {
             @"sys_lastuser": @@(@http_context,"$session/user/uid")
             @"nota": trim(@@(data,"$nota"))
             @"usuario": @@(@http_context,"$session/user/name")
             @"ref_partida": @@(data,"#ref_partida")
         }
-        return entity.update(db,params,data)
+        return entity.update(db,params,nota)
+    }
+
+    notify::&db,&nota
+    {
+        ref partida = dbr.rec(db,"SELECT sys_pk, sys_user, partida, status FROM gop_partida WHERE sys_pk = @ref_partida",nota)
+        owner = @@(partida,"$sys_user")
+        status = @@(partida,"#status")
+        
+        _notify = @false
+        notif_to_user = ""
+
+        switch status
+        {
+            case @stt_pda_revision
+            {
+                _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_06","true"))
+                notif_to_user = owner
+
+                if not(_notify) { break }
+                //GP1B - Establecer partida en revisión
+                if @@(nota,"$sys_user") == owner
+                {
+                    sql_ultima_nota = "
+                    SELECT t1.sys_user, t1.usuario, t1.nota
+                    FROM gop_partida_log AS t1
+                        INNER JOIN tuser AS t2 ON t1.sys_user = t2.userid
+                        INNER JOIN user_usergroup_ AS t3 ON t2.sys_pk = t3.users
+                        INNER JOIN `profile` AS t4 ON t3.`groups` = t4.`usergroup`
+                        INNER JOIN sitem AS t5 ON t4.item = t5.sys_pk
+                    WHERE t5.itemid = 'GP1B' AND t1.sys_user != @sys_user
+                    ORDER BY t1.sys_dtcreated DESC
+                    LIMIT 1;"
+                    ref ult_nota = dbr.rec(db,sql_ultima_nota,nota)
+                    notif_to_user = @@(ult_nota,"$sys_user")
+                }
+                break
+            }
+            case @stt_pda_revisada
+            {
+                _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_07","true"))
+
+                if not(_notify) { break }
+                //GP17 - Establecer partida revisada
+                //GP19 - Establecer partida Autorizada
+                sql_ultima_nota = "
+                SELECT t1.sys_user, t1.usuario, t1.nota
+                FROM gop_partida_log AS t1
+                    INNER JOIN tuser AS t2 ON t1.sys_user = t2.userid
+                    INNER JOIN user_usergroup_ AS t3 ON t2.sys_pk = t3.users
+                    INNER JOIN `profile` AS t4 ON t3.`groups` = t4.`usergroup`
+                    INNER JOIN sitem AS t5 ON t4.item = t5.sys_pk
+                WHERE (t5.itemid = 'GP17' OR t5.itemid = 'GP19') AND t1.sys_user != @sys_user
+                ORDER BY t1.sys_dtcreated DESC
+                LIMIT 1;"
+                ref ult_nota = dbr.rec(db,sql_ultima_nota,nota)
+                notif_to_user = @@(ult_nota,"$sys_user")
+                break
+            }
+        }
+
+        if not(_notify) { return }
+        if notif_to_user == "" { return }
+
+        ref notif_to = list.create()
+        new user { @"user": notif_to_user }
+        do list.add(notif_to,user)
+
+        notif_title = "Nueva nota a: "+@@(partida,"$partida")
+        notif_body = @@(nota,"$usuario")+"> "+ifstr(length(@@(nota,"$nota"))>50, cut(@@(nota,"$nota"),50)+"...", @@(nota,"$nota"))
+        notif_href = path.concat(@GOP_PARTIDA,@@(partida,"$sys_pk")+"/")
+
+        new notification
+        {
+            @"title": notif_title
+            @"sender": "pregop"
+            @"body": notif_body
+            @"href": "/?go="+url_encode(notif_href)
+            @"target": "_self"
+            @"to*": notif_to
+        }
+        do dbr.notif.send(db,notification)
     }
 
     point @list to gop.partida.log.list
