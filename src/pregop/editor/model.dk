@@ -461,7 +461,7 @@ module "Presupuestos de Gastos de Operacion"
         do dbr.begin(db)
         
         ref res = entity.update(db,params,new_data)
-
+        
         if not(isnull(partidas))
         {
             pk_presupuesto = @@(res,"#sys_pk")
@@ -584,6 +584,7 @@ module "Presupuestos de Gastos de Operacion"
                     if trim(@@(partida,"$sys_info"))=="" { do field.remove(partida,"sys_info") }
                     if field.exist(partida,"istatus") { do field.remove(partida,"istatus") }
                     if field.exist(partida,"cstatus") { do field.remove(partida,"cstatus") }
+                    if field.exist(partida,"__items") { do field.remove(partida,"__items") }
 
                     do parseNumbersPartida(partida)
                     ref entity = dbr.save(db,"gop_partida",partida)
