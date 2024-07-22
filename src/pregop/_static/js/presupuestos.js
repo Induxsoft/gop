@@ -31,6 +31,30 @@ var presupuesto =
         // Antes de mover la fila
         this.table.Events[this.events.BeforeMoveRow] = (e) =>
         {
+            if (this.table.ReadOnly) {
+                e.cancel = true;
+                return
+            }
+
+            let src_stt = e.source.istatus;
+            let trg_stt = e.target.istatus;
+
+            if (src_stt && src_stt == editor.stt_pda_cancelada) {
+                alert('No es posible identar una partida "Cancelada"');
+                e.cancel = true;
+                return
+            }
+            if (trg_stt && trg_stt == editor.stt_pda_cancelada) {
+                alert('No es posible insertar a una partida "Cancelada"');
+                e.cancel = true;
+                return
+            }
+            if (src_stt && src_stt != e.target.istatus) {
+                alert(`No es posible insertar una partida "${e.source.cstatus}" a una partida "${e.target.cstatus}"`);
+                e.cancel = true;
+                return
+            }
+
             /**
              * Antes de mover preguntamos si desea continuar y recalcular la fila destino en base a la 
              * fila origen cuando ésta se pretende agregar como hija de una fila que también es hija.
@@ -38,7 +62,7 @@ var presupuesto =
             const options = this.table._getTreeOptions();
             
             if (e.child && e.target[options.parentkey]) {
-                e.cancel = !confirm('Si continua se recalculará la fila superior (fila destino) a partir de la fila que pretende agregar como hija (fila origen).');
+                e.cancel = !confirm('Si continúa se recalculará la fila superior (fila destino) a partir de la fila que pretende agregar como hija (fila origen).');
             }
         };
 
@@ -50,16 +74,20 @@ var presupuesto =
              * Nota: en ésta instancia DataArray es un array multi-nivel, depués de terminar con la 
              * función RowMoved regresa a su estado normal (array de un nivel).
              */
-            let sparent = this.getParentNode(e.source, this.table.DataArray);
-            this.recalculeBranch(sparent, this.table.DataArray);
+            
             if (e.child)
             {
+                let sparent = this.getParentNode(e.source, this.table.DataArray);
+                if (sparent && sparent.sys_pk != e.target.sys_pk) this.recalculeBranch(sparent, this.table.DataArray);
+                
                 this.recalculeBranch(e.target, this.table.DataArray);
             }
             else
             {
                 let tparent = this.getParentNode(e.target, this.table.DataArray);
-                this.recalculeBranch(tparent, this.table.DataArray);
+                if (tparent && tparent.sys_pk != e.target.sys_pk) this.recalculeBranch(tparent, this.table.DataArray);
+                
+                this.recalculeBranch(e.target, this.table.DataArray);
             }
             if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
         }
@@ -233,6 +261,7 @@ var presupuesto =
     },
     recalculeBranch(node, dataArray=[])
     {
+        console.log("Partida:", node.partida, "-> recalculeBranch()")
         const opts = this.table._getTreeOptions();
 
         const calcule = (node={}, childs=[]) => 
@@ -262,7 +291,7 @@ var presupuesto =
     coloringStatusRows(td, data)
     {
         if (!td || !data || !editor.cfg_pda_stt_color) return;
-        let color = editor.cfg_pda_stt_color[data.istatus].color;
+        let color = editor.cfg_pda_stt_color[data.istatus]?.color ?? "#FFF";
         td.style.borderLeft = `.4em solid ${color}`;
     },
     alertAuthBalance(td, data)

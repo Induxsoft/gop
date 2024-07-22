@@ -151,6 +151,7 @@ var editor =
 
             presupuesto.events = events;
             presupuesto.setTableEvents();
+            this.togglePartidasControl(false);
         }
     },
     setAjustPanelUnidadEvent()
@@ -197,8 +198,14 @@ var editor =
     },
     indentPartidaRow(add=true)
     {
-        const row = this.tablePartidas.GetTrByIndex(this.tablePartidas.CurrentRowIndex());
-        if (row) this.tablePartidas.RowIndent(row, add);
+        let index = this.tablePartidas.CurrentRowIndex();
+        if (index < 0) return;
+        
+        // let dtarray = (this.tablePartidas?.DataArray??[]);
+        // let partida = dtarray[index];
+
+        const row = this.tablePartidas.GetTrByIndex(index);
+        this.tablePartidas.RowIndent(row, add);
     },
     showPdaBtnStatus(partida)
     {
@@ -745,7 +752,8 @@ var editor =
         }
 
         setTimeout(()=>{
-            this.tablePartidas._printRows();
+            this.tablePartidas._printTreeData();
+            // this.tablePartidas._printRows();
             container.style.opacity = 1;
         },200);
 
@@ -772,7 +780,8 @@ var editor =
                 let options = this.tablePartidas._getTreeOptions();
                 if(this.tablePartidas._moveData(newRow, curRow, false, options, true))
                 {
-                    this.tablePartidas._printRows();
+                    this.tablePartidas._printTreeData();
+                    // this.tablePartidas._printRows();
                     let newRowIdx = this.tablePartidas.DataArray.findIndex(data => data[options.key] == (newRow[options.key]??'_-_'));
                     if (newRowIdx >= 0) {
                         let nr = this.tablePartidas.GetTrByIndex(newRowIdx);
@@ -788,7 +797,35 @@ var editor =
     },
     deleteRowPartida()
     {
-        this.tablePartidas.DeleteCurrentRow();
+        if (!this.presupuesto) {
+            console.warn("No se encontro el presupuesto de la partida");
+            return
+        }
+        if (!this.tablePartidas) {
+            console.warn("La tabla de las partidas no esta definida");
+            return
+        }
+
+        let index = this.tablePartidas.CurrentRowIndex();        
+        
+        if (index < 0) return;
+        if (!confirm("¿Está seguro que desea eliminar la partida seleccionada?\r\nSe eliminaran las partidas hijas\r\nEste proceso es irreversible")) return;
+
+        let dtarray = (this.tablePartidas?.DataArray??[]);
+        let partida = dtarray[index];
+
+        let endpoint = (editor.services["gop_partida"]).replace("@partida",(partida?.sys_pk??0));
+        console.log(endpoint)
+
+        main.request(endpoint,"DELETE",null,
+            (success) => {
+                this.getPresupuesto(this.unidadSelected.sys_pk);
+            },
+            (failure) => {
+                alert(failure.message ?? JSON.stringify(failure));
+            },
+            false
+        );
     },
     setPartidasBackup()
     {
@@ -810,8 +847,11 @@ var editor =
             table_partidas_control.classList.remove("hidde-control");
             status_partidas_control.classList.add("hidde-control");
             this.showControls(["save_pre","disc_pre"],"partidas_control");
-            // this.tablePartidas.CanMoveRow = true;
+            
             this.tablePartidas.ReadOnly = false;
+            this.tablePartidas.AutoAddRow = true;
+            this.tablePartidas.AutoDelRow = true;
+            //Se controla el desplazamiento de filas desde el evento 'BeforeMoveRow'
         }
         else
         {
@@ -821,8 +861,11 @@ var editor =
             status_partidas_control.classList.remove("hidde-control");
             this.showControls(["enable_edit_partidas"],"partidas_control");
             this.printPartidaInfo(null);
-            // this.tablePartidas.CanMoveRow = false;
+            
             this.tablePartidas.ReadOnly = true;
+            this.tablePartidas.AutoAddRow = false;
+            this.tablePartidas.AutoDelRow = false;
+            //Se controla el desplazamiento de filas desde el evento 'BeforeMoveRow'
         }
     },
     savePartidasPresupuesto()
@@ -884,16 +927,24 @@ var editor =
             return
         }
 
-        let array = (this.tablePartidas?.DataArray??[]);
-        let index = this.tablePartidas.CurrentRowIndex();
-        
+        let index = this.tablePartidas.CurrentRowIndex();        
         if (index < 0) {
             alert("Es necesario seleccionar un elemento de la lista.");
             return
         }
 
-        let partida = array[index];
-        let params = { status: Number(btnStatus.getAttribute("status")), presupuesto: this.presupuesto.sys_pk }
+        let nstatus = Number(btnStatus.getAttribute("status"));
+
+        let cfg_status = (editor.cfg_pda_stt_color[nstatus]??{});
+        let message = (cfg_status?.text??"" != "")
+            ? `¿Está seguro que desea establecer la partida seleccionada en "${cfg_status?.text}"?`
+            : "¿Está seguro que desea cambiar el estado de la partida seleccionada?";
+        message += "\r\nEl nuevo estado se aplicará a las partidas hijas";
+        if (!confirm(message)) return;
+
+        let dtarray = (this.tablePartidas?.DataArray??[]);
+        let partida = dtarray[index];
+        let params = { status: nstatus, presupuesto: this.presupuesto.sys_pk }
 
         let endpoint = (editor.services["change_pda_status"]).replace("@partida",(partida?.sys_pk??0));
         endpoint = InduxsoftCrudlModel.UrlReplace(endpoint,params);
@@ -901,9 +952,19 @@ var editor =
         btnStatus.disabled = true;
         main.request(endpoint,"PUT",null,
             (success) => {
-                this.getPartidas(this.presupuesto.sys_pk);
-                this.printPartidaInfo(success);
-                this.showPdaBtnStatus(success);
+                if (nstatus == editor.stt_pda_cancelada)
+                {
+                    this.getPresupuesto(this.unidadSelected.sys_pk);
+                    this.printPartidaInfo(null);
+                    this.showPdaBtnStatus(null);
+                }
+                else
+                {
+                    this.getPartidas(this.presupuesto.sys_pk);
+                    this.printPartidaInfo(success);
+                    this.showPdaBtnStatus(success);
+                }
+
                 btnStatus.disabled = false;
             },
             (failure) => {

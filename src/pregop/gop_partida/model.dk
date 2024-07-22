@@ -131,17 +131,19 @@ module ":gop.partida"
         ref entity = entity.update(db,params,data)
         if has_parent { do updateParent(db,@@(entity,"#sys_pk")) }
         
-        sql_totales = "
+        sql_totales = ftext("
         SELECT
             ref_presupuesto,
-            SUM(IFNULL(autorizado,0)) AS autorizado,
-            SUM((IFNULL(reserva,0)+IFNULL(p01,0)+IFNULL(p02,0)+IFNULL(p03,0)+IFNULL(p04,0)+IFNULL(p05,0)+IFNULL(p06,0)+IFNULL(p07,0)+IFNULL(p08,0)+IFNULL(p09,0)+IFNULL(p10,0)+IFNULL(p11,0)+IFNULL(p12,0))) AS planeado,
-            SUM((IFNULL(rc,0)+IFNULL(c01,0)+IFNULL(c02,0)+IFNULL(c03,0)+IFNULL(c04,0)+IFNULL(c05,0)+IFNULL(c06,0)+IFNULL(c07,0)+IFNULL(c08,0)+IFNULL(c09,0)+IFNULL(c10,0)+IFNULL(c11,0)+IFNULL(c12,0))) AS comprometido,
-            SUM((IFNULL(re,0)+IFNULL(e01,0)+IFNULL(e02,0)+IFNULL(e03,0)+IFNULL(e04,0)+IFNULL(e05,0)+IFNULL(e06,0)+IFNULL(e07,0)+IFNULL(e08,0)+IFNULL(e09,0)+IFNULL(e10,0)+IFNULL(e11,0)+IFNULL(e12,0))) AS ejercido
+            IFNULL(SUM(IFNULL(autorizado,0)),0) AS autorizado,
+            IFNULL(SUM((IFNULL(reserva,0)+IFNULL(p01,0)+IFNULL(p02,0)+IFNULL(p03,0)+IFNULL(p04,0)+IFNULL(p05,0)+IFNULL(p06,0)+IFNULL(p07,0)+IFNULL(p08,0)+IFNULL(p09,0)+IFNULL(p10,0)+IFNULL(p11,0)+IFNULL(p12,0))),0) AS planeado,
+            IFNULL(SUM((IFNULL(rc,0)+IFNULL(c01,0)+IFNULL(c02,0)+IFNULL(c03,0)+IFNULL(c04,0)+IFNULL(c05,0)+IFNULL(c06,0)+IFNULL(c07,0)+IFNULL(c08,0)+IFNULL(c09,0)+IFNULL(c10,0)+IFNULL(c11,0)+IFNULL(c12,0))),0) AS comprometido,
+            IFNULL(SUM((IFNULL(re,0)+IFNULL(e01,0)+IFNULL(e02,0)+IFNULL(e03,0)+IFNULL(e04,0)+IFNULL(e05,0)+IFNULL(e06,0)+IFNULL(e07,0)+IFNULL(e08,0)+IFNULL(e09,0)+IFNULL(e10,0)+IFNULL(e11,0)+IFNULL(e12,0))),0) AS ejercido
         FROM gop_partida
-        WHERE padre IS NULL AND ref_presupuesto = @ref_presupuesto
-        "
-        ref totales = dbr.rec(db,sql_totales,entity)
+        WHERE padre IS NULL
+            AND `status` != #<@stt_pda_cancelada>
+            AND ref_presupuesto = @ref_presupuesto
+        ")
+        ref totales = dbr.rec(db,sql_totales,params)
         
         sql_update_presupuesto = "
         UPDATE gop_presupuesto SET

@@ -38,7 +38,7 @@ module "Presupuestos de Gastos de Operacion"
 
     function gop.obtenerPartidas(&db, &params)
     {
-        conditions = "IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto) ORDER BY p.padre, p.sys_pk"
+        conditions = ftext("IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto) AND p.`status` != #<@stt_pda_cancelada> ORDER BY p.sys_pk, p.padre")
         return dbr.list(db,ftext(@query_partida_presupuestal),params)
     }
 
@@ -83,9 +83,11 @@ module "Presupuestos de Gastos de Operacion"
         SELECT
             pda.padre,
             pda.status,
+            pda.ref_presupuesto,
             ppto.ref_unidad,
             IFNULL(pda.autorizado,0) AS autorizado,
             (IFNULL(pda.reserva,0)+IFNULL(pda.p01,0)+IFNULL(pda.p02,0)+IFNULL(pda.p03,0)+IFNULL(pda.p04,0)+IFNULL(pda.p05,0)+IFNULL(pda.p06,0)+IFNULL(pda.p07,0)+IFNULL(pda.p08,0)+IFNULL(pda.p09,0)+IFNULL(pda.p10,0)+IFNULL(pda.p11,0)+IFNULL(pda.p12,0)) AS planeado,
+            (IFNULL(pda.rc,0)+IFNULL(pda.c01,0)+IFNULL(pda.c02,0)+IFNULL(pda.c03,0)+IFNULL(pda.c04,0)+IFNULL(pda.c05,0)+IFNULL(pda.c06,0)+IFNULL(pda.c07,0)+IFNULL(pda.c08,0)+IFNULL(pda.c09,0)+IFNULL(pda.c10,0)+IFNULL(pda.c11,0)+IFNULL(pda.c12,0)) AS comprometido,
             (IFNULL(pda.re,0)+IFNULL(pda.e01,0)+IFNULL(pda.e02,0)+IFNULL(pda.e03,0)+IFNULL(pda.e04,0)+IFNULL(pda.e05,0)+IFNULL(pda.e06,0)+IFNULL(pda.e07,0)+IFNULL(pda.e08,0)+IFNULL(pda.e09,0)+IFNULL(pda.e10,0)+IFNULL(pda.e11,0)+IFNULL(pda.e12,0)) AS ejercido
         FROM gop_partida pda
             INNER JOIN gop_presupuesto ppto ON pda.ref_presupuesto = ppto.sys_pk
@@ -95,22 +97,28 @@ module "Presupuestos de Gastos de Operacion"
 
         ref entity = dbr.rec(db,sql_partida,params)
         ref action = @@(@cfg_pda_stt_color,"&"+@@(params,"$status"))
+
+        cur_status = @@(entity,"#status")
+        new_status = @@(params,"#status")
         
-        if @@(params,"#status") < @@(entity,"#status") {
+        if new_status < cur_status {
             ref action:@@(@cfg_pda_stt_color,"&"+@@(entity,"$status"))
             back = @true
         }
 
         if isnull(action) { do rise_error(500,"Acción no definida") }
         if @@(entity,"#padre") > 0 { do rise_error(500,"No es posible cambiar el estado, esta acción solo esta disponible para 'Partidas Raíz'.") }
-        if not(allow_status(@cfg_pda_status,@@(entity,"#status"),@@(params,"#status"))) {
+        if not(allow_status(@cfg_pda_status,cur_status,new_status)) {
             do rise_error(500,"No es posible cambiar al estado indicado debido al estado en el que se encuentra actualmente.")
         }
-        if @@(entity,"#status") == @stt_pda_autorizada && @@(entity,"#ejercido") > 0 {
-            do rise_error(500,"No es posible cambiar al estado indicado debido a que ya se han realizado afectaciones al ejercido de la partida.")
+        if cur_status == @stt_pda_autorizada && @@(entity,"#ejercido") > 0 {
+            do rise_error(500,"No es posible cambiar al estado indicado debido a que se han realizado afectaciones al 'Ejercido' de la partida.")
         }
-        if @@(params,"#status") == @stt_pda_autorizada && @@(entity,"#autorizado") < @@(entity,"#planeado") {
+        if new_status == @stt_pda_autorizada && @@(entity,"#autorizado") < @@(entity,"#planeado") {
             do rise_error(500,"No es posible autorizar la partida, el importe autorizado debe ser igual o mayor al monto planeado.")
+        }
+        if new_status == @stt_pda_cancelada && (@@(entity,"#comprometido")+@@(entity,"#ejercido")) > 0 {
+            do rise_error(500,"No es posible cancelar la partida debido a que se han realizado afectaciones en sus montos 'Ejercido' o 'Comprometido'")
         }
         
         params<"lastuser"> : @@(@http_context,"$session/user/uid")
@@ -121,7 +129,7 @@ module "Presupuestos de Gastos de Operacion"
         do dbr.apps.action.pre(act_code)
         do dbr.begin(db)
 
-        do gop.partida.changeStatusOfChildren(db,@@(params,"#_entity_id"),@@(params,"#status"))
+        do gop.partida.changeStatusOfChildren(db,@@(params,"#_entity_id"),new_status)
 
         sql = "
         UPDATE gop_partida SET
@@ -131,6 +139,8 @@ module "Presupuestos de Gastos de Operacion"
             status = @status
         WHERE sys_pk = @_entity_id"
         do dbr.execute(db,sql,params)
+
+        if new_status == @stt_pda_cancelada { do gop.updateAmounts(db,@@(entity,"#ref_presupuesto")) }
 
         conditions = "p.sys_pk=@_entity_id AND p.ref_presupuesto=@presupuesto"
         ref entity:dbr.rec(db,ftext(@query_partida_presupuestal),params)
@@ -215,17 +225,66 @@ module "Presupuestos de Gastos de Operacion"
     function gop.eliminarPartida(&db, &params)
     {
         @use_transaction = @false
+
+        sql_partida = "
+        SELECT pda.ref_presupuesto, ppto.ref_unidad
+        FROM gop_partida pda
+            INNER JOIN gop_presupuesto ppto ON pda.ref_presupuesto = ppto.sys_pk
+        WHERE pda.sys_pk = @_entity_id
+        "
+        ref partida = dbr.rec(db,sql_partida,params)
+        
+        do dbr.apps.action.pre("GP12:DET060:"+@@(partida,"$ref_unidad"))
         do dbr.begin(db)
 
-        do deleteChilds(db, @@(params,"_entity_id"))
-        do entity.delete(db, params)
+        do gop.partida.validForDelete(db,@@(params,"#_entity_id"))
+        do gop.partida.deleteChilds(db,@@(params,"#_entity_id"))
+        do dbr.delete(db,"gop_partida_log","ref_partida=@_entity_id",params)
+        do entity.delete(db,params)
+        do gop.updateAmounts(db,@@(partida,"#ref_presupuesto"))
+
+        do dbr.apps.action.pos(@null)
         do dbr.commit(db)
+        do dbr.apps.action.ext(@null)
 
         exception
     	{
+            code = last_error_code()
+            error = last_error()
+
             if dbr.in_transaction(db) { do dbr.rollback(db) }
-    		do rise_error(500,last_error())
+            if isset("@@_action_context"){ do dbr.apps.action.log() }
+    		do rise_error(code,error)
     	}
+    }
+
+    function gop.partida.validForDelete(&db,partida_pk)
+    {
+        new params { @"partida_pk": partida_pk }
+
+        sql_partida = "
+        SELECT
+            pda.padre,
+            pda.status,
+            pda.ref_presupuesto,
+            ppto.ref_unidad,
+            pda.partida,
+            IFNULL(pda.autorizado,0) AS autorizado,
+            (IFNULL(pda.reserva,0)+IFNULL(pda.p01,0)+IFNULL(pda.p02,0)+IFNULL(pda.p03,0)+IFNULL(pda.p04,0)+IFNULL(pda.p05,0)+IFNULL(pda.p06,0)+IFNULL(pda.p07,0)+IFNULL(pda.p08,0)+IFNULL(pda.p09,0)+IFNULL(pda.p10,0)+IFNULL(pda.p11,0)+IFNULL(pda.p12,0)) AS planeado,
+            (IFNULL(pda.rc,0)+IFNULL(pda.c01,0)+IFNULL(pda.c02,0)+IFNULL(pda.c03,0)+IFNULL(pda.c04,0)+IFNULL(pda.c05,0)+IFNULL(pda.c06,0)+IFNULL(pda.c07,0)+IFNULL(pda.c08,0)+IFNULL(pda.c09,0)+IFNULL(pda.c10,0)+IFNULL(pda.c11,0)+IFNULL(pda.c12,0)) AS comprometido,
+            (IFNULL(pda.re,0)+IFNULL(pda.e01,0)+IFNULL(pda.e02,0)+IFNULL(pda.e03,0)+IFNULL(pda.e04,0)+IFNULL(pda.e05,0)+IFNULL(pda.e06,0)+IFNULL(pda.e07,0)+IFNULL(pda.e08,0)+IFNULL(pda.e09,0)+IFNULL(pda.e10,0)+IFNULL(pda.e11,0)+IFNULL(pda.e12,0)) AS ejercido
+        FROM gop_partida pda
+            INNER JOIN gop_presupuesto ppto ON pda.ref_presupuesto = ppto.sys_pk
+        WHERE pda.sys_pk = @partida_pk
+        "
+        ref partida = dbr.rec(db,sql_partida,params)
+
+        if @@(partida,"#status") != @stt_pda_prevista || (@@(partida,"#comprometido")+@@(partida,"#ejercido")) > 0
+        {
+            message = 'Para eliminar la partida "'+@@(partida,"$partida")+'" debe encontrarse en el estdo "Prevista" y no tener afectaciones en sus montos "Ejercido" o "Comprometido"'
+            do _free(partida)
+            do rise_error(500,message)
+        }
     }
 
     function updateParent(&db,childPK)
@@ -261,21 +320,26 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
-    function deleteChilds(&db, parentPK)
+    function gop.partida.deleteChilds(&db, parentPK)
     {
-        new prm { @"pk": parentPK }
-
-        ref childs = dbr.list(db, "SELECT sys_pk FROM gop_partida WHERE padre=@pk;", prm)
+        new params { @"pk": parentPK }
+        ref childs = dbr.list(db, "SELECT sys_pk FROM gop_partida WHERE padre=@pk;", params)
         
-        if not(isnull(childs)) && list.count(childs) > 0
+        if list.count(childs) > 0
         {
             for i=0; i<list.count(childs)
             {
                 ref child = list.obj(childs, i)
-                do deleteChilds(db, @@(child, "#sys_pk"))
-                do dbr.delete(db, "gop_partida", "sys_pk=@sys_pk", child)
+
+                do gop.partida.validForDelete(db, @@(child,"#sys_pk"))
+                do gop.partida.deleteChilds(db, @@(child,"#sys_pk"))
+                do dbr.delete(db,"gop_partida_log","ref_partida=@sys_pk",child)
+                do dbr.delete(db,"gop_partida","sys_pk=@sys_pk",child)
             }
         }
+
+        do _free(params)
+        do _free(childs)
     }
 
     // =============== GOP_PRESUPUESTO
@@ -361,7 +425,7 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
-    function changeStatus(&db,&params,&data)
+    function gop.changeStatus(&db,&params,&data)
     {
         ref entity = dbr.rec(db,"SELECT status, ref_unidad FROM gop_presupuesto WHERE sys_pk = @_entity_id",params)
 
@@ -424,9 +488,38 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
+    function gop.updateAmounts(&db,presupuesto_pk)
+    {
+        new params { @"ref_presupuesto": presupuesto_pk }
+
+        sql_totales = ftext("
+        SELECT
+            IFNULL(SUM(IFNULL(autorizado,0)),0) AS autorizado,
+            IFNULL(SUM((IFNULL(reserva,0)+IFNULL(p01,0)+IFNULL(p02,0)+IFNULL(p03,0)+IFNULL(p04,0)+IFNULL(p05,0)+IFNULL(p06,0)+IFNULL(p07,0)+IFNULL(p08,0)+IFNULL(p09,0)+IFNULL(p10,0)+IFNULL(p11,0)+IFNULL(p12,0))),0) AS planeado,
+            IFNULL(SUM((IFNULL(rc,0)+IFNULL(c01,0)+IFNULL(c02,0)+IFNULL(c03,0)+IFNULL(c04,0)+IFNULL(c05,0)+IFNULL(c06,0)+IFNULL(c07,0)+IFNULL(c08,0)+IFNULL(c09,0)+IFNULL(c10,0)+IFNULL(c11,0)+IFNULL(c12,0))),0) AS comprometido,
+            IFNULL(SUM((IFNULL(re,0)+IFNULL(e01,0)+IFNULL(e02,0)+IFNULL(e03,0)+IFNULL(e04,0)+IFNULL(e05,0)+IFNULL(e06,0)+IFNULL(e07,0)+IFNULL(e08,0)+IFNULL(e09,0)+IFNULL(e10,0)+IFNULL(e11,0)+IFNULL(e12,0))),0) AS ejercido
+        FROM gop_partida
+        WHERE padre IS NULL
+            AND `status` != #<@stt_pda_cancelada>
+            AND ref_presupuesto = @ref_presupuesto
+        ")
+        ref totales = dbr.rec(db,sql_totales,params)
+        totales<"ref_presupuesto"> : presupuesto_pk
+        
+        sql_update_presupuesto = "
+        UPDATE gop_presupuesto SET
+            monto_autorizado = @autorizado,
+            monto_planeado = @planeado,
+            monto_comprometido = @comprometido,
+            monto_ejercido = @ejercido
+        WHERE sys_pk = @ref_presupuesto
+        "
+        do dbr.execute(db,sql_update_presupuesto,totales)
+    }
+
     function gop.actualizarPresupuesto(&db,&params,&data)
     {
-        if @@(data,"$act")!="" { return changeStatus(db,params,data) }
+        if @@(data,"$act")!="" { return gop.changeStatus(db,params,data) }
 
         ref new_data = record.create()
         if field.exist(data,"sys_pk"){ new_data<"sys_pk">: @@(data,"#sys_pk") }
