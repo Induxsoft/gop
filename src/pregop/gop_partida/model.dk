@@ -143,7 +143,7 @@ module ":gop.partida"
             AND `status` != #<@stt_pda_cancelada>
             AND ref_presupuesto = @ref_presupuesto
         ")
-        ref totales = dbr.rec(db,sql_totales,params)
+        ref totales = dbr.rec(db,sql_totales,entity)
         
         sql_update_presupuesto = "
         UPDATE gop_presupuesto SET
