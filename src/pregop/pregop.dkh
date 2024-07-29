@@ -124,7 +124,7 @@ module ":pregop"
 
         if @@(params,"#padre")!=0 
         { 
-            montos<"_level">:@@(montos,"#_level")+1
+            montos<"_levels">:@@(montos,"#_levels")+1
             do partida.afectar(db, @@(params,"#padre"), periodo, montos)
         }
 

@@ -120,14 +120,14 @@ module "form.dk"
                         fieldset(class="d-flex align-items-center gap-2" id="status_control")
                         {
                             ##
-                            btn_status_cls = "btn btn-xs btn-light btn-status border rounded-0"
+                            btn_stt_cls = "btn btn-xs btn-light btn-status border rounded-0"
                             ##
 
-                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_prevista>" hidden=""){$"Prevista"}
-                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_revision>" hidden=""){$"En revisión"}
-                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_revisada>" hidden=""){$"Revisada"}
-                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_autorizada>" hidden=""){$"Autorizar"}
-                            button(class="#<btn_status_cls>" type="button" status="#<@stt_pda_cancelada>" hidden=""){$"Cancelar"}
+                            button(class="#<btn_stt_cls>" type="button" status="#<@stt_pda_prevista>" hidden=""){$"Prevista"}
+                            button(class="#<btn_stt_cls>" type="button" status="#<@stt_pda_revision>" hidden=""){$"En revisión"}
+                            button(class="#<btn_stt_cls>" type="button" status="#<@stt_pda_revisada>" hidden=""){$"Revisada"}
+                            button(class="#<btn_stt_cls>" type="button" status="#<@stt_pda_autorizada>" hidden=""){$"Autorizar"}
+                            button(class="#<btn_stt_cls>" type="button" status="#<@stt_pda_cancelada>" hidden=""){$"Cancelar"}
                         }
                     }
 

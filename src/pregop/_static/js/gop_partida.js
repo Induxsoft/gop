@@ -113,7 +113,7 @@ var partida =
     },
 
     changeStatus(button)
-    {
+    {   
         let params = {
             status: Number(button.getAttribute("status")),
             presupuesto: Number(this.elems["ref_presupuesto"].value)
@@ -148,7 +148,7 @@ var partida =
             this.elems["status_control"].disabled = false;
         }
 
-        InduxsoftCrudlModel.InvokeService(endpoint,null,onSuccess,onFailure,"PUT",false,true,"",false);
+        InduxsoftCrudlModel.InvokeService(endpoint,null,onSuccess,onFailure,"PUT",false);
     },
 
     showButtonStatus(partida=null)
@@ -182,8 +182,10 @@ var partida =
         let isRoot = (padre === 0);
         buttons.forEach(btn => {
             let show = (isRoot && AllowStatus(status,btn.getAttribute("status")));
-            if (show) btn.addEventListener("click", (e) => this.changeStatus(e.target));
-            else btn.removeEventListener("click", (e) => this.changeStatus(e.target));
+            if (show && !btn.hasClickListenner) {
+                btn.addEventListener("click", (e) => this.changeStatus(e.target));
+                btn.hasClickListenner = true;
+            }
             btn.hidden = !show;
         });
     },
