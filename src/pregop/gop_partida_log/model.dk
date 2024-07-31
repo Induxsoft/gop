@@ -72,36 +72,63 @@ module ":gop.partida.log"
 
     notify::&db,&nota
     {
-        ref partida = dbr.rec(db,"SELECT sys_pk, sys_user, partida, status FROM gop_partida WHERE sys_pk = @ref_partida",nota)
+        sql_partida = "
+        SELECT pda.sys_pk, pda.sys_user, pda.status, pda.partida, ppto.titulo AS presupuesto, uni.descripcion AS unidad
+        FROM gop_partida AS pda
+            INNER JOIN gop_presupuesto AS ppto ON pda.ref_presupuesto = ppto.sys_pk
+            INNER JOIN rh_unidad_org AS uni ON ppto.ref_unidad = uni.sys_pk
+        WHERE pda.sys_pk = @ref_partida
+        "
+        ref partida = dbr.rec(db,sql_partida,nota)
         owner = @@(partida,"$sys_user")
         status = @@(partida,"#status")
         
         _notify = @false
         notif_to_user = ""
 
+        sql_has_priv = "
+        SELECT usr.username, itm.itemid, itm.`description`
+        FROM tuser AS usr
+            INNER JOIN user_usergroup_ AS ug ON ug.users=usr.sys_pk
+            INNER JOIN `profile` AS pf ON ug.`groups`=pf.`usergroup`
+            INNER JOIN sitem AS itm ON pf.item=itm.sys_pk
+        WHERE #<conditions>
+        LIMIT 1;
+        "
+        sql_ultima_nota = "
+        SELECT log.sys_user, log.usuario, log.nota
+        FROM gop_partida_log AS log
+            INNER JOIN tuser AS usr ON log.sys_user = usr.userid
+            INNER JOIN user_usergroup_ AS ug ON usr.sys_pk = ug.users
+            INNER JOIN `profile` AS pf ON ug.`groups` = pf.`usergroup`
+            INNER JOIN sitem AS itm ON pf.item = itm.sys_pk
+        WHERE #<conditions>
+        ORDER BY log.sys_dtcreated DESC
+        LIMIT 1;
+        "
+
         switch status
         {
             case @stt_pda_revision
             {
                 _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_07","true"))
-                notif_to_user = owner
 
                 if not(_notify) { break }
-                //GP1B - Establecer partida en revisión
+                //GP1B - Establecer partida en Revisión
+                //GP17 - Establecer partida Revisada
                 if @@(nota,"$sys_user") == owner
                 {
-                    sql_ultima_nota = "
-                    SELECT t1.sys_user, t1.usuario, t1.nota
-                    FROM gop_partida_log AS t1
-                        INNER JOIN tuser AS t2 ON t1.sys_user = t2.userid
-                        INNER JOIN user_usergroup_ AS t3 ON t2.sys_pk = t3.users
-                        INNER JOIN `profile` AS t4 ON t3.`groups` = t4.`usergroup`
-                        INNER JOIN sitem AS t5 ON t4.item = t5.sys_pk
-                    WHERE t5.itemid = 'GP1B' AND t1.sys_user != @sys_user
-                    ORDER BY t1.sys_dtcreated DESC
-                    LIMIT 1;"
-                    ref ult_nota = dbr.rec(db,sql_ultima_nota,nota)
+                    // Notificar al Revisor de la partida cuando la nota sea del creador
+                    conditions = "itm.itemid = 'GP1B' AND log.sys_user != @sys_user"
+                    ref ult_nota = dbr.rec(db,ftext(sql_ultima_nota),nota)
                     notif_to_user = @@(ult_nota,"$sys_user")
+                }
+                else
+                {
+                    conditions = "usr.userid = @sys_user AND itm.itemid = 'GP1B'"
+                    is_reviewer = not(isnull(dbr.rec(db,ftext(sql_has_priv),nota)))
+                    // Notificar al creador de la partida cuando la nota sea de un revisor
+                    if is_reviewer { notif_to_user = owner }
                 }
                 break
             }
@@ -110,19 +137,10 @@ module ":gop.partida.log"
                 _notify = parse.bool(dbr.vars.getd(db,"pregop_notif_08","true"))
 
                 if not(_notify) { break }
-                //GP17 - Establecer partida revisada
+                //GP17 - Establecer partida Revisada
                 //GP19 - Establecer partida Autorizada
-                sql_ultima_nota = "
-                SELECT t1.sys_user, t1.usuario, t1.nota
-                FROM gop_partida_log AS t1
-                    INNER JOIN tuser AS t2 ON t1.sys_user = t2.userid
-                    INNER JOIN user_usergroup_ AS t3 ON t2.sys_pk = t3.users
-                    INNER JOIN `profile` AS t4 ON t3.`groups` = t4.`usergroup`
-                    INNER JOIN sitem AS t5 ON t4.item = t5.sys_pk
-                WHERE (t5.itemid = 'GP17' OR t5.itemid = 'GP19') AND t1.sys_user != @sys_user
-                ORDER BY t1.sys_dtcreated DESC
-                LIMIT 1;"
-                ref ult_nota = dbr.rec(db,sql_ultima_nota,nota)
+                conditions = "(itm.itemid = 'GP17' OR itm.itemid = 'GP19') AND log.sys_user != @sys_user"
+                ref ult_nota = dbr.rec(db,ftext(sql_ultima_nota),nota)
                 notif_to_user = @@(ult_nota,"$sys_user")
                 break
             }
@@ -133,17 +151,8 @@ module ":gop.partida.log"
                 if not(_notify) { break }
                 //GP17 - Establecer partida revisada
                 //GP19 - Establecer partida Autorizada
-                sql_ultima_nota = "
-                SELECT t1.sys_user, t1.usuario, t1.nota
-                FROM gop_partida_log AS t1
-                    INNER JOIN tuser AS t2 ON t1.sys_user = t2.userid
-                    INNER JOIN user_usergroup_ AS t3 ON t2.sys_pk = t3.users
-                    INNER JOIN `profile` AS t4 ON t3.`groups` = t4.`usergroup`
-                    INNER JOIN sitem AS t5 ON t4.item = t5.sys_pk
-                WHERE (t5.itemid = 'GP17' OR t5.itemid = 'GP19') AND t1.sys_user != @sys_user
-                ORDER BY t1.sys_dtcreated DESC
-                LIMIT 1;"
-                ref ult_nota = dbr.rec(db,sql_ultima_nota,nota)
+                conditions = "(itm.itemid = 'GP17' OR itm.itemid = 'GP19') AND log.sys_user != @sys_user"
+                ref ult_nota = dbr.rec(db,ftext(sql_ultima_nota),nota)
                 notif_to_user = @@(ult_nota,"$sys_user")
                 break
             }
@@ -157,7 +166,8 @@ module ":gop.partida.log"
         do list.add(notif_to,user)
 
         notif_title = "Nueva nota a partida presupuestal"
-        notif_body = @@(partida,"$partida") +":\r\n"+ @@(nota,"$usuario")+"> "+ifstr(length(@@(nota,"$nota"))>50, cut(@@(nota,"$nota"),50)+"...", @@(nota,"$nota"))
+        notif_body = "Unidad: "+@@(partida,"$unidad")+"\r\n"+@@(partida,"$partida")
+        notif_body = notif_body + "\r\n"+@@(nota,"$usuario")+"> "+ifstr(length(@@(nota,"$nota"))>50, cut(@@(nota,"$nota"),50)+"...", @@(nota,"$nota"))
         notif_href = path.concat(@GOP_PARTIDA,@@(partida,"$sys_pk")+"/")
 
         new notification
