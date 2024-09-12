@@ -1,0 +1,9 @@
+#include "dkli.dkh"
+#!
+module "error.dk"
+{
+	#include "functions.dkh"
+
+	if file.exists("webshell/error.dk") { include "webshell/error.dk" }
+	else { include "crudl/error.dk" }
+}

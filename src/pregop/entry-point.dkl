@@ -17,6 +17,12 @@ module "Controller configs"
 
 	@base_path = "pregop"
 	@path_root = ""
+
+	if @@(@http_context,"$session/user/ids") == "" {
+		if file.exists("webshell/lost.dk") { include "webshell/lost.dk" }
+		else { @http_context<"response/headers/location"> : "/" }
+		return
+	}
 	
 	//No modifique a menos que sepa lo que está haciendo
 
