@@ -350,9 +350,22 @@ module "Presupuestos de Gastos de Operacion"
     function gop.obtenerPresupuestos(&db, &params)
     {
         do dbr.apps.action.grant("GP11")
+        if field.exist(params,"_key") { @keyfield = @@(params,"$_key") }
 
-        query = "SELECT * FROM gop_presupuesto;"
-        return dbr.list(db, query, params)
+        query = ftext("
+        SELECT p.sys_pk, p.sys_recver, p.ref_unidad, p.ejercicio, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
+            IFNULL(p.monto_autorizado, 0) monto_autorizado, IFNULL(p.monto_planeado, 0) monto_planeado, 
+            IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido
+        FROM gop_presupuesto p
+            INNER JOIN gop_presupuesto_status s ON p.status = s.id
+            INNER JOIN divisa d ON p.divisa = d.sys_pk
+        WHERE NOT IFNULL(p.sys_deleted,0)
+            AND IF(IFNULL(@u,'')='', TRUE, p.ref_unidad = @u)
+            AND IF(IFNULL(@e,'')='', TRUE, p.ejercicio = @e)
+        ORDER BY p.ejercicio ASC
+        ")
+        
+        return dbr.list(db,query,params)
 
         exception
         {
@@ -370,13 +383,13 @@ module "Presupuestos de Gastos de Operacion"
         if field.exist(params,"_key") { @keyfield = @@(params,"$_key") }
 
         sql = ftext("
-        SELECT p.sys_pk, p.sys_recver, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
+        SELECT p.sys_pk, p.sys_recver, p.ref_unidad, p.ejercicio, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
             IFNULL(p.monto_autorizado, 0) monto_autorizado, IFNULL(p.monto_planeado, 0) monto_planeado, 
             IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido
         FROM gop_presupuesto p
             INNER JOIN gop_presupuesto_status s ON p.status = s.id
             INNER JOIN divisa d ON p.divisa = d.sys_pk
-        WHERE p.#<@keyfield>=@_entity_id 
+        WHERE p.#<@keyfield> = @_entity_id 
             AND IF(IFNULL(@e,'')='', true, p.ejercicio=@e)
         LIMIT 1;")
 
@@ -402,6 +415,8 @@ module "Presupuestos de Gastos de Operacion"
         do dbr.apps.action.pre("GP12:DET060:"+@@(data,"$ref_unidad"))
         do dbr.begin(db)
 
+        copy_from = @@(data,"#copy_from")
+
         ref presupuesto = record.copy(data,"*")
         using presupuesto
         {
@@ -412,8 +427,49 @@ module "Presupuestos de Gastos de Operacion"
             @"monto_comprometido": 0.00
             @"monto_ejercido": 0.00
         }
-        
+        do field.remove(presupuesto,"copy_from")
         ref entity = entity.create(db,params,presupuesto)
+
+        if copy_from > 0
+        {
+            ref partidas = dbr.list(db,"SELECT sys_pk,ref_presupuesto,id,padre,partida,autorizado,reserva,p01,p02,p03,p04,p05,p06,p07,p08,p09,p10,p11,p12 FROM gop_partida WHERE ref_presupuesto=@copy_from ORDER BY sys_pk, padre;",data)
+            ref backup = record.create()
+            ppto = @@(entity,"#sys_pk")
+            // Copiar estructura de otro presupuesto.
+            for i = 0; i < list.count(partidas)
+            {
+                ref partida = list.obj(partidas,i)
+                
+                pk = @@(partida,"$sys_pk")
+                id = uuid()
+                
+                backup<pk> : id
+                
+                using partida
+                {
+                    @"sys_pk": 0
+                    @"sys_user": @@(@http_context,"$session/user/uid")
+                    @"ref_presupuesto": ppto
+                    @"id": id
+                    @"status": @stt_pda_prevista
+                }
+                
+                // Establecer padre con ayuda del respaldo creado
+                padre = @@(partida,"#padre")
+                if padre > 0 {
+                    new p
+                    {
+                        @"ppto":ppto
+                        @"id":@@(backup,str(padre))
+                    }
+                    partida<"padre"> : dbr.num(db,"select sys_pk from gop_partida where ref_presupuesto=@ppto and id=@id",p)
+                }
+
+                do dbr.save(db,"gop_partida",partida)
+            }
+            // Actualizar importes del presupuesto copiado
+            do gop.updateAmounts(db,ppto)
+        }
         
         do dbr.apps.action.pos(entity)
         do dbr.commit(db)
@@ -617,29 +673,30 @@ module "Presupuestos de Gastos de Operacion"
     
     function insertPartidas(&db, &partidas, pk_presupuesto)
     {
-        if not(isnull(partidas)) && list.count(partidas) > 0
+        if isnull(partidas){ ref partidas:list.create() }
+        if list.count(partidas) < 1 { return }
+
+        for i = 0; i < list.count(partidas)
         {
-            for i = 0; i < list.count(partidas)
+            ref partida = list.obj(partidas,i)
+            
+            do field.remove(partida,"anual")
+            _save = @true
+            _notify = @false
+            
+            // Si tiene padre lo guardamos temporalmente en el campo info para asignarselo a todos en una sola consulta
+            using partida
             {
-                ref partida = list.obj(partidas,i)
-                /*
-                 * Si tiene padre lo guardamos temporalmente en el campo info para
-                 * asignarselo a todos en una sola consulta
-                 */
-                do field.remove(partida,"anual")
-                _save = @true
-                _notify = @false
-
-                using partida
-                {
-                    @"sys_pk": @@(partida,"#sys_pk")
-                    @"sys_info": @@(partida,"$padre")
-                    @"sys_recver": @@(partida,"#sys_recver")
-                    @"padre*": @null
-                    @"ref_presupuesto": pk_presupuesto
-                    @"id": ifempty(@@(partida,"$id"),@@(partida,"$sys_guid"))
-                }
-
+                @"sys_pk": @@(partida,"#sys_pk")
+                @"sys_info": @@(partida,"$padre")
+                @"sys_recver": @@(partida,"#sys_recver")
+                @"padre*": @null
+                @"ref_presupuesto": pk_presupuesto
+                @"id": ifempty(@@(partida,"$id"),@@(partida,"$sys_guid"))
+            }
+            
+            if @@(partida,"#ref_presupuesto")>0 && trim(@@(partida,"$id"))!="" && trim(@@(partida,"$partida"))!=""
+            {
                 if @@(partida,"#sys_pk") < 1
                 {
                     do field.remove(partida,"sys_pk")
@@ -697,16 +754,16 @@ module "Presupuestos de Gastos de Operacion"
                     }
                 }
             }
-
-            new prm { @"presupuesto": pk_presupuesto }
-            //do dbr.execute(db, "UPDATE gop_partida p SET p.padre=(SELECT p2.sys_pk FROM gop_partida p2 WHERE p2.sys_guid=p.sys_info LIMIT 1) WHERE p.ref_presupuesto=@presupuesto", prm)
-            do dbr.execute(db, "
-                UPDATE gop_partida p
-                    INNER JOIN gop_partida p2 ON p2.sys_guid=p.sys_info 
-                SET p.padre=p2.sys_pk
-                WHERE p.ref_presupuesto=@presupuesto", prm)
-            do dbr.execute(db, "UPDATE gop_partida p SET p.sys_info=NULL WHERE p.ref_presupuesto=@presupuesto", prm)
         }
+
+        new prm { @"presupuesto": pk_presupuesto }
+        //do dbr.execute(db, "UPDATE gop_partida p SET p.padre=(SELECT p2.sys_pk FROM gop_partida p2 WHERE p2.sys_guid=p.sys_info LIMIT 1) WHERE p.ref_presupuesto=@presupuesto", prm)
+        do dbr.execute(db, "
+            UPDATE gop_partida p
+                INNER JOIN gop_partida p2 ON p2.sys_guid=p.sys_info 
+            SET p.padre=p2.sys_pk
+            WHERE p.ref_presupuesto=@presupuesto", prm)
+        do dbr.execute(db, "UPDATE gop_partida p SET p.sys_info=NULL WHERE p.ref_presupuesto=@presupuesto", prm)
     }
     function changePkParentToGuid(&partidas)
     {
@@ -785,7 +842,8 @@ module "Presupuestos de Gastos de Operacion"
         {
             res<"unidades*">: dbr.list(db, query, params)
             res<"status*">: dbr.list(db, 'SELECT * FROM gop_presupuesto_status where id not in(3,4);', @null)
-            res<"divisa*">: dbr.list(db, 'SELECT * FROM divisa;', @null)
+            res<"divisas*">: dbr.list(db, 'SELECT sys_pk, codigo, descripcion, tcambio, decimales FROM divisa WHERE NOT IFNULL(sys_deleted,0);', @null)
+            res<"dvspred*">: dbr.localize.money(db,@dbr.localize.default.money_code)
         }
         else
         {
@@ -811,6 +869,7 @@ module "Presupuestos de Gastos de Operacion"
                 IFNULL(u.superior,0) AS unidad_fk,
                 IF(IFNULL(u.superior,0) > 0, u.descripcion, '') AS unidad_desc,
                 p.titulo AS pres_title,
+                p.ejercicio,
                 s.const AS `status`,
                 d.codigo AS `divisa`,
                 IFNULL(p.monto_autorizado,0) AS monto_autorizado,
@@ -826,7 +885,7 @@ module "Presupuestos de Gastos de Operacion"
             ORDER BY u.sys_pk ASC
             "
             
-            res<"subunidades*">: dbr.list(db, query, prm)
+            res<"subunidades*">: dbr.list(db,query,prm)
         }
 
         return res

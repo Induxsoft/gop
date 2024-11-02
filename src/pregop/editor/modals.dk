@@ -22,12 +22,7 @@ module "Editor Modals"
                     label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Descripción:"}
                     input(type="text" class="induxsoft-form-control" name="descripcion" required="true")
                     label(class="text-secondary fz-8 mt-2 mb-1"){$"Depende de:"}
-                   "input-key"(
-                        id="mdl_au_ik_unidad"
-                        name="superior"
-                        "data-key"="sys_pk"
-                        "data-search"="codigo"
-                        "data-text"="descripcion"
+                   "input-key"(id="mdl_au_ik_unidad" name="superior" "data-key"="sys_pk" "data-search"="codigo" "data-text"="descripcion"
                         "data-source"="#<@URL_BUSCAR_UNIDAD>"
                         "box-title-text"="Seleccione una unidad organizacional"
                         "box-placeholder-text"="Buscar unidad organizacional"
@@ -54,7 +49,7 @@ module "Editor Modals"
     }
 
     // Modal add presupuesto
-    div(class="modal fade" id="modal_presupuesto" tabindex="-1" "aria-labelledby"="exampleModalLabel" "aria-hidden"="true" "data-bs-backdrop"="false")
+    div(class="modal fade" id="modal_presupuesto" tabindex="-1" "aria-labelledby"="modal_presupuesto_title" "aria-hidden"="true" "data-bs-backdrop"="false")
     {
         div(class="modal-dialog modal-dialog-centered modal-dialog-scrollable")
         {
@@ -62,30 +57,58 @@ module "Editor Modals"
             {
                 div(class="modal-header p-3")
                 {
-                    h6(class="modal-title"){$"Agregar presupuesto"}
+                    h6(class="modal-title" id="modal_presupuesto_title"){$"Agregar presupuesto"}
                     button(type="button" class="btn-close btn-sm" "data-bs-dismiss"="modal" "aria-label"="Close"){$""}
                 }
                 div(class="modal-body p-4 bg-white" id="mdl_ap_controls")
                 {
+                    input(type="hidden" name="sys_pk" "hidden-type"="number")
+                    input(type="hidden" name="sys_recver" "hidden-type"="number")
+
+                    div(class="d-flex align-items-center justify-content-end gap-1")
+                    {
+                        label(class="text-dark fw-5 fz-8"){$"Ejercicio:"}
+                        select(class="induxsoft-form-select w-auto fz-7" name="ejercicio" "default"="#<current_year>")
+                        {
+                            #!
+                            ref years = get_year_list()
+                            for i = 0; i < list.count(years) {
+                                y = list.num(years,i)
+                                #$ option(value="#<y>" "#<ifstr(current_year != y,'', 'selected')>"=""){$"#<y>"}
+                            }
+                            #$
+                        }
+                    }
+
                     label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Título:"}
                     input(type="text" class="induxsoft-form-control" name="titulo" required="true")
                     
                     label(class="text-dark fw-5 fz-8 mt-2 mb-1"){$"Moneda:"}
-                    select(class="induxsoft-form-select" name="divisa" required="true" type="number")
-                    { $""
-                        #! if not(isnull(dvss)) && list.count(dvss) > 0 {
-                            for i = 0; i < list.count(dvss) {
-                                ref divisa = list.obj(dvss, i)
-                                #$ option(value="#<@@(divisa,'sys_pk')>"){$"#<@@(divisa,'codigo')> - #<@@(divisa,'descripcion')>"}
+                    select(class="induxsoft-form-select" name="divisa" "default"="#<@@(dvsp,'#sys_pk')>" required="true")
+                    {$""
+                        #!
+                        if not(isnull(dvss)) && list.count(dvss) > 0
+                        {
+                            pk_dvspred = @@(dvsp,"#sys_pk")
+                            for i = 0; i < list.count(dvss)
+                            {
+                                ref divisa = list.obj(dvss,i)
+                                sys_pk = @@(divisa,"#sys_pk")
+                                codigo = @@(divisa,"$codigo")
+                                selected = ifstr(sys_pk == pk_dvspred, "selected", "")
+
+                                #$ option(value="#<sys_pk>" "data-codigo"="#<codigo>" "data-tcambio"="#<@@(divisa,'#tcambio')>" "data-decimals"="#<@@(divisa,'#decimales')>" "#<selected>"=""){$"#<codigo> - #<@@(divisa,'descripcion')>"}
                             }
                         }
+                        #$
                     }
 
-                    label(class="text-secondary fz-8 mt-2 mb-1"){$"Notas:"}
+                    label(class="fz-8 mt-2 mb-1"){$"Notas:"}
                     textarea(rows="2" class="induxsoft-form-control" name="notas"){$""}
 
-                    input(type="hidden" name="sys_pk" "hidden-type"="number")
-                    input(type="hidden" name="sys_recver" "hidden-type"="number")
+                    hr(class="mb-1"){$""}
+                    label(class="fz-8"){$"Copiar estructura de:"}
+                    select(class="induxsoft-form-select" name="copy_from" id="copy-ppto-from" "default"="0" onchange="editor.selOptStruct(this.options[this.selectedIndex])"){""}
                 }
                 div(class="modal-footer")
                 {

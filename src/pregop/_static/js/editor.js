@@ -1,10 +1,12 @@
 var editor = 
 {
+    dvspred: {},
     tableUnidades: null, 
     tablePartidas: null,
     tableSubUnids: null,
     unidades: [], 
     unidadSelected: null, 
+    presupuestos: [],
     presupuesto: null, 
     partidas: [],
     partidasBackup: [],
@@ -115,8 +117,9 @@ var editor =
                 this.unidadSelected = this.tableUnidades.DataArray[e.sender.CurrentRowIndex()];
                 if (textSelected) textSelected.textContent = (this.unidadSelected?.descripcion ?? '');
                 this.presupuesto = null;
+
                 this.getUnidad(this.unidadSelected.sys_pk, true);
-                this.getPresupuesto(this.unidadSelected.sys_pk);
+                this.getPresupuestos(this.unidadSelected.sys_pk);
                 this.showControls(['btn_add_unidad', 'btn_edit_unidad', 'btn_delete_unidad'], 'unidad_controls');
                 this.printPartidaInfo(null);
                 this.showPdaBtnStatus(null);
@@ -497,7 +500,7 @@ var editor =
         if (!this.presupuesto)
         {
             values['ref_unidad'] = this.unidadSelected.sys_pk;
-            values['ejercicio'] = Number(this.ejercicio_select.value);
+            if (!values.ejercicio) values['ejercicio'] = Number(this.ejercicio_select.value);
             endpoint = endpoint.replace('@presupuesto', '_new');
         }
         else
@@ -507,10 +510,9 @@ var editor =
         }
 
         main.request(endpoint, method, values,
-            success => { 
+            success => {
                 this.presupuesto = success;
-                this.printPresupuesto(this.presupuesto);
-                this.getPartidas(this.presupuesto.sys_pk);
+                this.initPresupuesto();
 
                 main.clearValues('mdl_ap_controls'); 
                 main.closeModal('modal_presupuesto');
@@ -523,33 +525,107 @@ var editor =
     {
         if (!unidadPK) return;
 
-        const presupuesto_controls = document.getElementById("presupuesto_controls");
         let endpoint = editor.services['gop_presupuesto'];
-        endpoint = endpoint.replace('@presupuesto', unidadPK) + '?_key=ref_unidad';
-        endpoint += '&e=' + this.ejercicio_select.value;
-
+        let ejercicio = this.ejercicio_select.value;
+        endpoint = endpoint.replace('@presupuesto', unidadPK) + '/?_key=ref_unidad';
+        endpoint += '&e=' + ejercicio;
+        
         main.request(endpoint, 'GET', null,
-            success => { 
+            (success) => {
                 this.presupuesto = success;
-                presupuesto_controls.classList.remove("hidde-control");
-                this.showControls(['btn_seguimiento_presupuesto','edit_pre','delete_pre'], 'presupuesto_controls');
-                this.printPresupuesto();
-                this.getPartidas(this.presupuesto.sys_pk);
+                this.initPresupuesto();
             },
-            failure => {
+            (failure) => {
                 if (failure?.message?.includes('Elemento no encontrado')) {
                     this.presupuesto = null;
-                    presupuesto_controls.classList.add("hidde-control");
-                    this.showControls([], 'presupuesto_controls');
-                    this.printPresupuesto();
-                    this.tablePartidas.DataArray = [];
-                    this.partidasBackup = [];
-                    this.printPartidas();
+                    this.initPresupuesto();
                 }
                 else alert('No fue posible obtener el presupuesto.\n\n' + (failure.message ?? JSON.stringify(failure))); 
             },
             false
         );
+    },
+    initPresupuesto()
+    {
+        const presupuesto_controls = document.getElementById("presupuesto_controls");
+        const div_ppto = document.getElementById("presupuestos");
+        const div_pda = document.getElementById("partidas");
+
+        if (this.presupuesto && Object.keys(this.presupuesto??{}).length > 0)
+        {
+            // div_ppto.innerHTML = "";
+            div_ppto.classList.toggle("d-none",true);
+            div_pda.classList.toggle("d-none",false);
+            presupuesto_controls.classList.remove("hidde-control");
+            this.ejercicio_select.value = this.presupuesto.ejercicio;
+            this.showControls(['btn_seguimiento_presupuesto','edit_pre','delete_pre'], 'presupuesto_controls');
+            this.printPresupuesto();
+            this.getPartidas(this.presupuesto.sys_pk);
+        }
+        else
+        {
+            div_ppto.innerHTML = "";
+            div_ppto.classList.toggle("d-none",false);
+            div_pda.classList.toggle("d-none",true);
+            presupuesto_controls.classList.add("hidde-control");
+            this.showControls([], 'presupuesto_controls');
+            this.printPresupuesto();
+            this.tablePartidas.DataArray = [];
+            this.partidasBackup = [];
+            this.printPartidas();
+        }
+    },
+    getPresupuestos(unidadPK)
+    {
+        if (!unidadPK) return;
+
+        let ejercicio = this.ejercicio_select.value;
+        let endpoint = editor.services['gop_presupuestos'];
+        endpoint += '&u='+unidadPK;
+
+        main.request(endpoint,'GET',null,
+            (data) => {
+                const div_ppto = document.getElementById("presupuestos");
+                // const div_pda = document.getElementById("partidas");
+
+                this.presupuestos = data;
+                this.presupuesto = null;
+                this.initPresupuesto();
+
+                let cards = '';
+                data.forEach((ppto) => {
+                    cards += `
+                    <div class="col-auto">
+                        <a class="presupuesto-item" href="#" onclick="editor.selPresupuesto(${ppto.sys_pk})">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-dark">${ppto.titulo}</h5>
+                                    <h6 class="card-subtitle text-muted">${ppto.ejercicio}</h6>
+                                </div>
+                            </div>
+                        </a>
+                    </div>`;
+                });
+                if (cards == '') cards = '<h5 class="text-center text-muted">La unidad aún no cuenta con presupuestos</h5>';
+                div_ppto.innerHTML = cards;
+            },
+            (error) => {
+                this.presupuestos = [];
+                alert(error.message ?? JSON.stringify(error));
+            },
+            false
+        );
+    },
+    selPresupuesto(presupuestoPK)
+    {
+        if (!presupuestoPK) return;
+
+        let found = this.presupuestos.find(ppto => ppto.sys_pk == presupuestoPK);
+        if (Object.keys(found).length > 0)
+        {
+            this.presupuesto = found;
+            this.initPresupuesto();
+        }
     },
     enableTablesSection(presupuesto)
     {
@@ -715,7 +791,38 @@ var editor =
     load_presupuesto_modal()
     {
         let presupuesto = (this.presupuesto ?? {});
+        let isnew = ((presupuesto?.sys_pk??0) == 0);
+        let ejercicio = this.ejercicio_select.value;
+
+        const pptos_list = document.getElementById("copy-ppto-from");
+        if (this.presupuestos.length > 0) {
+            let last_ppto = this.presupuestos[(this.presupuestos.length - 1)];
+            ejercicio = (last_ppto.ejercicio + 1);
+        }
+
+        document.getElementById("modal_presupuesto_title").textContent = (isnew) ? "Nuevo presupuesto" : "Editar presupuesto";
+        if (isnew) document.querySelector("#modal_presupuesto select[name='ejercicio']").setAttribute("default",ejercicio);
+        document.querySelector("#modal_presupuesto select[name='divisa']").disabled = !isnew;
+        
+        pptos_list.innerHTML = `<option value="0" divisa="${this.dvspred?.sys_pk??1}">Ninguno</option>`;
+        if (isnew) {
+            this.presupuestos.forEach(ppto => {
+                const option = document.createElement("option");
+                option.value = ppto.sys_pk;
+                option.text = ppto.titulo + ` [${ppto.ejercicio}/${ppto.divisa_text}]`;
+                option.setAttribute("divisa",ppto.divisa);
+
+                pptos_list.appendChild(option);
+            });
+        }
+
         main.setValues('modal_presupuesto', presupuesto);
+    },
+    selOptStruct(option)
+    {
+        const sel_moneda = document.querySelector("#modal_presupuesto select[name='divisa']");
+        sel_moneda.value = option.getAttribute("divisa") ?? this.dvspred.sys_pk;
+        sel_moneda.disabled = (Number(option?.value??0) > 0)
     },
 
     // =============== PARTIDAS
@@ -767,7 +874,7 @@ var editor =
     {
         this.tablePartidas.AddRow();
     },
-    insertRowPartida()
+    insertRowPartida(moveAsChild=false, onTopIfNotAsChild=true)
     {
         if (this.tablePartidas.DataArray && this.tablePartidas.DataArray.length > 0)
         {
@@ -778,7 +885,7 @@ var editor =
             if (newRow && curRow)
             {
                 let options = this.tablePartidas._getTreeOptions();
-                if(this.tablePartidas._moveData(newRow, curRow, false, options, true))
+                if(this.tablePartidas._moveData(newRow, curRow, moveAsChild, options, onTopIfNotAsChild))
                 {
                     this.tablePartidas._printTreeData();
                     // this.tablePartidas._printRows();
@@ -795,6 +902,8 @@ var editor =
             this.addRowPartida();
         }
     },
+    addRowBroPartida(){ this.insertRowPartida(false,false); },
+    addRowSonPartida(){ this.insertRowPartida(true,false); },
     deleteRowPartida()
     {
         if (!this.presupuesto) {
@@ -813,9 +922,13 @@ var editor =
 
         let dtarray = (this.tablePartidas?.DataArray??[]);
         let partida = dtarray[index];
+        let sys_pk = Number(partida?.sys_pk??"0");
 
-        let endpoint = (editor.services["gop_partida"]).replace("@partida",(partida?.sys_pk??0));
-        console.log(endpoint)
+        if (isNaN(sys_pk) || sys_pk < 1) {
+            this.tablePartidas.DeleteRow(index);
+            return
+        }
+        let endpoint = (editor.services["gop_partida"]).replace("@partida",sys_pk);
 
         main.request(endpoint,"DELETE",null,
             (success) => {

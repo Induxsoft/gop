@@ -141,7 +141,7 @@ var main = {
     {
         const controls = document.querySelectorAll(`#${containerId} input, #${containerId} select, #${containerId} textarea`);
         controls.forEach(control => {
-            control.value = (obj[control.name]??'');
+            control.value = obj[control.name] ?? (control.getAttribute("default")??'');
         });
     },
     clearValues(containerId)

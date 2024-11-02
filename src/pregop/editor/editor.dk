@@ -12,23 +12,26 @@ program
 
 	do @context.begin(@crud_context)
 
-	current_year = get_current_year()
 	ref unidades = @('&./unidades')
 	ref stts = @('&./status')
-	ref dvss = @('&./divisa')
+	ref dvss = @('&./divisas')
+	ref dvsp = @('&./dvspred')
 	
+	current_year = get_current_year()
 	message_pvg=@("$parameters/message_pvg")
-	if trim(message_pvg)!=""
-	{
+
+	if trim(message_pvg)!="" {
 		@TEMPLATE_ADD=replace(@TEMPLATE_ERROR_PVG,"@message",message_pvg)
 	}
 
-    #$ div
+    #$ 
+	div
 	{
 		#! 
 		#include "./modals.dk"
-		
-		#$ link(rel="stylesheet" href="#<@CSS_MAIN>")
+		#$
+
+		link(rel="stylesheet" href="#<@CSS_MAIN>")
 		link(rel="stylesheet" href="#<@CSS_EDITOR>")
 
 		div(id="main_container")
@@ -129,10 +132,11 @@ program
 								small(class="fz-8 text-secondary"){$"Ejercicio:"}
 								select(class="induxsoft-form-select fz-7" id="ejercicio_select")
 								{
-									#! ref years = get_year_list()
+									#!
+									ref years = get_year_list()
 									for i = 0; i < list.count(years) {
 										y = list.num(years,i)
-										#$ option(value="#<y>" "#<ifstr(current_year != y,'', 'selected')>"="true"){$"#<y>"}
+										#$ option(value="#<y>" "#<ifstr(current_year != y,'', 'selected')>"=""){$"#<y>"}
 									}
 								}
 							}
@@ -144,8 +148,10 @@ program
 						small(class="text-secondary"){$"Selecciona una Unidad Organizacional."}
 					}
 				}
+				// Presupuestos (vista de tarjetas)
+				div(class="row gx-2 gy-2 p-2" id="presupuestos"){$""}
 				// Partidas
-				div
+				div(class="d-none" id="partidas")
 				{
 					// Tables
 					div(class="" id="tables")
@@ -163,7 +169,7 @@ program
 										span(class="fw-bold" id="pda_title"){$"Item"}
 										small(class="" id="pda_status_text"){$""}
 										
-										button(class="btn btn-xs btn-main-action border-secondary rounded-0 no-shadow hidde-control" id="pda_detail"){$"Detalle"}
+										button(class="btn btn-link rounded-0 no-shadow py-0 px-1 hidde-control" id="pda_detail"){$"Detalle"}
 									}
 
 									small(class="text-muted mx-2"){$"|"}
@@ -176,9 +182,11 @@ program
 
 										button(class="#<btn_table_cls>" title="Disminuir identación" onclick="editor.indentPartidaRow(false)"){$"#<@ICON_TEXT_INDENT_RIGHT>"}
 										button(class="#<btn_table_cls>" title="Agregar identación" onclick="editor.indentPartidaRow(true)"){$"#<@ICON_TEXT_INDENT_LEFT>"}
-										button(class="#<btn_table_cls>" title="Agregar fila" onclick="editor.addRowPartida()"){$"#<@ICON_ADD_ROW>"}
 										button(class="#<btn_table_cls>" title="Eliminar fila" onclick="editor.deleteRowPartida()"){$"#<@ICON_REMOVE_ROW>"}
+										button(class="#<btn_table_cls>" title="Agregar fila" onclick="editor.addRowPartida()"){$"#<@ICON_ADD_ROW>"}
 										button(class="#<btn_table_cls>" title="Insertar fila" onclick="editor.insertRowPartida()"){$"#<@ICON_INSERT_ROW>"}
+										button(class="#<btn_table_cls>" title="Agregar fila hermana" onclick="editor.addRowBroPartida()"){$"#<@ICON_ADD_ROW_BRO>"}
+										button(class="#<btn_table_cls>" title="Agregar fila hija" onclick="editor.addRowSonPartida()"){$"#<@ICON_ADD_ROW_SON>"}
 									}
 
 									div(class="d-flex align-items-center justify-content-start gap-1" id="status_partidas_control")
@@ -268,8 +276,9 @@ program
 											{
 												"edit-th"(type="NoEditable" field="unidad_desc"){$"Unidad"}
 												"edit-th"(type="NoEditable" field="pres_title"){$"Presupuesto"}
-												"edit-th"(type="NoEditable" field="status"){$"Estado"}
-												"edit-th"(type="NoEditable" field="divisa"){$"Divisa"}
+												"edit-th"(type="NoEditable" field="ejercicio" textalign="center"){$"Ejercicio"}
+												"edit-th"(type="NoEditable" field="status" textalign="center"){$"Estado"}
+												"edit-th"(type="NoEditable" field="divisa" textalign="center"){$"Divisa"}
 												"edit-th"(type="Number" field="monto_autorizado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto autorizado"}
 												"edit-th"(type="Number" field="monto_planeado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto planeado"}
 												"edit-th"(type="Number" field="monto_comprometido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto comprometido"}
@@ -289,6 +298,7 @@ program
 		script(src="#<@JS_PRESUPUESTOS>"){$""}
 		script(src="#<@JS_EDITOR>"){$""}
 		script{$'
+			editor.divisa_predet = #<to.json(dvsp)>;
 			editor.services = #<to.json(@URL_SERVICES)>;
 			editor.unidades = #<to.json(unidades)>;
 			editor.currenty = #<current_year>;

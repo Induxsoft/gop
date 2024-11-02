@@ -87,6 +87,21 @@
     border-right: 1px solid var(--color-borders);
     padding: 8px 12px;
 }
+.presupuesto-item {
+    transition: .3s;
+    outline: 1px solid transparent;
+    border: 1px solid #DDD;
+    text-decoration: none;
+    color: black;
+    align-items: center; 
+    justify-content: center;
+    display: flex;
+}
+.presupuesto-item:hover {
+    box-shadow: 3px 3px 9px 0 #DDD;
+    outline: 1px solid #DDD;
+    color: black;
+}
 
 /* ========== MEDIA QUERIES ========== */
 
