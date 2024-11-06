@@ -59,24 +59,28 @@ module "form.dk"
         #!
     }
 
-    #$ div(class="container-fluid")
+    #$ div(class="container-lg")
     {
-        #! do uie.printV12FormBar(nav_config)
+        #!
+        do uie.printV12FormBar(nav_config)
         #$
+
         style
         {$'
             .no-shadow { box-shadow: none !important; }
             .btn.btn-xs { padding: .20rem .4rem; font-size: .725rem; border-radius: .1rem; }
         '}
+        
         div(class="row" id="work_area")
         {
             div(class="alert alert-danger overflow-auto mb-2 #<ifstr(@('$error/message')!='','','d-none')>" id="form_alerts"){$"#<@('error/message')>"}
 
-            div(class="col-lg-6 col-md-6 mb-2")
+            div(class="col-12 mb-2") //class="col-lg-6 col-md-6 mb-2"
             {
                 form(method="POST" action="./" id="form-partida")
                 {
                     input(type="hidden" name="sys_pk" value="#<@@(entity, '#sys_pk')>")
+                    input(type="hidden" name="sys_guid" value="#<@@(entity, '$sys_guid')>")
                     input(type="hidden" name="sys_recver" value="#<@@(entity, '#sys_recver')>")
                     input(type="hidden" name="ref_presupuesto" value="#<@@(entity,'#ref_presupuesto')>")
                     ##
@@ -236,52 +240,52 @@ module "form.dk"
                 }
             }
             
-            div(class="col-lg-6 col-md-6 mb-2 overflow-auto" style="max-height:90vh;")
-            {
-                // div(class="card mb-2")
-                // {
-                //     div(class="card-header")
-                //     {
-                //         div(class="d-flex align-items-center")
-                //         {
-                //             h5(class="mb-0"){$"Adjuntos"}
+            // div(class="col-lg-6 col-md-6 mb-2 overflow-auto" style="max-height:90vh;")
+            // {
+            //     // div(class="card mb-2")
+            //     // {
+            //     //     div(class="card-header")
+            //     //     {
+            //     //         div(class="d-flex align-items-center")
+            //     //         {
+            //     //             h5(class="mb-0"){$"Adjuntos"}
                             
-                //             span(class="flex-grow-1"){""}
-                //             input(class="form-control form-control-sm rounded-0 d-none" type="file" name="adjuntos" multiple="true" id="txt_adjuntos")
-                //             label(class="btn btn-primary btn-sm rounded-0" "for"="txt_adjuntos" title="Subir archivos"){$"Adjuntar"}
-                //         }
-                //     }
-                //     div(class="card-body")
-                //     {
-                //         div(class="overflow-auto w-100 d-flex gap-2" id="div_adjuntos" style="max-height:25vh;")
-                //         {$""
-                //             ##
-                //             do print_attachments()
-                //             ##
-                //         }
-                //     }
-                // }
+            //     //             span(class="flex-grow-1"){""}
+            //     //             input(class="form-control form-control-sm rounded-0 d-none" type="file" name="adjuntos" multiple="true" id="txt_adjuntos")
+            //     //             label(class="btn btn-primary btn-sm rounded-0" "for"="txt_adjuntos" title="Subir archivos"){$"Adjuntar"}
+            //     //         }
+            //     //     }
+            //     //     div(class="card-body")
+            //     //     {
+            //     //         div(class="overflow-auto w-100 d-flex gap-2" id="div_adjuntos" style="max-height:25vh;")
+            //     //         {$""
+            //     //             ##
+            //     //             do print_attachments()
+            //     //             ##
+            //     //         }
+            //     //     }
+            //     // }
 
-                div(class="card")
-                {
-                    h5(class="card-header"){$"Bitácora"}
-                    div(class="card-body")
-                    {
-                        div(class="input-group input-group-sm mb-2")
-                        {
-                            input(class="form-control rounded-0" type="text" name="notes" id="txt_log" maxlength="1024" placeholder="Ingrese texto...")
-                            button(class="btn btn-primary rounded-0" type="button" id="btn_send_log"){$"Agregar"}
-                        }
+            //     div(class="card")
+            //     {
+            //         h5(class="card-header"){$"Bitácora"}
+            //         div(class="card-body")
+            //         {
+            //             div(class="input-group input-group-sm mb-2")
+            //             {
+            //                 input(class="form-control rounded-0" type="text" name="notes" id="txt_log" maxlength="1024" placeholder="Ingrese texto...")
+            //                 button(class="btn btn-primary rounded-0" type="button" id="btn_send_log"){$"Agregar"}
+            //             }
 
-                        div(class="overflow-auto w-100" id="div_log" style="max-height:50vh;")
-                        {$""
-                            ##
-                            do print_log_table()
-                            ##
-                        }
-                    }
-                }
-            }
+            //             div(class="overflow-auto w-100" id="div_log" style="max-height:50vh;")
+            //             {$""
+            //                 ##
+            //                 do print_log_table()
+            //                 ##
+            //             }
+            //         }
+            //     }
+            // }
         }
 
         script(src="#<@JS_PARTIDA>"){$""}
@@ -290,6 +294,7 @@ module "form.dk"
             partida.formId = "form-partida";
             partida.GET = #<to.json(@("&parameters"))>;
             partida.cfg_status = "#<@cfg_pda_status>";
+            partida.url_bitacora = "#<@URL_BITACORA_PARTIDA>";
         '}
     }
 }

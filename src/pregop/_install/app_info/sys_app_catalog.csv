@@ -1,3 +1,4 @@
 "pack_id","app_id","app_title","created","app_info"
-"pregop","pregop.editor","Presupuesto",2023-12-07T23:59:59,"Administración de Presupuestos operativos"
-"pregop","pregop.ops"," operaciones por presupuestar y afectación por operación",2023-12-07T23:59:59," operaciones por presupuestar y afectación por operación"
+"pregop","pregop.editor","Presupuesto de gastos de operación",2023-12-07T23:59:59,"Administración de Presupuestos operativos"
+"pregop","pregop.partida","Partida de presupuesto",2024-11-05T23:59:59,"Partidas de presupuestos de gastos de operación"
+"pregop","pregop.ops"," operaciones por presupuestar y afectación por operación",2023-12-07T23:59:59,"Operaciones por presupuestar y afectación por operación"

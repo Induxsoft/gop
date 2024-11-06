@@ -76,11 +76,13 @@ module "config.dk"
     @OPS_OPER="/!/pregop/ops/"
     @OPS_OPER_GOP="/!/pregop/ops/{id}/view.oper_gop/"
     @OPS_EDIT="/!/pregop/ops/{id}/"
+    
     // _PACKAGE
     @URL_BUSCAR_UNIDAD = "/!/pregop/editor/?_view=rh_unidad_org&s=@search"
-    
     @URL_BUSCAR_UNIDAD_ORG = "/!/cmpreq/requisiciones/?_view=buscar-unidad-org&search=@search"
 	@URL_BUSCAR_PARTIDA_PRE = "/!/cmpreq/requisiciones/?_view=buscar-partida-pre&search=@search"
+
+    @URL_BITACORA_PARTIDA = "/!/webshell/log/DET035/@detid/"
 
     new @URL_SERVICES
     {

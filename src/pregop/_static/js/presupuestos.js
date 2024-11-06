@@ -28,7 +28,7 @@ var presupuesto =
             }
         }
 
-        // Antes de mover la fila
+        // Antes de mover una fila
         this.table.Events[this.events.BeforeMoveRow] = (e) =>
         {
             if (this.table.ReadOnly) {
@@ -55,13 +55,13 @@ var presupuesto =
                 return
             }
 
-            /**
-             * Antes de mover preguntamos si desea continuar y recalcular la fila destino en base a la 
-             * fila origen cuando ésta se pretende agregar como hija de una fila que también es hija.
-             */
+            // Antes de mover preguntamos si desea continuar y recalcular la fila destino en base a la fila origen cuando ésta se pretende agregar como hija de una fila que ya tiene montos propios y anteriormente no era padre.
             const options = this.table._getTreeOptions();
+            let trgAnual = this.calculeAnualFromDataRow(e.target);
+            let trgIsFather = (this.table.DataArray.filter(row => row[options.parentkey] == e.target[options.key]).length > 0);
             
-            if (e.child && e.target[options.parentkey]) {
+            // console.log("Target:", e.target[options.key], "Anual:", trgAnual, "IsFather:", trgIsFather);
+            if (e.child && trgAnual > 0 && !trgIsFather) {
                 e.cancel = !confirm('Si continúa se recalculará la fila superior (fila destino) a partir de la fila que pretende agregar como hija (fila origen).');
             }
         };
@@ -228,6 +228,7 @@ var presupuesto =
         });
 
         data['anual'] = Number(anual);
+        return Number(anual);
     },
     getCellIndexByField(field='')
     {
@@ -261,7 +262,7 @@ var presupuesto =
     },
     recalculeBranch(node, dataArray=[])
     {
-        console.log("Partida:", node.partida, "-> recalculeBranch()")
+        // console.log("Partida:", node.partida, "-> recalculeBranch()");
         const opts = this.table._getTreeOptions();
 
         const calcule = (node={}, childs=[]) => 

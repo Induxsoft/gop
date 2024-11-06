@@ -58,6 +58,12 @@ var editor =
         if (btn_edit_unidad) btn_edit_unidad.addEventListener('click', () => { this.load_unidad_modal(false) });
         if (btn_tab_subunidades) btn_tab_subunidades.addEventListener('click', () => this.selectTabTable(btn_tab_subunidades));
         if (btn_tab_presupuesto) btn_tab_presupuesto.addEventListener('click', () => this.selectTabTable(btn_tab_presupuesto));
+        window.addEventListener('beforeunload', (e) => {
+            if (this.isDirtyPresupuesto()) {
+                let message = "Es posible que no se guarden los cambios realizados en las partidas.";
+                e.preventDefault();
+            }
+        });
     },
     setKeyboardShortcuts()
     {
@@ -925,7 +931,7 @@ var editor =
         let sys_pk = Number(partida?.sys_pk??"0");
 
         if (isNaN(sys_pk) || sys_pk < 1) {
-            this.tablePartidas.DeleteRow(index);
+            this.cascadingDelete(this.tablePartidas, partida);
             return
         }
         let endpoint = (editor.services["gop_partida"]).replace("@partida",sys_pk);
@@ -939,6 +945,19 @@ var editor =
             },
             false
         );
+    },
+    cascadingDelete(table,node)
+    {
+        const op = table._getTreeOptions();
+        let nodeId = node[op.key];
+        
+        let childs = table.DataArray.filter(row => row[op.parentkey] == nodeId);
+        for (let i = 0; i < childs.length; i++) {
+            this.cascadingDelete(table,childs[i]);
+        }
+
+        const index = table.DataArray.findIndex(obj => obj[op.key] == nodeId);
+        if (index != -1) table.DeleteRow(index);
     },
     setPartidasBackup()
     {

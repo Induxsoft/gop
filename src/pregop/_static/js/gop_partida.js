@@ -5,6 +5,7 @@ var partida =
     url_partida:"/!/pregop/gop_partida/",
     url_change_status:"/!/pregop/editor/@partida/change-pda-status/?status=@status&presupuesto=@presupuesto",
     url_logs:"/!/pregop/gop_partida_log/",
+    url_bitacora:"",
     url_files:"",
     cfg_status:"",
     error_timeout:7,
@@ -26,12 +27,18 @@ var partida =
             else this.toggleEdit(true);
         });
 
-        txt_log.addEventListener("keydown", (e) => { if (e.key === "Enter") this.sendLog(); });
-        btn_send_log.addEventListener("click", (e) => this.sendLog());
+        if (txt_log) txt_log.addEventListener("keydown", (e) => { if (e.key === "Enter") this.sendLog(); });
+        if (btn_send_log) btn_send_log.addEventListener("click", (e) => this.sendLog());
         
         this.updateAnualField();
         this.showButtonStatus();
         this.toggleEditFieldsByStatus();
+        
+        let sys_guid = this.elems["sys_guid"].value;
+        if (this.url_bitacora && sys_guid) {
+            let url = this.url_bitacora.replace("@detid",sys_guid);
+            top.WebShell.Panels.Show(top.WebShell.Panels.Const.Right, url);
+        }
     },
 
     updateAnualField()
