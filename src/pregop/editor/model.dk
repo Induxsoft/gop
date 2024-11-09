@@ -376,6 +376,7 @@ module "Presupuestos de Gastos de Operacion"
             do rise_error(code,error)
         }
     }
+
     function gop.obtenerPresupuesto(&db, &params)
     {
         do dbr.apps.action.grant("GP11:DET060:"+@@(params,"$_entity_id"))
