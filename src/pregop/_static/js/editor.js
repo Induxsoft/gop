@@ -349,7 +349,6 @@ var editor =
     addAndUpdateUnidad()
     {
         let values = main.getValues('mdl_au_controls');
-
         if (values == null) return;
 
         let endpoint = editor.services['rh_unidad'];
@@ -467,25 +466,31 @@ var editor =
     },
     load_unidad_modal(empty=false)
     {
-        let data = {}
         const ik_unidad = document.querySelector('#mdl_au_ik_unidad');
+        let data = {}
+
+        const setSuperior = (superior) => {
+            let endpoint = editor.services['rh_unidad'];
+            endpoint = endpoint.replace('@unidad',superior);
+
+            main.request(endpoint, 'GET', null,
+                success => { ik_unidad.setValue(success); },
+                failure => { console.log(failure); },
+                false
+            );
+        }
+
         ik_unidad.setValue(null);
-
-        if (!empty && this.unidadSelected)
-        {
+        if (empty && this.unidadSelected) {
+            setSuperior(this.unidadSelected.sys_pk);
+        }
+        if (!empty && this.unidadSelected) {
             data = this.unidadSelected;
-            if (this.unidadSelected.superior)
-            {
-                let endpoint = editor.services['rh_unidad'];
-                endpoint = endpoint.replace('@unidad', this.unidadSelected.superior);
-
-                main.request(endpoint, 'GET', null,
-                    success => { ik_unidad.setValue(success); },
-                    failure => { console.log(failure); },
-                    false
-                );
+            if (this.unidadSelected.superior) {
+                setSuperior(this.unidadSelected.superior);
             }
         }
+
         main.setValues('mdl_au_controls', data);
     },
 

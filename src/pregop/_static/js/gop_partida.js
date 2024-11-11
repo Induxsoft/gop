@@ -37,7 +37,7 @@ var partida =
         let sys_guid = this.elems["sys_guid"].value;
         if (this.url_bitacora && sys_guid) {
             let url = this.url_bitacora.replace("@detid",sys_guid);
-            top.WebShell.Panels.Show(top.WebShell.Panels.Const.Right, url);
+            top?.WebShell?.Panels.Show(top.WebShell.Panels.Const.Right, url);
         }
     },
 
