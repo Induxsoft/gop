@@ -60,7 +60,8 @@ var presupuesto =
             let trgAnual = this.calculeAnualFromDataRow(e.target);
             let trgIsFather = (this.table.DataArray.filter(row => row[options.parentkey] == e.target[options.key]).length > 0);
             
-            // console.log("Target:", e.target[options.key], "Anual:", trgAnual, "IsFather:", trgIsFather);
+            // console.log("Source:",e.source[options.key], "IsChild:",e.child, "Father:",e.source[options.parentkey]);
+            // console.log("Target:",e.target[options.key], "Anual:",trgAnual, "IsFather:",trgIsFather);
             if (e.child && trgAnual > 0 && !trgIsFather) {
                 e.cancel = !confirm('Si continúa se recalculará la fila superior (fila destino) a partir de la fila que pretende agregar como hija (fila origen).');
             }
@@ -74,21 +75,24 @@ var presupuesto =
              * Nota: en ésta instancia DataArray es un array multi-nivel, depués de terminar con la 
              * función RowMoved regresa a su estado normal (array de un nivel).
              */
-            
+
             if (e.child)
             {
                 let sparent = this.getParentNode(e.source, this.table.DataArray);
+                // console.log("IsChild")
+                // console.log(sparent?.partida, e.target.partida)
                 if (sparent && sparent.sys_pk != e.target.sys_pk) this.recalculeBranch(sparent, this.table.DataArray);
-                
                 this.recalculeBranch(e.target, this.table.DataArray);
             }
             else
             {
                 let tparent = this.getParentNode(e.target, this.table.DataArray);
+                // console.log("NotChild")
+                // console.log(tparent?.partida, e.target.partida)
                 if (tparent && tparent.sys_pk != e.target.sys_pk) this.recalculeBranch(tparent, this.table.DataArray);
-                
-                this.recalculeBranch(e.target, this.table.DataArray);
+                if (!e.source.padre) this.recalculeBranch(e.target, this.table.DataArray);
             }
+
             if (this.onCalculeBranch) this.onCalculeBranch(this.table.DataArray);
         }
 
@@ -319,16 +323,19 @@ var presupuesto =
     validateStatus(col, data, coldef)
     {
         // DOC: https://docs.induxsoft.net/es/productos/v12/devops/packs/pregop/enums/gop_status_partida.md
-        let sys_pk = Number(data?.sys_pk??0);
-        let istatus = Number(data?.istatus??404);
+        let allow = Number(coldef?.allow ?? "1");
+        let sys_pk = Number(data?.sys_pk ?? "0");
+        let istatus = Number(data?.istatus ?? "404");
         
         switch (istatus) {
             case editor.stt_pda_prevista:
+                // No editar celda 'autorizado'
                 coldef.readonly = (coldef.field === "autorizado");
                 break;
             case editor.stt_pda_revision:
             case editor.stt_pda_revisada:
-                coldef.readonly = (coldef.field !== "autorizado");
+                // Editar celda 'autorizado' si tiene permisos.
+                coldef.readonly = (coldef.field !== "autorizado" || !allow);
                 break;
             case editor.stt_pda_autorizada:
             case editor.stt_pda_cancelada:
@@ -339,7 +346,10 @@ var presupuesto =
                     coldef.readonly = true;
                     console.warn("status no definido.");
                 }
-                else coldef.readonly = false;
+                else {
+                    // No editar celda 'autorizado' si no tiene permisos.
+                    coldef.readonly = (coldef.field === "autorizado" && !allow);
+                }
                 break;
         }
     }

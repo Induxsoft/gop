@@ -841,10 +841,11 @@ module "Presupuestos de Gastos de Operacion"
         ref res = record.create()
         if @add_others
         {
-            res<"unidades*">: dbr.list(db, query, params)
-            res<"status*">: dbr.list(db, 'SELECT * FROM gop_presupuesto_status where id not in(3,4);', @null)
-            res<"divisas*">: dbr.list(db, 'SELECT sys_pk, codigo, descripcion, tcambio, decimales FROM divisa WHERE NOT IFNULL(sys_deleted,0);', @null)
-            res<"dvspred*">: dbr.localize.money(db,@dbr.localize.default.money_code)
+            res<"unidades*"> : dbr.list(db, query, params)
+            res<"status*"> : dbr.list(db, 'SELECT * FROM gop_presupuesto_status where id not in(3,4);', @null)
+            res<"divisas*"> : dbr.list(db, 'SELECT sys_pk, codigo, descripcion, tcambio, decimales FROM divisa WHERE NOT IFNULL(sys_deleted,0);', @null)
+            res<"dvspred*"> : dbr.localize.money(db,@dbr.localize.default.money_code)
+            res<"autedt"> : dbr.security.isauth(db,"GP19") //Editar campo/celda 'Autorizado'
         }
         else
         {

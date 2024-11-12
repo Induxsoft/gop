@@ -18,7 +18,7 @@ program
 	ref dvsp = @('&./dvspred')
 	
 	current_year = get_current_year()
-	message_pvg=@("$parameters/message_pvg")
+	message_pvg = @("$parameters/message_pvg")
 
 	if trim(message_pvg)!="" {
 		@TEMPLATE_ADD=replace(@TEMPLATE_ERROR_PVG,"@message",message_pvg)
@@ -231,7 +231,7 @@ program
 											"edit-tr"
 											{
 												"edit-th"(type="Text" field="partida"){$"Partida"}
-												"edit-th"(type="Number" field="autorizado" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
+												"edit-th"(type="Number" field="autorizado" allow="#<@('#./autedt')>" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
 												"edit-th"(type="NoEditable" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
 												"edit-th"(type="Number" field="reserva" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true" "textalign"="end"){$"Reserva"}
 
