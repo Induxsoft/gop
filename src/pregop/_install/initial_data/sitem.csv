@@ -13,9 +13,11 @@ GP18,Cancelar partida,pregop.editor
 GP19,Autorizar partida,pregop.editor
 GP1A,Establecer partida prevista,pregop.editor
 GP1B,Establecer partida en revisión,pregop.editor
+GP1C,Visualizar detalles de los presupuestos,pregop.editor
 pregop.partida,Partida,pregop
 GP30,Partida presupuestal,pregop.partida
 GP31,Bitácora de partida presupuestal,pregop.partida
 GP32,Escribir registro de partida presupuestal,pregop.partida
+GP33,Visualizar detalles de las partidas,pregop.partida
 pregop.ops,Operaciones presupuestadas,pregop
 GP20,Operaciones por presupuestar y afectación por operación,pregop.ops

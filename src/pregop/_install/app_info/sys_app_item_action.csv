@@ -11,3 +11,5 @@ GP19,Autorizar partida,Autorizar,,"",0,pregop.editor,DET035,1,action
 GP1A,Establecer partida prevista,Prevista,,"",0,pregop.editor,DET035,1,action
 GP1B,Establecer partida en revisión,Revisión,,"",0,pregop.editor,DET035,1,action
 GP20,Operaciones por presupuestar y afectación por operación,"O.P.S",,"/!/pregop/ops/","0","pregop.ops","DET03C","0","action"
+GP1C,Visualizar detalles de los presupuestos,Detalle presupuesto,,"",0,pregop.editor,DET035,1,action
+GP33,Visualizar detalles de las partidas,Detalle partida,,"",0,pregop.partida,DET035,1,action
