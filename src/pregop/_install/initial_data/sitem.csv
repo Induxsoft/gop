@@ -19,5 +19,6 @@ GP30,Partida presupuestal,pregop.partida
 GP31,Bitácora de partida presupuestal,pregop.partida
 GP32,Escribir registro de partida presupuestal,pregop.partida
 GP33,Visualizar detalles de las partidas,pregop.partida
+GP34,Transferir partida presupuestal,pregop.partida
 pregop.ops,Operaciones presupuestadas,pregop
 GP20,Operaciones por presupuestar y afectación por operación,pregop.ops

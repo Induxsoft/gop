@@ -167,6 +167,59 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
+    function gop.partida.transferirPartida(&db, &params, &data)
+    {
+        @use_transaction = @false
+
+        ref presupuesto = dbr.rec(db,"SELECT * FROM gop_presupuesto WHERE sys_pk=@presupuesto AND ref_unidad=@unidad LIMIT 1;", data)
+        if isnull(presupuesto) {
+            do rise_error(404,"No se encontró el presupuesto al que se transferirá la partida.")
+        }
+
+        ref partida = dbr.rec(db,"select * from gop_partida where sys_pk=@partida limit 1;", data)
+        if isnull(partida) {
+            do rise_error(404,"No se encontró la partida a transferir.")
+        }
+
+        old_presupuesto = @@(partida,"#ref_presupuesto")
+        new_presupuesto = @@(presupuesto,"#sys_pk")
+
+        do dbr.apps.action.pre("GP34:DET060:"+@@(data,"$unidad"))
+        do dbr.begin(db)
+
+        data<"userid"> : @@(@http_context,"$session/user/uid")
+
+        do dbr.execute(db, "
+            UPDATE gop_partida SET
+                ref_presupuesto = @presupuesto,
+                sys_timestamp = NOW(),
+                sys_lastuser = @userid,
+                sys_recver = (IFNULL(sys_recver,0) + 1)
+            WHERE sys_pk = @partida
+        ",data)
+        do gop.partida.updateChilds(db,@@(partida,"#sys_pk"))
+        do gop.updateAmounts(db,old_presupuesto)
+        do gop.updateAmounts(db,new_presupuesto)
+
+        log = ftext("Transferencia de partida a presupuesto #<new_presupuesto> desde #<old_presupuesto>")
+        do gop.partida.saveLog(db,log,@@(partida,"#sys_pk"))
+        
+        partida<"ref_presupuesto"> : new_presupuesto
+
+        do dbr.apps.action.pos(partida)
+        do dbr.commit(db)
+        do dbr.apps.action.ext(partida)
+
+        return partida
+
+        exception
+        {
+            if dbr.in_transaction(db){ do dbr.rollback(db) }
+            if isset("@@_action_context"){ do dbr.apps.action.log() }
+            do rise_error(last_error_code(),last_error())
+        }
+    }
+
     function gop.crearPartida(&db, &params, &data)
     {
         @use_transaction = @false
@@ -175,7 +228,7 @@ module "Presupuestos de Gastos de Operacion"
         ref res = entity.create(db,params,data)
 
         if trim(@@(data, "$padre")) != "" {
-            do updateParent(db, @@(res, "#sys_pk"))
+            do gop.partida.updateParent(db, @@(res, "#sys_pk"))
         }
 
         do dbr.commit(db)
@@ -213,7 +266,7 @@ module "Presupuestos de Gastos de Operacion"
         ref res = entity.create(db,params,data)
 
         if not(isnull(updateAsc)) {
-            do updateParent(db, @@(res, "#sys_pk"))
+            do gop.partida.updateParent(db, @@(res, "#sys_pk"))
         }
 
         do dbr.commit(db)
@@ -231,7 +284,7 @@ module "Presupuestos de Gastos de Operacion"
         @use_transaction = @false
 
         sql_partida = "
-        SELECT pda.ref_presupuesto, ppto.ref_unidad
+        SELECT pda.sys_pk, pda.padre, pda.ref_presupuesto, ppto.ref_unidad
         FROM gop_partida pda
             INNER JOIN gop_presupuesto ppto ON pda.ref_presupuesto = ppto.sys_pk
         WHERE pda.sys_pk = @_entity_id
@@ -245,6 +298,25 @@ module "Presupuestos de Gastos de Operacion"
         do gop.partida.deleteChilds(db,@@(params,"#_entity_id"))
         do dbr.delete(db,"gop_partida_log","ref_partida=@_entity_id",params)
         do entity.delete(db,params)
+
+        if @@(partida,"#padre") < 1 {/*Si la fila no tenia un padre no hacemos nada*/}
+        else
+        {
+            ref other_child = dbr.rec(db,"select sys_pk from gop_partida where padre=@padre and sys_pk!=@sys_pk limit 1;",partida)
+            if not(isnull(other_child)) {
+                do gop.partida.updateParent(db,@@(other_child,"#sys_pk"))
+            }
+            else
+            {
+                do dbr.execute(db,"
+                    update gop_partida
+                    set autorizado = 0, reserva = 0, p01 = 0, p02 = 0, p03 = 0, p04 = 0, p05 = 0, p06 = 0, p07 = 0, p08 = 0, p09 = 0, p10 = 0, p11 = 0, p12 = 0,
+                        sys_timestamp = NOW(), sys_recver = (IFNULL(sys_recver,0) + 1)
+                    where sys_pk=@padre
+                ",partida)
+            }
+        }
+
         do gop.updateAmounts(db,@@(partida,"#ref_presupuesto"))
 
         do dbr.apps.action.pos(@null)
@@ -291,7 +363,7 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
-    function updateParent(&db,childPK)
+    function gop.partida.updateParent(&db,childPK)
     {
         new prm { @"child": childPK }
 
@@ -311,16 +383,41 @@ module "Presupuestos de Gastos de Operacion"
                             SUM(IFNULL(p.p05,0)) p05, SUM(IFNULL(p.p06,0)) p06, SUM(IFNULL(p.p07,0)) p07, SUM(IFNULL(p.p08,0)) p08,
                             SUM(IFNULL(p.p09,0)) p09, SUM(IFNULL(p.p10,0)) p10, SUM(IFNULL(p.p11,0)) p11, SUM(IFNULL(p.p12,0)) p12
                         FROM gop_partida p 
-                        WHERE p.padre=@sys_pk GROUP BY p.padre)
-                    childs ON parent.sys_pk=childs.padre
+                        WHERE p.padre=@sys_pk
+                        GROUP BY p.padre
+                    ) childs ON parent.sys_pk=childs.padre
                 SET parent.autorizado = childs.autorizado, parent.reserva = childs.reserva, 
                     parent.p01 = childs.p01, parent.p02 = childs.p02, parent.p03 = childs.p03, 
                     parent.p04 = childs.p04, parent.p05 = childs.p05, parent.p06 = childs.p06, 
                     parent.p07 = childs.p07, parent.p08 = childs.p08, parent.p09 = childs.p09, 
                     parent.p10 = childs.p10, parent.p11 = childs.p11, parent.p12 = childs.p12
-                WHERE parent.sys_pk=@sys_pk", parent)
+                WHERE parent.sys_pk=@sys_pk
+            ", parent)
             
-            do updateParent(db, @@(parent, "#sys_pk"))
+            do gop.partida.updateParent(db, @@(parent, "#sys_pk"))
+        }
+    }
+
+    function gop.partida.updateChilds(&db,parentPK)
+    {
+        new params { @"pk": parentPK }
+
+        ref grandpa = dbr.rec(db,"select sys_pk pk_abuelo, ref_presupuesto from gop_partida where sys_pk=@pk;",params)
+        ref parents = dbr.list(db,"SELECT parent.sys_pk FROM gop_partida parent WHERE parent.padre=@pk_abuelo AND (select count(*) from gop_partida where padre=parent.sys_pk) > 0;", grandpa)
+
+        do dbr.execute(db,"
+            UPDATE gop_partida child
+            SET child.ref_presupuesto = @ref_presupuesto,
+                child.sys_timestamp = NOW(),
+                child.sys_lastuser = '"+@@(@http_context,"$session/user/uid")+"',
+                child.sys_recver = (IFNULL(child.sys_recver,0) + 1)
+            WHERE child.padre = @pk_abuelo
+        ",grandpa)
+
+        for i=0; i<list.count(parents)
+        {
+            ref parent = list.obj(parents,i)
+            do gop.partida.updateChilds(db,@@(parent,"#sys_pk"))
         }
     }
 
@@ -355,16 +452,19 @@ module "Presupuestos de Gastos de Operacion"
         query = ftext("
         SELECT p.sys_pk, p.sys_recver, p.ref_unidad, p.ejercicio, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
             IFNULL(p.monto_autorizado, 0) monto_autorizado, IFNULL(p.monto_planeado, 0) monto_planeado, 
-            IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido
+            IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido,
+            CONCAT(uo.codigo, ' - ', uo.descripcion) unidad_org
         FROM gop_presupuesto p
             INNER JOIN gop_presupuesto_status s ON p.status = s.id
+            INNER JOIN rh_unidad_org uo ON p.ref_unidad = uo.sys_pk
             INNER JOIN divisa d ON p.divisa = d.sys_pk
         WHERE NOT IFNULL(p.sys_deleted,0)
             AND IF(IFNULL(@u,'')='', TRUE, p.ref_unidad = @u)
             AND IF(IFNULL(@e,'')='', TRUE, p.ejercicio = @e)
+            AND IF(IFNULL(@s,'')='', TRUE, p.status = @s)
+            AND IF(IFNULL(@t,'')='', TRUE, p.titulo LIKE CONCAT('%',@t,'%'))
         ORDER BY p.ejercicio ASC
         ")
-        
         return dbr.list(db,query,params)
 
         exception

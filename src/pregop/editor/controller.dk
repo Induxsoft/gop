@@ -53,6 +53,14 @@ module "controller"
             point @update to gop.partida.changeStatus
             break
         }
+        case "transfer-partida"
+        {
+            point @create to gop.partida.transferirPartida
+            point @update to gop.partida.transferirPartida
+            
+            @table_name = "gop_partida"
+            break
+        }
         default
         {
             @table_name = "rh_unidad_org"

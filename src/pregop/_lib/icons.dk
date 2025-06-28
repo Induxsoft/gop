@@ -200,4 +200,15 @@ module "icons.dk"
         <text style="line-height:1.25" x=".119" y="2.858" font-size="1.726" font-family="sans-serif" stroke-width=".092"><tspan x=".119" y="2.858">+</tspan></text>
     </svg>
     '}
+
+    text @ICON_TRANSFER_ROW
+    {$'
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="20" viewBox="0 0 24 20" fill="none">
+        <rect x="3" y="4" width="10" height="2" rx="1" fill="#4B5563"/>
+        <rect x="3" y="9" width="10" height="2" rx="1" fill="#4B5563"/>
+        <rect x="3" y="14" width="10" height="2" rx="1" fill="#4B5563"/>
+        <path d="M17 8L21 12L17 16" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 12H9" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    '}
 }

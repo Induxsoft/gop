@@ -118,4 +118,58 @@ module "Editor Modals"
             }
         }
     }
+
+    // Modal transferir partida
+    div(class="modal fade" id="modal_tr_partida" tabindex="-1" "aria-hidden"="true" "data-bs-backdrop"="false")
+    {
+        div(class="modal-dialog modal-dialog-centered modal-dialog-scrollable")
+        {
+            div(class="modal-content rounded-0 p-0 border-0 shadow")
+            {
+                div(class="modal-header p-3")
+                {
+                    h6(class="modal-title"){"Transferir partida"}
+                    button(type="button" class="btn-close btn-sm" "data-bs-dismiss"="modal" "aria-label"="Close"){$""}
+                }
+                div(class="modal-body p-4 bg-white" id="mdl_tr_controls")
+                {
+                    div(class="text-center")
+                    {
+                        h6(class="text-secondary" id="tr_partida_title"){""}
+                        span(class=""){"Transferir a"}
+                    }
+
+                    label(class="text-dark fw-5 fz-8 mt-2 mb-1"){"Unidad:"}
+                   "input-key"(id="ik_tr_unidad" name="unidad" "data-key"="sys_pk" "data-search"="codigo" "data-text"="descripcion"
+                        "data-source"="#<@URL_BUSCAR_UNIDAD>"
+                        "box-title-text"="Seleccione una unidad organizacional"
+                        "box-placeholder-text"="Buscar unidad organizacional"
+                        "box-nodata-text"="No se encontraron unidades organizacionales"
+                        columns="codigo,descripcion"
+                        colcaptions="Codigo,Nombre"
+                        "control-styles"="#search_container{ padding: 0 !important;} #description_container{ padding: 0 !important; padding-left: 6px !important; }"
+                    ){$""}
+
+                    label(class="text-dark fw-5 fz-8 mt-2 mb-1"){"Presupuesto:"}
+                   "input-key"(id="ik_tr_presupuesto" name="presupuesto" "data-key"="sys_pk" "data-search"="titulo" "data-text"="ejercicio"
+                        "data-source"="@search"
+                        "box-title-text"="Seleccione un presupuesto organizacional"
+                        "box-placeholder-text"="Buscar presupuesto organizacional"
+                        "box-nodata-text"="No se encontraron presupuestos organizacionales"
+                        columns="unidad_org,titulo,ejercicio,divisa_text"
+                        colcaptions="Unidad,Presupuesto,Ejercicio,Divisa"
+                        required="true"
+                        "control-styles"="#search_container{ padding: 0 !important;} #description_container{ padding: 0 !important; padding-left: 6px !important; }"
+                    ){$""}
+
+                    input(type="hidden" name="partida" value="0" "hidden-type"="number")
+                }
+                div(class="modal-footer")
+                {
+                    button(type="button" class="btn btn-sm btn-primary" onclick="editor.transferPartida()"){$"Aceptar"}
+                    button(type="button" class="btn btn-sm bg-white border" "data-bs-dismiss"="modal"){$"Cancelar"}
+                }
+            }
+        }
+    }
 }

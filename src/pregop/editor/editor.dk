@@ -85,7 +85,7 @@ program
 			div(id="content_container" class="section-container")
 			{
 				// Presupuesto
-				div(class="border-bottom bg-white")
+				section(class="border-bottom bg-white" id="header")
 				{
 					// Barra de controles
 					div(class="d-flex flex-wrap justify-content-between align-items-center border-bottom")
@@ -148,146 +148,224 @@ program
 						small(class="text-secondary"){$"Selecciona una Unidad Organizacional."}
 					}
 				}
-				// Presupuestos (vista de tarjetas)
-				div(class="row gx-2 gy-2 p-2" id="presupuestos"){$""}
-				// Partidas
-				div(class="d-none" id="partidas")
+
+				section(id="content")
 				{
-					// Tables
-					div(class="" id="tables")
+					// Presupuestos (vista de tarjetas)
+					div(class="row gx-2 gy-2 p-2" id="presupuestos"){$""}
+					// Partidas
+					div(class="d-none" id="partidas")
 					{
-						// Table partidas
-						div(id="partidas_main_container" class='t-table d-none')
+						// Tables
+						div(class="" id="tables")
 						{
-							// Barra de controles
-							div(class="d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white py-1 px-2")
+							// Table partidas
+							div(id="partidas_main_container" class='t-table d-none')
 							{
-								div(class="d-flex align-items-center")
+								// Barra de controles
+								div(class="d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white py-1 px-2")
 								{
-									div(class="d-flex align-items-center justify-content-start gap-1" id="partida_info")
+									div(class="d-flex align-items-center")
 									{
-										span(class="fw-bold" id="pda_title"){$"Item"}
-										small(class="" id="pda_status_text"){$""}
-										
-										button(class="btn btn-link rounded-0 no-shadow py-0 px-1 hidde-control" id="pda_detail"){$"Detalle"}
+										div(class="d-flex align-items-center justify-content-start gap-1" id="partida_info")
+										{
+											span(class="fw-bold" id="pda_title"){$"Item"}
+											small(class="" id="pda_status_text"){$""}
+											
+											button(class="btn btn-link rounded-0 no-shadow py-0 px-1 hidde-control" id="pda_detail"){$"Detalle"}
+										}
+
+										small(class="text-muted mx-2"){$"|"}
+
+										div(class="d-flex align-items-center justify-content-start hidde-control" id="table_partidas_control")
+										{
+											##
+											btn_table_cls = "control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 p-1 no-shadow"
+											##
+
+											button(class="#<btn_table_cls>" title="Disminuir identación" onclick="editor.indentPartidaRow(false)"){$"#<@ICON_TEXT_INDENT_RIGHT>"}
+											button(class="#<btn_table_cls>" title="Agregar identación" onclick="editor.indentPartidaRow(true)"){$"#<@ICON_TEXT_INDENT_LEFT>"}
+											button(class="#<btn_table_cls>" title="Eliminar fila" onclick="editor.deleteRowPartida()"){$"#<@ICON_REMOVE_ROW>"}
+											button(class="#<btn_table_cls>" title="Agregar fila" onclick="editor.addRowPartida()"){$"#<@ICON_ADD_ROW>"}
+											button(class="#<btn_table_cls>" title="Insertar fila" onclick="editor.insertRowPartida()"){$"#<@ICON_INSERT_ROW>"}
+											button(class="#<btn_table_cls>" title="Agregar fila hermana" onclick="editor.addRowBroPartida()"){$"#<@ICON_ADD_ROW_BRO>"}
+											button(class="#<btn_table_cls>" title="Agregar fila hija" onclick="editor.addRowSonPartida()"){$"#<@ICON_ADD_ROW_SON>"}
+										}
+
+										div(class="d-flex align-items-center justify-content-start gap-1" id="status_partidas_control")
+										{
+											button(class="#<btn_table_cls>" title="Transferir partida" onclick="editor.showTransferPartidaModal()"){$"#<@ICON_TRANSFER_ROW>"}
+
+											##
+											btn_status_cls = "btn btn-xs btn-main-action btn-status border-secondary rounded-0 no-shadow hidde-control"
+											##
+
+											button(class="#<btn_status_cls>" id="pda_prevista" status="#<@stt_pda_prevista>" onclick="editor.changePartidaStatus(this)"){$"Prevista"}
+											button(class="#<btn_status_cls>" id="pda_revision" status="#<@stt_pda_revision>" onclick="editor.changePartidaStatus(this)"){$"En revisión"}
+											button(class="#<btn_status_cls>" id="pda_revisada" status="#<@stt_pda_revisada>" onclick="editor.changePartidaStatus(this)"){$"Revisada"}
+											button(class="#<btn_status_cls>" id="pda_autorizar" status="#<@stt_pda_autorizada>" onclick="editor.changePartidaStatus(this)"){$"Autorizar"}
+											button(class="#<btn_status_cls>" id="pda_cancelar" status="#<@stt_pda_cancelada>" onclick="editor.changePartidaStatus(this)"){$"Cancelar"}
+										}
 									}
 
-									small(class="text-muted mx-2"){$"|"}
-
-									div(class="d-flex align-items-center justify-content-start hidde-control" id="table_partidas_control")
+									div(class="d-flex align-items-center justify-content-start" id="partidas_control")
 									{
-										##
-										btn_table_cls = "control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow"
-										##
-
-										button(class="#<btn_table_cls>" title="Disminuir identación" onclick="editor.indentPartidaRow(false)"){$"#<@ICON_TEXT_INDENT_RIGHT>"}
-										button(class="#<btn_table_cls>" title="Agregar identación" onclick="editor.indentPartidaRow(true)"){$"#<@ICON_TEXT_INDENT_LEFT>"}
-										button(class="#<btn_table_cls>" title="Eliminar fila" onclick="editor.deleteRowPartida()"){$"#<@ICON_REMOVE_ROW>"}
-										button(class="#<btn_table_cls>" title="Agregar fila" onclick="editor.addRowPartida()"){$"#<@ICON_ADD_ROW>"}
-										button(class="#<btn_table_cls>" title="Insertar fila" onclick="editor.insertRowPartida()"){$"#<@ICON_INSERT_ROW>"}
-										button(class="#<btn_table_cls>" title="Agregar fila hermana" onclick="editor.addRowBroPartida()"){$"#<@ICON_ADD_ROW_BRO>"}
-										button(class="#<btn_table_cls>" title="Agregar fila hija" onclick="editor.addRowSonPartida()"){$"#<@ICON_ADD_ROW_SON>"}
-									}
-
-									div(class="d-flex align-items-center justify-content-start gap-1" id="status_partidas_control")
-									{
-										##
-										btn_status_cls = "btn btn-xs btn-main-action btn-status border-secondary rounded-0 no-shadow hidde-control"
-										##
-
-										button(class="#<btn_status_cls>" id="pda_prevista" status="#<@stt_pda_prevista>" onclick="editor.changePartidaStatus(this)"){$"Prevista"}
-										button(class="#<btn_status_cls>" id="pda_revision" status="#<@stt_pda_revision>" onclick="editor.changePartidaStatus(this)"){$"En revisión"}
-										button(class="#<btn_status_cls>" id="pda_revisada" status="#<@stt_pda_revisada>" onclick="editor.changePartidaStatus(this)"){$"Revisada"}
-										button(class="#<btn_status_cls>" id="pda_autorizar" status="#<@stt_pda_autorizada>" onclick="editor.changePartidaStatus(this)"){$"Autorizar"}
-										button(class="#<btn_status_cls>" id="pda_cancelar" status="#<@stt_pda_cancelada>" onclick="editor.changePartidaStatus(this)"){$"Cancelar"}
+										button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow" title="Modificar partidas" id="enable_edit_partidas" onclick="editor.togglePartidasControl(true)"){
+											$"#<@ICON_EDIT>"
+											small{$"Modificar"}
+										}
+										button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Guardar cambios" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
+											$"#<@ICON_SAVE>"
+											small{$"Guardar"}
+										}
+										button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Descartar cambios" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
+											$"#<@ICON_DISCARD>"
+											small{$"Descartar"}
+										}
 									}
 								}
-
-								div(class="d-flex align-items-center justify-content-start" id="partidas_control")
+								// Tabla de partidas
+								div(id="partidas_container")
 								{
-									button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow" title="Modificar partidas" id="enable_edit_partidas" onclick="editor.togglePartidasControl(true)"){
-										$"#<@ICON_EDIT>"
-										small{$"Modificar"}
-									}
-									button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Guardar cambios" id="save_pre" onclick="editor.savePartidasPresupuesto()"){
-										$"#<@ICON_SAVE>"
-										small{$"Guardar"}
-									}
-									button(class="control btn btn-sm btn-main-action d-flex align-items-center justify-content-center gap-2 no-shadow hidde-control" title="Descartar cambios" id="disc_pre" onclick="editor.discardPartidasPresupuesto()"){
-										$"#<@ICON_DISCARD>"
-										small{$"Descartar"}
+									div(style="max-height:80vh; display:flex;")
+									{
+										"edit-table"(id="treePartidas" style="width:100%;" readonly="" "show-tree"="true" parentkey="padre" key="sys_pk" "can-move-row"="true" "control-styles"="tr th{ font-size:.9rem; outline:none !important; font-weight:500 !important; } tr td{ font-size:.8rem; } table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
+										{
+											"edit-thead"
+											{
+												"edit-tr"
+												{
+													"edit-th"(type="Text" field="partida"){$"Partida"}
+													"edit-th"(type="Number" field="autorizado" allow="#<@('#./autedt')>" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
+													"edit-th"(type="NoEditable" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
+													"edit-th"(type="Number" field="reserva" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true" "textalign"="end"){$"Reserva"}
+
+													"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
+													"edit-th"(type="Number" field="p02" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Febrero"}
+													"edit-th"(type="Number" field="p03" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Marzo"}
+													"edit-th"(type="Number" field="p04" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Abril"}
+													"edit-th"(type="Number" field="p05" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Mayo"}
+													"edit-th"(type="Number" field="p06" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Junio"}
+													"edit-th"(type="Number" field="p07" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Julio"}
+													"edit-th"(type="Number" field="p08" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Agosto"}
+													"edit-th"(type="Number" field="p09" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Septiembre"}
+													"edit-th"(type="Number" field="p10" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Octubre"}
+													"edit-th"(type="Number" field="p11" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Noviembre"}
+													"edit-th"(type="Number" field="p12" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Diciembre"}
+
+													"edit-th"(type="Memo" field="notas"){$"Notas"}
+												}
+											}
+										}
 									}
 								}
 							}
-							// Tabla de partidas
-							div(id="partidas_container")
+							// Table sub unidades
+							div(id="unidades_main_container" class='t-table d-none')
 							{
-								div(style="max-height: 80vh;display: flex;")
+								// Barra de controles
+								div(class="p-2 d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white")
 								{
-									"edit-table"(id="treePartidas" "show-tree"="true" "can-move-row"="true" readonly="" parentkey="padre" key="sys_pk" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
+									small(class="fw-5"){$"Resumen"}
+								}
+								// Tabla de sub unidades
+								div
+								{
+									div(style="max-height: 80vh;display: flex;")
 									{
-										"edit-thead"
+										"edit-table"(id="tableSubUnids" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}")
 										{
-											"edit-tr"
+											"edit-thead"
 											{
-												"edit-th"(type="Text" field="partida"){$"Partida"}
-												"edit-th"(type="Number" field="autorizado" allow="#<@('#./autedt')>" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
-												"edit-th"(type="NoEditable" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
-												"edit-th"(type="Number" field="reserva" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true" "textalign"="end"){$"Reserva"}
-
-												"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
-												"edit-th"(type="Number" field="p02" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Febrero"}
-												"edit-th"(type="Number" field="p03" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Marzo"}
-												"edit-th"(type="Number" field="p04" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Abril"}
-												"edit-th"(type="Number" field="p05" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Mayo"}
-												"edit-th"(type="Number" field="p06" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Junio"}
-												"edit-th"(type="Number" field="p07" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Julio"}
-												"edit-th"(type="Number" field="p08" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Agosto"}
-												"edit-th"(type="Number" field="p09" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Septiembre"}
-												"edit-th"(type="Number" field="p10" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Octubre"}
-												"edit-th"(type="Number" field="p11" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Noviembre"}
-												"edit-th"(type="Number" field="p12" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Diciembre"}
-
-												"edit-th"(type="Memo" field="notas"){$"Notas"}
+												"edit-tr"
+												{
+													"edit-th"(type="NoEditable" field="unidad_desc"){$"Unidad"}
+													"edit-th"(type="NoEditable" field="pres_title"){$"Presupuesto"}
+													"edit-th"(type="NoEditable" field="ejercicio" textalign="center"){$"Ejercicio"}
+													"edit-th"(type="NoEditable" field="status" textalign="center"){$"Estado"}
+													"edit-th"(type="NoEditable" field="divisa" textalign="center"){$"Divisa"}
+													"edit-th"(type="Number" field="monto_autorizado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto autorizado"}
+													"edit-th"(type="Number" field="monto_planeado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto planeado"}
+													"edit-th"(type="Number" field="monto_comprometido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto comprometido"}
+													"edit-th"(type="Number" field="monto_ejercido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto ejercido"}
+												}
 											}
 										}
 									}
 								}
 							}
 						}
-						// Table sub unidades
-						div(id="unidades_main_container" class='t-table d-none')
+					}
+				}
+
+				section(id="footer")
+				{
+					div(id="partidas_resumen" class="d-none align-items-center justify-content-between border-top bg-white py-1 px-2")
+					{
+						div(class="")
 						{
-							// Barra de controles
-							div(class="p-2 d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white")
-							{
-								small(class="fw-5"){$"Resumen"}
-							}
-							// Tabla de sub unidades
-							div
-							{
-								div(style="max-height: 80vh;display: flex;")
-								{
-									"edit-table"(id="tableSubUnids" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}")
-									{
-										"edit-thead"
-										{
-											"edit-tr"
-											{
-												"edit-th"(type="NoEditable" field="unidad_desc"){$"Unidad"}
-												"edit-th"(type="NoEditable" field="pres_title"){$"Presupuesto"}
-												"edit-th"(type="NoEditable" field="ejercicio" textalign="center"){$"Ejercicio"}
-												"edit-th"(type="NoEditable" field="status" textalign="center"){$"Estado"}
-												"edit-th"(type="NoEditable" field="divisa" textalign="center"){$"Divisa"}
-												"edit-th"(type="Number" field="monto_autorizado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto autorizado"}
-												"edit-th"(type="Number" field="monto_planeado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto planeado"}
-												"edit-th"(type="Number" field="monto_comprometido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto comprometido"}
-												"edit-th"(type="Number" field="monto_ejercido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto ejercido"}
-											}
-										}
-									}
-								}
-							}
+							small(class="d-block fw-5"){"Reserva:"}
+							span(id="total_reserva"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Enero:"}
+							span(id="total_p01"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Febrero:"}
+							span(id="total_p02"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Marzo:"}
+							span(id="total_p03"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Abril:"}
+							span(id="total_p04"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Mayo:"}
+							span(id="total_p05"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Junio:"}
+							span(id="total_p06"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Julio:"}
+							span(id="total_p07"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Agosto:"}
+							span(id="total_p08"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Septiembre:"}
+							span(id="total_p09"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Octubre:"}
+							span(id="total_p10"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Noviembre:"}
+							span(id="total_p11"){"$0.00"}
+						}
+						div(class="")
+						{
+							small(class="d-block fw-5"){"Diciembre:"}
+							span(id="total_p12"){"$0.00"}
 						}
 					}
 				}

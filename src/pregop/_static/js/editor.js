@@ -44,26 +44,55 @@ var editor =
 
         this.ejercicio_select = document.querySelector('#ejercicio_select');
         const modal_presupuesto = document.querySelector('#modal_presupuesto');
+        const modal_tr_partida = document.querySelector('#modal_tr_partida');
+        const partidas_main_container = document.querySelector('#partidas_main_container');
+        const partidas_resumen = document.querySelector('#partidas_resumen');
         const btn_add_unidad = document.querySelector('#btn_add_unidad');
         const btn_edit_unidad = document.querySelector('#btn_edit_unidad');
         const btn_tab_subunidades = document.querySelector('#btn_tab_subunidades');
         const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
+        const ik_tr_unidad = document.querySelector('#ik_tr_unidad');
+        const ik_tr_presupuesto = document.querySelector('#ik_tr_presupuesto');
 
         if (this.ejercicio_select) this.ejercicio_select.addEventListener('change', () => {
             this.getUnidad(this.unidadSelected?.sys_pk??null, true);
             this.getPresupuesto(this.unidadSelected?.sys_pk??null) 
         });
         if (modal_presupuesto) modal_presupuesto.addEventListener('show.bs.modal', () => { this.load_presupuesto_modal(); });
+        if (modal_tr_partida) modal_tr_partida.addEventListener('show.bs.modal', () => { ik_tr_unidad.setValue(this.unidadSelected); });
+        if (modal_tr_partida) modal_tr_partida.addEventListener('hidden.bs.modal', () => { main.clearValues('modal_tr_partida'); });
         if (btn_add_unidad) btn_add_unidad.addEventListener('click', () => { this.load_unidad_modal(true) });
         if (btn_edit_unidad) btn_edit_unidad.addEventListener('click', () => { this.load_unidad_modal(false) });
         if (btn_tab_subunidades) btn_tab_subunidades.addEventListener('click', () => this.selectTabTable(btn_tab_subunidades));
         if (btn_tab_presupuesto) btn_tab_presupuesto.addEventListener('click', () => this.selectTabTable(btn_tab_presupuesto));
+        if (ik_tr_unidad) ik_tr_unidad.change_event = (data) => { ik_tr_presupuesto.clear(); };
+        if (ik_tr_presupuesto) ik_tr_presupuesto.onBeforeSearch = (s) => this.onBeforeSearchPresupuesto(s);
+        
+        window.addEventListener('resize', (e) => this.onResize(e));
         window.addEventListener('beforeunload', (e) => {
             if (this.isDirtyPresupuesto()) {
                 let message = "Es posible que no se guarden los cambios realizados en las partidas.";
                 e.preventDefault();
             }
         });
+
+        this.observeAttributes(partidas_main_container, (mutation) => {
+            if (mutation.attributeName === 'class' || mutation.attributeName === 'style') {
+                const style = getComputedStyle(partidas_main_container);
+                if (style.display != 'none') {
+                    partidas_resumen.classList.remove('d-none');
+                    partidas_resumen.classList.add('d-flex');
+                    
+                    setTimeout(() => { this.adjustContentContainer() }, 500);
+                }
+                else {
+                    partidas_resumen.classList.remove('d-flex');
+                    partidas_resumen.classList.add('d-none');
+                }
+            }
+        });
+
+        // setTimeout(() => { window.dispatchEvent(new Event('resize')) }, 500);
     },
     setKeyboardShortcuts()
     {
@@ -342,6 +371,43 @@ var editor =
                 this.printPresupuesto(this.presupuesto);
             }
         }
+    },
+    onResize(e)
+    {
+        this.adjustContentContainer();
+    },
+    adjustContentContainer()
+    {
+        const container = document.querySelector('#content_container');
+        const header = container.querySelector('#header');
+        const content = container.querySelector('#content');
+        const footer = container.querySelector('#footer');
+
+        if (!container || !header || !content || !footer) return;
+
+        let containerHeight = container.offsetHeight - (document.body.offsetHeight - window.innerHeight);
+        let headerHeight = header.offsetHeight;
+        let footerHeight = footer.offsetHeight;
+        let contentHeight = containerHeight - (headerHeight + footerHeight);
+
+        content.style.height = contentHeight + 'px';
+    },
+    observeAttributes(element, callback)
+    {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(mutation => {
+                if (mutation.type === 'attributes') {
+                    callback(mutation);
+                }
+            });
+        });
+
+        observer.observe(element, {
+            attributes: true,
+            subtree: false
+        });
+
+        return observer;
     },
 
     // =============== UNIDADES
@@ -630,6 +696,7 @@ var editor =
     selPresupuesto(presupuestoPK)
     {
         if (!presupuestoPK) return;
+        this.adjustContentContainer();
 
         let found = this.presupuestos.find(ppto => ppto.sys_pk == presupuestoPK);
         if (Object.keys(found).length > 0)
@@ -774,6 +841,7 @@ var editor =
             this.presupuesto['monto_planeado'] = planeado;
 
             this.printPresupuesto();
+            this.summarizeByMonths();
         }
 
         const isDirty = this.isDirtyPresupuesto();
@@ -781,15 +849,32 @@ var editor =
     },
     isDirtyPresupuesto()
     {
-        let isDirty = false;
-
-        if (!isDirty && this.tablePartidas.DataArray && this.partidasBackup) 
+        if (this.tablePartidas.DataArray && this.partidasBackup) 
         {
-            let partidas = JSON.parse(JSON.stringify(this.tablePartidas.DataArray));
-            isDirty = (JSON.stringify(this.tablePartidas.TableArray(partidas)) !== JSON.stringify(this.partidasBackup));
+            const partidas = this.tablePartidas.DataArray;
+            const backup = this.partidasBackup ?? [];
+            
+            if (partidas.length == 0 && backup.length == 0) return false;
+            if (partidas.length != backup.length) return true;
+
+            const mapPartidas = new Map(partidas.map(p => [p.sys_pk, p]));
+            const mapBackup = new Map(backup.map(b => [b.sys_pk, b]));
+
+            let isDirty = false;
+            for (const [id, pda] of mapPartidas) {
+                const bkp = mapBackup.get(id);
+                console.log(id, pda, bkp);
+
+                if (JSON.stringify(pda) !== JSON.stringify(bkp)) {
+                    isDirty = true;
+                    break;
+                }
+            }
+
+            return isDirty;
         }
         
-        return isDirty;
+        return false;
     },
     showDirtyControls(isDirty=true)
     {
@@ -859,8 +944,9 @@ var editor =
     },
     printPartidas()
     {
-        const container = document.querySelector('#partidas_main_container');
-        container.style.opacity = 0;
+        const partidas_main_container = document.querySelector('#partidas_main_container');
+        const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
+        partidas_main_container.style.opacity = 0;
 
         if (this.tablePartidas.DataArray && this.tablePartidas.DataArray.length > 0)
         {
@@ -872,14 +958,52 @@ var editor =
         setTimeout(()=>{
             this.tablePartidas._printTreeData();
             // this.tablePartidas._printRows();
-            container.style.opacity = 1;
+            partidas_main_container.style.opacity = 1;
+            this.summarizeByMonths();
         },200);
-
-        const partidas_main_container = document.querySelector('#partidas_main_container');
-        const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
 
         partidas_main_container.classList.toggle('d-none', (this.presupuesto ? false : true));
         btn_tab_presupuesto.classList.toggle('d-none', (this.presupuesto ? false : true));
+    },
+    summarizeByMonths()
+    {
+        if (!this.tablePartidas) {
+            console.warn("No se encontro la tabla de las partidas");
+            return
+        }
+
+        const partidas_resumen = document.querySelector('#partidas_resumen');
+
+        let dataArray = this.tablePartidas.DataArray;
+        let summary = {reserva:0, p01:0, p02:0, p03:0, p04:0, p05:0, p06:0, p07:0, p08:0, p09:0, p10:0, p11:0, p12:0};
+
+        for (let i = 0; i < dataArray.length; i++) {
+            const row = dataArray[i];
+            // Solo sumar las partidas raíz (sin padre)
+            if (row.padre!=null || row.padre!=undefined) continue;
+            
+            summary.reserva = Math.add(summary.reserva, Number(row.reserva));
+            summary.p01 = Math.add(summary.p01, Number(row.p01));
+            summary.p02 = Math.add(summary.p02, Number(row.p02));
+            summary.p03 = Math.add(summary.p03, Number(row.p03));
+            summary.p04 = Math.add(summary.p04, Number(row.p04));
+            summary.p05 = Math.add(summary.p05, Number(row.p05));
+            summary.p06 = Math.add(summary.p06, Number(row.p06));
+            summary.p07 = Math.add(summary.p07, Number(row.p07));
+            summary.p08 = Math.add(summary.p08, Number(row.p08));
+            summary.p09 = Math.add(summary.p09, Number(row.p09));
+            summary.p10 = Math.add(summary.p10, Number(row.p10));
+            summary.p11 = Math.add(summary.p11, Number(row.p11));
+            summary.p12 = Math.add(summary.p12, Number(row.p12));
+        }
+
+        Object.entries(summary).forEach(([key, value]) => {
+            const span = partidas_resumen.querySelector('#total_'+key);
+            if (span) {
+                let fv = this.tablePartidas._format(Number(value), 2, true);
+                span.textContent = "$"+fv;
+            }
+        });
     },
     addRowPartida()
     {
@@ -1159,6 +1283,91 @@ var editor =
         }
 
         window.location.href = "/!/pregop/gop_partida/"+pk+"/"
+    },
+    showTransferPartidaModal()
+    {
+        if (!this.tablePartidas) {
+            console.warn("La tabla de las partidas no esta definida");
+            return
+        }
+        
+        let index = this.tablePartidas.CurrentRowIndex();
+        if (index < 0) return;
+        
+        let partida = this.tablePartidas.DataArray[index];
+        let sys_pk = Number(partida?.sys_pk??"0");
+        
+        if (isNaN(sys_pk) || sys_pk < 1) {
+            alert("No se puede transferir una partida sin guardar.");
+            return
+        }
+        
+        const partida_tile = document.querySelector('#modal_tr_partida #tr_partida_title');
+        const partida_sys_pk = document.querySelector('#modal_tr_partida input[name="partida"]');
+
+        partida_tile.textContent = partida.partida;
+        partida_sys_pk.value = sys_pk;
+
+        tools.showModal('modal_tr_partida');
+    },
+    onBeforeSearchPresupuesto(search)
+    {
+        const ik_u = document.querySelector('#ik_tr_unidad');
+
+        let unidad = (ik_u?.getValue()?.sys_pk) || this.unidadSelected?.sys_pk;
+        if (!unidad) {
+            alert("Debe seleccionar una unidad organizacional para continuar.");
+            return "";
+        }
+
+        let endpoint = editor.services['gop_presupuestos'];
+        endpoint += '&u=' + unidad;
+        endpoint += '&t=' + search;
+
+        return endpoint
+    },
+    transferPartida()
+    {
+        let data = main.getValues('modal_tr_partida');
+
+        if (!data || this.req_tr_pda) return;
+        if (!data?.partida) {
+            alert("No se selecciono una partida a transferir");
+            return
+        }
+        if (!data?.presupuesto) {
+            alert("Debe seleccionar un presupuesto y/o unidad destino para continuar.");
+            return
+        }
+        if (data.presupuesto == this.presupuesto.sys_pk) {
+            alert("No se puede transferir la partida al mismo presupuesto.");
+            return
+        }
+        if (!confirm("¿Está seguro que desea transferir la partida seleccionada?")) return;
+
+        let partida_sys_pk = Number(data.partida);
+        let endpoint = (editor.services["transfer_partida"]).replace("@partida",partida_sys_pk);
+        this.req_tr_pda = true;
+
+        main.request(endpoint, "PATCH", data,
+            (success) => {
+                if (success?.message) {
+                    alert(success.message);
+                }
+                this.getPartidas(this.presupuesto.sys_pk);
+                this.getPresupuesto(this.unidadSelected.sys_pk);
+                this.togglePartidasControl(false);
+                this.req_tr_pda = false;
+                main.clearValues('modal_tr_partida');
+                tools.hideModal('modal_tr_partida');
+            },
+            (failure) => {
+                if (failure.message) alert(failure.message);
+                else console.error(JSON.stringify(failure));
+                this.req_tr_pda = false;
+            },
+            false
+        );
     }
 }
 

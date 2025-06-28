@@ -93,6 +93,7 @@ module "config.dk"
         @"divisa": "/!/pregop/editor/?_view=divisa"
         @"gop_presupuesto_status": "/!/pregop/editor/?_view=gop_presupuesto_status"
         @"change_pda_status": "/!/pregop/editor/@partida/change-pda-status/?status=@status&presupuesto=@presupuesto"
+        @"transfer_partida": "/!/pregop/editor/@partida/transfer-partida/"
     }
 
     @EDITOR = "/!/pregop/editor/"
