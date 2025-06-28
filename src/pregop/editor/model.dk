@@ -144,7 +144,7 @@ module "Presupuestos de Gastos de Operacion"
         WHERE sys_pk = @_entity_id"
         do dbr.execute(db,sql,params)
 
-        if new_status == @stt_pda_cancelada { do gop.updateAmounts(db,@@(entity,"#ref_presupuesto")) }
+        if new_status == @stt_pda_cancelada { do gop.presupuesto.updateAmounts(db,@@(entity,"#ref_presupuesto")) }
 
         conditions = "p.sys_pk=@_entity_id AND p.ref_presupuesto=@presupuesto"
         ref entity:dbr.rec(db,ftext(@query_partida_presupuestal),params)
@@ -198,8 +198,8 @@ module "Presupuestos de Gastos de Operacion"
             WHERE sys_pk = @partida
         ",data)
         do gop.partida.updateChilds(db,@@(partida,"#sys_pk"))
-        do gop.updateAmounts(db,old_presupuesto)
-        do gop.updateAmounts(db,new_presupuesto)
+        do gop.presupuesto.updateAmounts(db,old_presupuesto)
+        do gop.presupuesto.updateAmounts(db,new_presupuesto)
 
         log = ftext("Transferencia de partida a presupuesto #<new_presupuesto> desde #<old_presupuesto>")
         do gop.partida.saveLog(db,log,@@(partida,"#sys_pk"))
@@ -317,7 +317,7 @@ module "Presupuestos de Gastos de Operacion"
             }
         }
 
-        do gop.updateAmounts(db,@@(partida,"#ref_presupuesto"))
+        do gop.presupuesto.updateAmounts(db,@@(partida,"#ref_presupuesto"))
 
         do dbr.apps.action.pos(@null)
         do dbr.commit(db)
@@ -484,7 +484,17 @@ module "Presupuestos de Gastos de Operacion"
         if field.exist(params,"_key") { @keyfield = @@(params,"$_key") }
 
         sql = ftext("
-        SELECT p.sys_pk, p.sys_recver, p.ref_unidad, p.ejercicio, p.titulo, IFNULL(p.notas, '') notas, p.status, s.const status_text, p.divisa, d.codigo divisa_text, 
+        SELECT
+            p.sys_pk,
+            p.sys_lock,
+            p.sys_recver,
+            (IFNULL(p.sys_lock,0) > 0) locked,
+            p.ref_unidad,
+            p.ejercicio,
+            p.titulo,
+            IFNULL(p.notas, '') notas,
+            p.status, s.const status_text,
+            p.divisa, d.codigo divisa_text, 
             IFNULL(p.monto_autorizado, 0) monto_autorizado, IFNULL(p.monto_planeado, 0) monto_planeado, 
             IFNULL(p.monto_comprometido, 0) monto_comprometido, IFNULL(p.monto_ejercido, 0) monto_ejercido
         FROM gop_presupuesto p
@@ -569,7 +579,7 @@ module "Presupuestos de Gastos de Operacion"
                 do dbr.save(db,"gop_partida",partida)
             }
             // Actualizar importes del presupuesto copiado
-            do gop.updateAmounts(db,ppto)
+            do gop.presupuesto.updateAmounts(db,ppto)
         }
         
         do dbr.apps.action.pos(entity)
@@ -586,7 +596,79 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
-    function gop.changeStatus(&db,&params,&data)
+    function gop.presupuesto.lock(&db,&params,&data)
+    {
+        // Verificar que el presupuesto no este bloqueado por otro usuario.
+        ref lockinfo = gop.presupuesto.chklock(db,params)
+        if @@(lockinfo,"#locked") {
+            do rise_error(500,@@(lockinfo,"#message"))
+        }
+
+        // Si el presupuesto no esta bloqueado, lo bloqueamos.
+        do dbr.lock(db,"gop_presupuesto",@@(params,"#_entity_id"))
+        ref entity = gop.obtenerPresupuesto(db,params)
+
+        return entity
+    }
+
+    function gop.presupuesto.chklock(&db,&params)
+    {
+        locked = dbr.chklock(db,"gop_presupuesto",@@(params,"#_entity_id"))
+        message = ""
+        lockUserId = ""
+        lockUserName = ""
+
+        if locked {
+            ref user = dbr.rec(db,"
+                select u.userid, u.username from gop_presupuesto ppto
+                    inner join sys_lockinfo sl on sl.sys_row = ppto.sys_pk and sl.sys_table = 'gop_presupuesto'
+                    inner join sys_session ss on ss.sys_pk = sl.sys_token
+                    inner join tuser u on u.sys_pk = ss.iuser
+                where ppto.sys_pk = @_entity_id
+            ",params)
+
+            lockUserId = @@(user,"$userid")
+            lockUserName = @@(user,"$username")
+            message = "El presupuesto se encuentra bloqueado por el usuario '" + lockUserName + "'."
+        }
+
+        new response
+        {
+            @"locked": locked
+            @"message": message
+            @"is_owner": (@@(@http_context,"$session/user/uid") == lockUserId)
+            @"lock_userid": lockUserId
+            @"lock_username": lockUserName
+        }
+        return response
+    }
+
+    function gop.presupuesto.unlock(&db,&params,&data)
+    {
+        ref entity = gop.obtenerPresupuesto(db,params)
+        ref lockinfo = gop.presupuesto.chklock(db,params)
+
+        // Verificar que el presupuesto este bloqueado.
+        if not(@@(lockinfo,"#locked")) {
+            entity<"sys_lock*"> : @null
+            entity<"locked"> : @false
+            return entity
+        }
+
+        // Verificar que el usuario que intenta desbloquear sea el mismo que lo bloqueo.
+        if not(@@(lockinfo,"#is_owner")) {
+            do rise_error(500,"El presupuesto no se puede desbloquear porque no fue bloqueado por el usuario actual.")
+        }
+
+        // Desbloquear el presupuesto.
+        do dbr.unlock(db,"gop_presupuesto",@@(params,"#_entity_id"))
+        
+        entity<"sys_lock*"> : @null
+        entity<"locked"> : @false
+        return entity
+    }
+
+    function gop.presupuesto.changeStatus(&db,&params,&data)
     {
         ref entity = dbr.rec(db,"SELECT status, ref_unidad FROM gop_presupuesto WHERE sys_pk = @_entity_id",params)
 
@@ -649,7 +731,7 @@ module "Presupuestos de Gastos de Operacion"
         }
     }
 
-    function gop.updateAmounts(&db,presupuesto_pk)
+    function gop.presupuesto.updateAmounts(&db,presupuesto_pk)
     {
         new params { @"ref_presupuesto": presupuesto_pk }
 
@@ -680,7 +762,7 @@ module "Presupuestos de Gastos de Operacion"
 
     function gop.actualizarPresupuesto(&db,&params,&data)
     {
-        if @@(data,"$act")!="" { return gop.changeStatus(db,params,data) }
+        if @@(data,"$act")!="" { return gop.presupuesto.changeStatus(db,params,data) }
 
         ref new_data = record.create()
         if field.exist(data,"sys_pk"){ new_data<"sys_pk">: @@(data,"#sys_pk") }
@@ -706,7 +788,7 @@ module "Presupuestos de Gastos de Operacion"
 
             ref partidas = from.json(to.json(@@(data,"&partidas")))
             do field.remove(data,"partidas")
-            do changePkParentToGuid(partidas)
+            do gop.partida.changePkParentToGuid(partidas)
         }
         
         @use_transaction = @false
@@ -719,8 +801,8 @@ module "Presupuestos de Gastos de Operacion"
         if not(isnull(partidas))
         {
             pk_presupuesto = @@(res,"#sys_pk")
-            // do removeAllPartidas(db, pk_presupuesto)
-            do insertPartidas(db,partidas,pk_presupuesto)
+            // do gop.presupuesto.removeAllPartidas(db, pk_presupuesto)
+            do gop.presupuesto.insertPartidas(db,partidas,pk_presupuesto)
         }
         
         do dbr.apps.action.pos(res)
@@ -765,14 +847,15 @@ module "Presupuestos de Gastos de Operacion"
             do rise_error(last_error_code(),last_error())
         }
     }
-    function removeAllPartidas(&db, pk_presupuesto)
+
+    function gop.presupuesto.removeAllPartidas(&db, pk_presupuesto)
     {
         new prm { @"pk": pk_presupuesto }
         do dbr.execute(db, "UPDATE gop_partida SET padre=NULL WHERE ref_presupuesto=@pk", prm)
         do dbr.execute(db, "DELETE FROM gop_partida WHERE ref_presupuesto=@pk", prm)
     }
     
-    function insertPartidas(&db, &partidas, pk_presupuesto)
+    function gop.presupuesto.insertPartidas(&db, &partidas, pk_presupuesto)
     {
         if isnull(partidas){ ref partidas:list.create() }
         if list.count(partidas) < 1 { return }
@@ -843,7 +926,7 @@ module "Presupuestos de Gastos de Operacion"
                     if field.exist(partida,"unidad") { do field.remove(partida,"unidad") }
                     if field.exist(partida,"__items") { do field.remove(partida,"__items") }
 
-                    do parseNumbersPartida(partida)
+                    do gop.partida.ensureNumberFields(partida)
                     ref entity = dbr.save(db,"gop_partida",partida)
                     if _notify
                     {
@@ -866,7 +949,8 @@ module "Presupuestos de Gastos de Operacion"
             WHERE p.ref_presupuesto=@presupuesto", prm)
         do dbr.execute(db, "UPDATE gop_partida p SET p.sys_info=NULL WHERE p.ref_presupuesto=@presupuesto", prm)
     }
-    function changePkParentToGuid(&partidas)
+
+    function gop.partida.changePkParentToGuid(&partidas)
     {
         if not(isnull(partidas)) && list.count(partidas) > 0
         {
@@ -892,7 +976,7 @@ module "Presupuestos de Gastos de Operacion"
             }
         }
     }
-    function parseNumbersPartida(&partida)
+    function gop.partida.ensureNumberFields(&partida)
     {
         if trim(@@(partida, "$autorizado")) != "" { partida<"autorizado">: @@(partida, "#autorizado") }
         if trim(@@(partida, "$reserva")) != "" { partida<"reserva">: @@(partida, "#reserva") }
@@ -929,6 +1013,7 @@ module "Presupuestos de Gastos de Operacion"
 
         exception{params<"message_pvg">:message + last_error()}
     }
+
     // =============== RH_UNIDAD_ORG
     function gop.obtenerUnidades(&db, &params)
     {

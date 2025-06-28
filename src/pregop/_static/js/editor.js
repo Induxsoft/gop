@@ -55,8 +55,10 @@ var editor =
         const ik_tr_presupuesto = document.querySelector('#ik_tr_presupuesto');
 
         if (this.ejercicio_select) this.ejercicio_select.addEventListener('change', () => {
-            this.getUnidad(this.unidadSelected?.sys_pk??null, true);
-            this.getPresupuesto(this.unidadSelected?.sys_pk??null) 
+            let unidad_pk = this.unidadSelected?.sys_pk;
+
+            this.getUnidad(unidad_pk, true);
+            this.getPresupuesto(unidad_pk);
         });
         if (modal_presupuesto) modal_presupuesto.addEventListener('show.bs.modal', () => { this.load_presupuesto_modal(); });
         if (modal_tr_partida) modal_tr_partida.addEventListener('show.bs.modal', () => { ik_tr_unidad.setValue(this.unidadSelected); });
@@ -472,6 +474,8 @@ var editor =
     },
     getUnidad(unidad_pk, withSubUnidades=false)
     {
+        if (!unidad_pk) return;
+
         let endpoint = editor.services['rh_unidad'];
         endpoint = endpoint.replace('@unidad', unidad_pk);
 
@@ -613,11 +617,15 @@ var editor =
                 this.initPresupuesto();
             },
             (failure) => {
-                if (failure?.message?.includes('Elemento no encontrado')) {
-                    this.presupuesto = null;
-                    this.initPresupuesto();
+                let message = (failure?.message ?? "No fue posible obtener el presupuesto.");
+                if (!message.includes("Elemento no encontrado")) {
+                    alert(message);
+                    console.error(failure);
                 }
-                else alert('No fue posible obtener el presupuesto.\n\n' + (failure.message ?? JSON.stringify(failure))); 
+
+                this.presupuesto = null;
+                this.initPresupuesto();
+                this.getPresupuestos(unidadPK);
             },
             false
         );
@@ -863,7 +871,6 @@ var editor =
             let isDirty = false;
             for (const [id, pda] of mapPartidas) {
                 const bkp = mapBackup.get(id);
-                console.log(id, pda, bkp);
 
                 if (JSON.stringify(pda) !== JSON.stringify(bkp)) {
                     isDirty = true;
@@ -920,6 +927,8 @@ var editor =
         sel_moneda.value = option.getAttribute("divisa") ?? this.dvspred.sys_pk;
         sel_moneda.disabled = (Number(option?.value??0) > 0)
     },
+    blockages()
+    {},
 
     // =============== PARTIDAS
     getPartidas(presupuestoPK)
@@ -1112,7 +1121,7 @@ var editor =
             this.tablePartidas.ReadOnly = false;
             this.tablePartidas.AutoAddRow = true;
             this.tablePartidas.AutoDelRow = true;
-            //Se controla el desplazamiento de filas desde el evento 'BeforeMoveRow'
+            //El desplazamiento de filas se controla desde el evento 'BeforeMoveRow'.
         }
         else
         {

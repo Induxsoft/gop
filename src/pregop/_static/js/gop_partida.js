@@ -9,6 +9,7 @@ var partida =
     url_files:"",
     cfg_status:"",
     error_timeout:7,
+    is_dad:false,
 
     init()
     {
@@ -144,7 +145,7 @@ var partida =
             document.getElementById("spn_status").textContent = data.cstatus;
             
             this.updateFormValues();
-            this.printLastLog();
+            // this.printLastLog();
             this.showButtonStatus(data);
             this.toggleEditFieldsByStatus(data);
             this.elems["status_control"].disabled = false;
@@ -201,6 +202,10 @@ var partida =
     {
         // let div_log = document.getElementById("div_log");
         let tbody = document.querySelector("#tbl_logs tbody");
+        if (!tbody) {
+            console.warn("Tabla de logs no encontrada.");
+            return
+        }
         
         let row = document.createElement("tr");    
         for (const key in data) {
@@ -273,13 +278,17 @@ var partida =
     toggleEditFieldsByStatus(partida=null)
     {
         const form_buttons = document.getElementById("div_form_buttons");
+        const dad_warning = document.getElementById("dad_warning");
+        
         let status = (partida) ? Number(partida?.status??0) : Number(this.elems["status"].value);
+        if (dad_warning && this.is_dad && status == 1) dad_warning.classList.remove("d-none");
+        else if (dad_warning && status != 1) dad_warning.classList.add("d-none");
 
         switch (status) {
             case 1: //Prevista
                 form_buttons.classList.toggle("d-none",false);
                 this.blockControls(["txt_autorizado"]);
-                this.blockControls(["txt_reserva","txt_p01","txt_p02","txt_p03","txt_p04","txt_p05","txt_p06","txt_p07","txt_p08","txt_p09","txt_p10","txt_p11","txt_p12"],false);
+                this.blockControls(["txt_reserva","txt_p01","txt_p02","txt_p03","txt_p04","txt_p05","txt_p06","txt_p07","txt_p08","txt_p09","txt_p10","txt_p11","txt_p12"],this.is_dad);
                 break;
             case 2: //Revisión
             case 3: //Revisada

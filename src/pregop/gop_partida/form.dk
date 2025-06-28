@@ -15,6 +15,7 @@ module "form.dk"
 	@_entity_id = @("$parameters/_entity_id")
 
 	is_new = (@_entity_id == "_new")
+    is_dad = @@(entity,"#es_padre")
     enable_editing = (@@(entity,"#status")!=@stt_pda_autorizada || @@(entity,"#status")!=@stt_pda_cancelada)
 
     new nav_config
@@ -133,6 +134,11 @@ module "form.dk"
                             button(class="#<btn_stt_cls>" type="button" status="#<@stt_pda_autorizada>" hidden=""){$"Autorizar"}
                             button(class="#<btn_stt_cls>" type="button" status="#<@stt_pda_cancelada>" hidden=""){$"Cancelar"}
                         }
+                    }
+
+                    div(class="alert alert-warning my-1 rounded-0 #<ifstr(is_dad && @@(entity,'#status') == 1, '', 'd-none')>" id="dad_warning")
+                    {
+                        span{$"Esta partida es un <b>padre</b> de otras partidas, por lo que no es posible modificar sus importes. Para modificar los importes de esta partida debe hacerlo a través de sus partidas <b>hijas</b>."}
                     }
 
                     div(class="row")
@@ -295,6 +301,7 @@ module "form.dk"
             partida.GET = #<to.json(@("&parameters"))>;
             partida.cfg_status = "#<@cfg_pda_status>";
             partida.url_bitacora = "#<@URL_BITACORA_PARTIDA>";
+            partida.is_dad = #<is_dad>;
         '}
     }
 }

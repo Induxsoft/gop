@@ -18,6 +18,7 @@ module ":gop.partida"
         p.ref_presupuesto,
         IFNULL(p.id,'') id,
         p.padre,
+        ((select count(sys_pk) from gop_partida where padre=p.sys_pk) > 0) AS es_padre,
         IFNULL(p2.partida,'Ninguno') AS padre_text,
         p.partida,
         p.`status`,

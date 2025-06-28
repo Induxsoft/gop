@@ -298,7 +298,7 @@ program
 					}
 				}
 
-				section(id="footer")
+				section(class="" id="footer")
 				{
 					div(id="partidas_resumen" class="d-none align-items-center justify-content-between border-top bg-white py-1 px-2")
 					{

@@ -28,6 +28,28 @@ module "controller"
             point @create to gop.crearPresupuesto
             point @update to gop.actualizarPresupuesto
             point @delete to gop.eliminarPresupuesto
+
+            switch @@(@http_context,"$request/get/_action")
+            {
+                case "lock"
+                {
+                    point @create to gop.presupuesto.lock
+                    point @update to gop.presupuesto.lock
+                    break
+                }
+                case "unlock"
+                {
+                    point @create to gop.presupuesto.unlock
+                    point @update to gop.presupuesto.unlock
+                    break
+                }
+                case "chklock"
+                {
+                    point @read to gop.presupuesto.chklock
+                    break
+                }
+            }
+
             break
         }
         case "gop_presupuesto_status"
