@@ -8,7 +8,7 @@ module ""
 	//#include "website.dkl"
     #include "config.dk"
     #include "../config.dk"
-	#include "../lib.dk"
+	#include "../_lib/lib.dk"
     #include "uielements.v12.dkl"
     #include "dbr.dkh"
 

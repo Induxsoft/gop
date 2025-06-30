@@ -21,11 +21,10 @@ var ops=
         this.ik_partida_pre=document.getElementById("ik_partida_pre");
 
         this.count_search=0;
-        if(this.ref_gasto)this.ref_gasto.addEventListener("change",
-        ()=>
-        {
+        if(this.ref_gasto)this.ref_gasto.addEventListener("change", (data) => {
+            if (!data) return;
+
             if(ops.count_search>0)if(this.form_search)this.form_search.submit();
-            
             ops.count_search++;
         });
         
@@ -80,7 +79,7 @@ var ops=
     },
     changeDataSource(row)
     {
-        var url_partida=ops.url_partida + "&iunidad="+(row.pkuorg??"")+"&ejercicio="+this.ejercicio.value;
+        var url_partida=ops.url_partida + "&type=single&unidad="+(row.pkuorg??"")+"&ejercicio="+this.ejercicio.value;
         if(this.ik_partida_pre)this.ik_partida_pre.setAttribute("data-source",url_partida);
     },
     getCurrentRow()

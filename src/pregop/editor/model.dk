@@ -37,12 +37,37 @@ module "Presupuestos de Gastos de Operacion"
         INNER JOIN gop_partida_status e ON p.status = e.id
         INNER JOIN gop_presupuesto pp ON p.ref_presupuesto = pp.sys_pk
         INNER JOIN rh_unidad_org uo ON pp.ref_unidad = uo.sys_pk
-    WHERE #<conditions>
+    WHERE NOT IFNULL(p.sys_deleted,0)
+        #<conditions>
     "
 
     function gop.obtenerPartidas(&db, &params)
     {
-        conditions = ftext("IF(IFNULL(@presupuesto,'')='', true, P.ref_presupuesto=@presupuesto) AND p.`status` != #<@stt_pda_cancelada> ORDER BY p.sys_pk, p.padre")
+        search = trim(@@(params,"$search"))
+        if search == "" { search = trim(@@(params,"$s")) }
+
+        params<"unidad"> : @@(params,"#unidad")
+        params<"presupuesto"> : @@(params,"#presupuesto")
+        params<"ejercicio"> : @@(params,"#ejercicio")
+        params<"status"> : @@(params,"#status")
+        params<"search"> : search
+        params<"type"> : @@(params,"$type")
+
+        conditions = ftext("
+            AND IF(@unidad > 0, pp.ref_unidad = @unidad, TRUE)
+            AND IF(@presupuesto > 0, p.ref_presupuesto = @presupuesto, TRUE)
+            AND IF(@ejercicio > 0, pp.ejercicio = @ejercicio, TRUE)
+            AND IF(@status > 0, p.`status` = @status, p.`status` != #<@stt_pda_cancelada>)
+            AND IF(@search != '', (IFNULL(p.id,'') = @search OR p.partida LIKE CONCAT('%',@search,'%')), TRUE)
+            AND (CASE @type
+                    WHEN 'root' THEN p.padre IS NULL
+                    WHEN 'father' THEN (select count(sys_pk) from gop_partida where padre = p.sys_pk) > 0
+                    WHEN 'son' THEN p.padre IS NOT NULL
+                    WHEN 'single' THEN (select count(sys_pk) from gop_partida where padre = p.sys_pk) = 0
+                    ELSE TRUE
+                END)
+        ORDER BY p.sys_pk, p.padre
+        ")
         return dbr.list(db,ftext(@query_partida_presupuestal),params)
     }
 
@@ -600,32 +625,90 @@ module "Presupuestos de Gastos de Operacion"
     {
         // Verificar que el presupuesto no este bloqueado por otro usuario.
         ref lockinfo = gop.presupuesto.chklock(db,params)
-        if @@(lockinfo,"#locked") {
+        if @@(lockinfo,"#locked") && not(@@(lockinfo,"#is_owner")) {
             do rise_error(500,@@(lockinfo,"#message"))
         }
 
         // Si el presupuesto no esta bloqueado, lo bloqueamos.
-        do dbr.lock(db,"gop_presupuesto",@@(params,"#_entity_id"))
-        ref entity = gop.obtenerPresupuesto(db,params)
+        // do dbr.lock(db,"gop_presupuesto",@@(params,"#_entity_id"))
+        
+        ref usrssion = @@(@http_context,"&session/user")
+        sys_table = dbr.num(db,"select sys_pk from sys_catalog where objectname='gop_presupuesto' limit 1",@null)
+        sys_row = @@(params,"#_entity_id")
+        sys_token = dbr.num(db,"select sys_pk from sys_session where sys_guid=@ids",usrssion)
 
-        return entity
+        new lock
+        {
+            @"sys_table": sys_table
+            @"sys_row": sys_row
+            @"sys_token": sys_token
+            @"sys_active": @true
+        }
+
+        do dbr.begin(db)
+        
+        do dbr.save(db,"sys_lockinfo",lock)
+        lock<"sys_pk"> : dbr.num(db,"select last_insert_id()",@null)
+        do dbr.execute(db,"UPDATE gop_presupuesto SET sys_lock = @sys_pk WHERE sys_pk = @sys_row",lock)
+
+        do dbr.commit(db)
+
+        using lockinfo
+        {
+            @"locked": @true
+            @"message": "El bloqueo se ha establecido correctamente"
+            @"is_owner": @true
+            @"lock_userid": @@(usrssion,"$uid")
+            @"lock_username": @@(usrssion,"$name")
+        }
+        return lockinfo
+
+        exception
+        {
+            error = last_error()
+            do rise_error(500,"No fue posible establecer el bloqueo.")
+        }
     }
 
     function gop.presupuesto.chklock(&db,&params)
     {
-        locked = dbr.chklock(db,"gop_presupuesto",@@(params,"#_entity_id"))
+        locked = @false
         message = ""
         lockUserId = ""
         lockUserName = ""
 
+        codeblock "Comprobar bloqueo"
+        {
+            // locked = dbr.chklock(db,"gop_presupuesto",dbr.num(db,"select sys_lock from gop_presupuesto where sys_pk = @_entity_id",params))
+
+            ref row_locked = dbr.rec(db,"select sys_lock from gop_presupuesto where sys_pk = @_entity_id",params)
+            if @@(row_locked,"#sys_lock") > 0 {
+                locked = dbr.num(db,"select sys_active from sys_lockinfo where sys_pk = @sys_lock",row_locked)
+            }
+
+            // exception
+            // {
+            //     do errordet(@false)
+            //     error = last_error()
+
+            //     if contains(error,"No se encontró fila bloqueada para el id proporcionado") {
+            //         locked = @false
+            //         message = "No se encontró fila bloqueada para el id proporcionado"
+            //     }
+            //     else {
+            //         do rise_error(500,error)
+            //     }
+            // }
+        }
+
         if locked {
             ref user = dbr.rec(db,"
-                select u.userid, u.username from gop_presupuesto ppto
-                    inner join sys_lockinfo sl on sl.sys_row = ppto.sys_pk and sl.sys_table = 'gop_presupuesto'
-                    inner join sys_session ss on ss.sys_pk = sl.sys_token
-                    inner join tuser u on u.sys_pk = ss.iuser
-                where ppto.sys_pk = @_entity_id
-            ",params)
+                select u.userid, u.username
+                from sys_lockinfo li
+                    inner join sys_session ss on li.sys_token = ss.sys_pk
+                    inner join tuser u on ss.iuser = u.sys_pk
+                where li.sys_pk = @sys_lock
+            ",row_locked)
 
             lockUserId = @@(user,"$userid")
             lockUserName = @@(user,"$username")
@@ -645,15 +728,9 @@ module "Presupuestos de Gastos de Operacion"
 
     function gop.presupuesto.unlock(&db,&params,&data)
     {
-        ref entity = gop.obtenerPresupuesto(db,params)
         ref lockinfo = gop.presupuesto.chklock(db,params)
-
         // Verificar que el presupuesto este bloqueado.
-        if not(@@(lockinfo,"#locked")) {
-            entity<"sys_lock*"> : @null
-            entity<"locked"> : @false
-            return entity
-        }
+        if not(@@(lockinfo,"#locked")) { return lockinfo }
 
         // Verificar que el usuario que intenta desbloquear sea el mismo que lo bloqueo.
         if not(@@(lockinfo,"#is_owner")) {
@@ -661,11 +738,22 @@ module "Presupuestos de Gastos de Operacion"
         }
 
         // Desbloquear el presupuesto.
-        do dbr.unlock(db,"gop_presupuesto",@@(params,"#_entity_id"))
+        // do dbr.unlock(db,"gop_presupuesto",@@(params,"#_entity_id"))
+        // do dbr.unlock(db,dbr.num(db,"select sys_lock from gop_presupuesto where sys_pk = @_entity_id",params))
+
+        do dbr.execute(db,"
+            UPDATE gop_presupuesto p
+                INNER JOIN sys_lockinfo l ON p.sys_lock = l.sys_pk
+            SET l.sys_active = 0, p.sys_lock = NULL
+            WHERE p.sys_pk = @_entity_id
+        ",params)
         
-        entity<"sys_lock*"> : @null
-        entity<"locked"> : @false
-        return entity
+        using lockinfo
+        {
+            @"locked": @false
+            @"message": "El bloqueo se ha removido correctamente"
+        }
+        return lockinfo
     }
 
     function gop.presupuesto.changeStatus(&db,&params,&data)
@@ -1022,7 +1110,8 @@ module "Presupuestos de Gastos de Operacion"
             do dbr.apps.action.grant("GP10")
         }
 
-        query = "SELECT * FROM rh_unidad_org;"
+        query = "SELECT sys_pk, sys_guid, codigo, descripcion, superior, notas, link FROM rh_unidad_org WHERE NOT IFNULL(sys_deleted,0)"
+
         ref res = record.create()
         if @add_others
         {
@@ -1034,6 +1123,13 @@ module "Presupuestos de Gastos de Operacion"
         }
         else
         {
+            search = trim(@@(params,"$search"))
+            if search == "" { search = trim(@@(params,"$s")) }
+            if search != "" {
+                params<"search"> : search
+                query = query + " AND (codigo = @search OR descripcion LIKE CONCAT('%',@search,'%'))"
+            }
+
             ref res = dbr.list(db, query, params)
         }
         return res

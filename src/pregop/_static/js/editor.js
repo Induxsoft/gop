@@ -927,8 +927,44 @@ var editor =
         sel_moneda.value = option.getAttribute("divisa") ?? this.dvspred.sys_pk;
         sel_moneda.disabled = (Number(option?.value??0) > 0)
     },
-    blockages()
-    {},
+    blockages(pkppto,action,callback)
+    {
+        if (!pkppto || !action) return;
+
+        let endpoint = editor.services['gop_presupuesto'];
+        let method = (action=='chklock') ? 'GET' : 'PATCH';
+
+        endpoint = endpoint.replace('@presupuesto', pkppto) + '/?_action=' + action;
+
+        main.request(endpoint, method, null,
+            success => {
+                if (callback) callback(success);
+                else if (success.message) alert(success.message);
+            },
+            failure => { 
+                alert('No fue posible completar la acción.\n\n' + (failure.message));
+            },
+            false
+        );
+    },
+    lockPresupuesto()
+    {
+        this.blockages(this.presupuesto.sys_pk, 'lock', (success) => {
+            console.log(success);
+        });
+    },
+    unlockPresupuesto()
+    {
+        this.blockages(this.presupuesto.sys_pk, 'unlock', (success) => {
+            console.log(success);
+        });
+    },
+    chklockPresupuesto()
+    {
+        this.blockages(this.presupuesto.sys_pk, 'chklock', (success) => {
+            console.log(success);
+        });
+    },
 
     // =============== PARTIDAS
     getPartidas(presupuestoPK)

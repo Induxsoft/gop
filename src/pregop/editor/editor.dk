@@ -304,67 +304,67 @@ program
 					{
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Reserva:"}
+							small(class="d-block fw-5"){"Reserva"}
 							span(id="total_reserva"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Enero:"}
+							small(class="d-block fw-5"){"Enero"}
 							span(id="total_p01"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Febrero:"}
+							small(class="d-block fw-5"){"Febrero"}
 							span(id="total_p02"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Marzo:"}
+							small(class="d-block fw-5"){"Marzo"}
 							span(id="total_p03"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Abril:"}
+							small(class="d-block fw-5"){"Abril"}
 							span(id="total_p04"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Mayo:"}
+							small(class="d-block fw-5"){"Mayo"}
 							span(id="total_p05"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Junio:"}
+							small(class="d-block fw-5"){"Junio"}
 							span(id="total_p06"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Julio:"}
+							small(class="d-block fw-5"){"Julio"}
 							span(id="total_p07"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Agosto:"}
+							small(class="d-block fw-5"){"Agosto"}
 							span(id="total_p08"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Septiembre:"}
+							small(class="d-block fw-5"){"Septiembre"}
 							span(id="total_p09"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Octubre:"}
+							small(class="d-block fw-5"){"Octubre"}
 							span(id="total_p10"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Noviembre:"}
+							small(class="d-block fw-5"){"Noviembre"}
 							span(id="total_p11"){"$0.00"}
 						}
 						div(class="")
 						{
-							small(class="d-block fw-5"){"Diciembre:"}
+							small(class="d-block fw-5"){"Diciembre"}
 							span(id="total_p12"){"$0.00"}
 						}
 					}

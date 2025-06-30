@@ -79,8 +79,8 @@ module "config.dk"
     
     // _PACKAGE
     @URL_BUSCAR_UNIDAD = "/!/pregop/editor/?_view=rh_unidad_org&s=@search"
-    @URL_BUSCAR_UNIDAD_ORG = "/!/cmpreq/requisiciones/?_view=buscar-unidad-org&search=@search"
-	@URL_BUSCAR_PARTIDA_PRE = "/!/cmpreq/requisiciones/?_view=buscar-partida-pre&search=@search"
+    @URL_BUSCAR_UNIDAD_ORG = @URL_BUSCAR_UNIDAD //"/!/cmpreq/requisiciones/?_view=buscar-unidad-org&search=@search"
+	@URL_BUSCAR_PARTIDA_PRE = "/!/pregop/editor/?_view=gop_partida&search=@search" //"/!/cmpreq/requisiciones/?_view=buscar-partida-pre&search=@search"
 
     @URL_BITACORA_PARTIDA = "/!/webshell/log/DET035/@detid/"
 
@@ -125,7 +125,7 @@ module "config.dk"
         @"4":"Abril"
         @"5":"Mayo"
         @"6":"Junio"
-        @"7":"Junio"
+        @"7":"Julio"
         @"8":"Agosto"
         @"9":"Septiembre"
         @"10":"Octubre"
