@@ -217,17 +217,17 @@ module ""
             do uie.printV12FormBar(nav_config)
             #$
 
-            h4{"#<@@(partida,'$partida')>"}
+            h4(title="Título de la partida"){"#<@@(partida,'$partida')>"}
             
             form(action="." method="get" id="form-filter")
             {
                 input(type="hidden" name="partida" value="#<@@(params,'#partida')>")
                 input(type="hidden" name="ano" value="#<@params_year>")
 
-                div(class="d-flex align-items-center gap-2")
+                div(class="d-flex align-items-center justify-content-between gap-2")
                 {
-                    div{ h6{"#<@@(presupuesto,'$titulo')>"} }
-                    div(class="flex-grow-1")
+                    div(class=""){ h5(title="Título del presupuesto"){"#<@@(presupuesto,'$titulo')>"} }
+                    div(class="")
                     {
                         select(class="form-select" name="month" onchange="this.form.submit()" title="filtrar por periodo")
                         {
