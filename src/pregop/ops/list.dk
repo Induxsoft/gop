@@ -95,7 +95,7 @@ module ""
                                 field=@@(dt,'$'+column)
                                 class=""
 
-                                if parse.num(field)>0
+                                if parse.num(field)>0 && field.typeof(dt,column)==2 //si es numero
                                 {
                                     class="text-end"
                                     field=format(parse.num(field),@FORMAT_DET_PRES)
