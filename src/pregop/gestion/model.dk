@@ -4,13 +4,23 @@ module ""
 {
     include @MODEL_EDITOR
 
-    @list_query_table_partidas="SELECT DATE_FORMAT(gm.sys_dtcreated,'%Y-%m-%d')fecha,sy.title concepto,gm.referencia,
-    IFNULL(gm.comprometido,0)comprometido,IFNULL(gm.ejercido,0)ejercido,MONTH(gm.sys_dtcreated) mes,YEAR(gm.sys_dtcreated)ano
+    @list_query_table_partidas = "
+    SELECT
+        DATE_FORMAT(gm.sys_dtcreated,'%Y-%m-%d') fecha,
+        sy.title concepto,
+        gm.referencia,
+        IFNULL(gm.comprometido,0) comprometido,
+        IFNULL(gm.ejercido,0) ejercido,
+        MONTH(gm.sys_dtcreated) mes,
+        YEAR(gm.sys_dtcreated) ano
     FROM gop_mov gm
-    INNER JOIN sys_app_item_type sy ON gm.dte=sy.id
-    INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
-    INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
-    WHERE p.sys_pk=@presupuesto AND gm.ref_partida=@partida AND MONTH(gm.sys_dtcreated)=@month"
+        INNER JOIN sys_app_item_type sy ON gm.dte=sy.id
+        INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
+        INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
+    WHERE p.sys_pk=@presupuesto
+        AND gm.ref_partida=@partida
+        AND MONTH(gm.sys_dtcreated)=@month
+    "
 
     inferirPartida::&partida
     {

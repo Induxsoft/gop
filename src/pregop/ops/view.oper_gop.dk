@@ -14,7 +14,7 @@ module ""
     ref selects=@("&./selects")
     ref first_select=@item(selects,0)
 
-     ref data=@("&./data")
+    ref data=@("&./data")
     ref ref_de_gasto=@item(data,0)
     
     if isnull(ref_de_gasto) && @("$./txt_ref_gasto")!=""{ref ref_de_gasto=from.json(@("$./txt_ref_gasto"))}
@@ -122,10 +122,11 @@ module ""
             h5(class="me-4"){"Valor del acto: "}
             h5(class="text-end"){"#<format(@@(ref_de_gasto,'#'+@@(dte_selected,'$max_field')),@FORMAT_DET_PRES)>"}
         }
-        #$ div(class="d-flex")
+        #$ div(class="d-flex align-items-center gap-1")
         {
             span(class="flex-grow-1"){""}
-            h5(class="me-2"){"Ejercicio:"}
+            
+            h5(class=""){"Ejercicio:"}
             div(class="col-md-1")
             {
                 #!
@@ -133,8 +134,8 @@ module ""
                 #$
             }
             
-            button(class="btn border-secondary induxsoft-corners btn-main-action no-print mb-2 btn-sm m-1" onclick="ops.DelRow();"){$"#<@ICON_REMOVE_ROW>"}
-            button(class="btn border-secondary induxsoft-corners btn-main-action no-print mb-2 btn-sm m-1" onclick="ops.AddRow();"){$"#<@ICON_ADD_ROW>"}
+            button(class="btn border-secondary induxsoft-corners btn-main-action no-print m-1" onclick="ops.DelRow();"){$"#<@ICON_REMOVE_ROW>"}
+            button(class="btn border-secondary induxsoft-corners btn-main-action no-print m-1" onclick="ops.AddRow();"){$"#<@ICON_ADD_ROW>"}
         }
         "edit-table"(class="table" id="table_movs" data="#<to.json(gop_movs)>" "cards-responsive"="true")
         {

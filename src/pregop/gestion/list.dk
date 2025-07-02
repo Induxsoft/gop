@@ -14,12 +14,12 @@ module ""
 
     do @context.begin(@crud_context)
 
-
     ref resumen=@("&./resumen")
     ref presupuestos=@("&./presupuestos")
     @text_button_detalle="Detalle"
 
-    @indentacion=0
+    @indentacion = 0
+    current_year = ndatetime.year(ndatetime.now())
 
     spaces::n
     {
@@ -111,7 +111,6 @@ module ""
             }
         }
         #!
-
         
         @indentacion=@indentacion + 1
         for i = 0; i < @count(hijos)
@@ -121,127 +120,172 @@ module ""
         }
         @indentacion=@indentacion - 1
     }
-    #$ div
-	{
-        #$ link(rel="stylesheet" href="#<@CSS_MAIN>"){""}
-		link(rel="stylesheet" href="#<@CSS_EDITOR>"){""}
-        #!
-        do uie.printMainBar(@null,"Detalle presupuesto",@false,@EDITOR)
-        #$
-        // Información del presupuesto
-        div(class="py-2 px-3 d-flex gap-2 flex-wrap" id="presupuesto_container" style="opacity: 1;") 
-        {
-            div(class="presupuesto-box-info")
-            {
-               small(class="fw-5"){"Título"}
-               p(class="m-0"){"#<@@(resumen,'$titulo')>"}
-            }
-            div(class="presupuesto-box-info")
-            {
-                small(class="fw-5"){"Estado"}
-                p(class="m-0"){"#<@@(resumen,'$status_text')>"}
-            }
-            div(class="presupuesto-box-info")
-            {
-                small(class="fw-5"){"Divisa"}
-                p(class="m-0"){"#<@@(resumen,'$divisa_text')>"}
-            }
 
-            div(class="presupuesto-box-info")
-            {
-                small(class="fw-5"){"Autorizado"}
-                p(class="m-0"){"#<format(@@(resumen,'#monto_autorizado'),@FORMAT_DET_PRES)>"}
+    new nav_config
+    {
+        @"title": "Detalles del presupuesto (Seguimiento)"
+        @"urlexit": @EDITOR
+        @"print_mode": 0 // 0-window.print() | 1-v12PrintHTML()
+
+        member "hidden"
+        {
+            @"send": @true
+        }
+    }
+
+    #$
+    div(class="container-fluid" id="view")
+	{
+        link(rel="stylesheet" href="#<@CSS_MAIN>"){""}
+		link(rel="stylesheet" href="#<@CSS_EDITOR>"){""}
+        style
+        {$'
+            table {
+                width: 100%;
+                font-size: 1rem;
+                border-spacing: 1px;
+                border-collapse: collapse;
             }
-            div(class="presupuesto-box-info")
-            {
-                small(class="fw-5"){"Planeado"}
-                p(class="m-0"){"#<format(@@(resumen,'#monto_planeado'),@FORMAT_DET_PRES)>"}
+            thead {
+                position: sticky;
+                top: 0;
+                z-index: 15;
             }
-            div(class="presupuesto-box-info")
-            {
-                small(class="fw-5"){"Comprometido"}
-                p(class="m-0"){"#<format(@@(resumen,'#monto_comprometido'),@FORMAT_DET_PRES)>"}
+            thead tr { outline: 1px solid #DDD; }
+            tbody tr:hover { background-color: #EDEDED; }
+            tr th { font-size:.9rem; }
+            tr td { font-size:.8rem; }
+            
+            .table-container {
+                height: 100%;
+                overflow: auto;
+                padding-bottom: .25rem;
             }
-            div(class="presupuesto-box-info")
+        '}
+
+        section(id="top_area")
+        {
+            #!
+            do uie.printV12FormBar(nav_config)
+            #$
+
+            // Información del presupuesto
+            div(class="py-2 px-3 d-flex gap-2 flex-wrap" id="presupuesto_container" style="opacity: 1;") 
             {
-                small(class="fw-5"){"Ejercido"}
-                p(class="m-0"){"#<format(@@(resumen,'#monto_ejercido'),@FORMAT_DET_PRES)>"}
-            }
-            div(class="presupuesto-box-info")
-            {
-                small(class="fw-5"){"Notas"}
-                p(class="m-0"){"#<@@(resumen,'$notas')>"}
+                div(class="presupuesto-box-info")
+                {
+                small(class="fw-5"){"Título"}
+                p(class="m-0"){"#<@@(resumen,'$titulo')>"}
+                }
+                div(class="presupuesto-box-info")
+                {
+                    small(class="fw-5"){"Estado"}
+                    p(class="m-0"){"#<@@(resumen,'$status_text')>"}
+                }
+                div(class="presupuesto-box-info")
+                {
+                    small(class="fw-5"){"Divisa"}
+                    p(class="m-0"){"#<@@(resumen,'$divisa_text')>"}
+                }
+
+                div(class="presupuesto-box-info")
+                {
+                    small(class="fw-5"){"Autorizado"}
+                    p(class="m-0"){"#<format(@@(resumen,'#monto_autorizado'),@FORMAT_DET_PRES)>"}
+                }
+                div(class="presupuesto-box-info")
+                {
+                    small(class="fw-5"){"Planeado"}
+                    p(class="m-0"){"#<format(@@(resumen,'#monto_planeado'),@FORMAT_DET_PRES)>"}
+                }
+                div(class="presupuesto-box-info")
+                {
+                    small(class="fw-5"){"Comprometido"}
+                    p(class="m-0"){"#<format(@@(resumen,'#monto_comprometido'),@FORMAT_DET_PRES)>"}
+                }
+                div(class="presupuesto-box-info")
+                {
+                    small(class="fw-5"){"Ejercido"}
+                    p(class="m-0"){"#<format(@@(resumen,'#monto_ejercido'),@FORMAT_DET_PRES)>"}
+                }
+                div(class="presupuesto-box-info")
+                {
+                    small(class="fw-5"){"Notas"}
+                    p(class="m-0"){"#<@@(resumen,'$notas')>"}
+                }
             }
         }
 
-        div(class="ms-2 me-2" style="overflow:auto;whidth:100%")
+        section(id="work_area")
         {
-            table(class="table border-1")
+            div(class="table-container ms-2 me-2")
             {
-                thead
+                table(class="table")
                 {
-                    tr
+                    thead(class="bg-white")
                     {
-                        th(rowspan="2" class="text-center"){"Partida"}
-                        th(colspan="5" class="text-center"){"Anual"}
-                        th(colspan="5" class="text-center"){"Reserva"}
-                        th(colspan="5" class="text-center"){"Enero"}
-                        th(colspan="5" class="text-center"){"Febrero"}
-                        th(colspan="5" class="text-center"){"Marzo"}
-                        th(colspan="5" class="text-center"){"Abril"}
-                        th(colspan="5" class="text-center"){"Mayo"}
-                        th(colspan="5" class="text-center"){"Junio"}
-                        th(colspan="5" class="text-center"){"Julio"}
-                        th(colspan="5" class="text-center"){"Agosto"}
-                        th(colspan="5" class="text-center"){"Septiembre"}
-                        th(colspan="5" class="text-center"){"Octubre"}
-                        th(colspan="5" class="text-center"){"Noviembre"}
-                        th(colspan="5" class="text-center"){"Diciembre"}
-                    }
-                    tr
-                    {
-                        #!
-                        for i = 0; i < 14
+                        tr
                         {
-                            #$
-                            th{"Presupuestado"}
-                            th{"Comprometido"}
-                            th{"Ejercido"}
-                            th{"Disponible"}
-                            th{""}
+                            th(rowspan="2" class="text-center"){"Partida"}
+                            th(colspan="5" class="text-center"){"Anual"}
+                            th(colspan="5" class="text-center"){"Reserva"}
+                            th(colspan="5" class="text-center"){"Enero"}
+                            th(colspan="5" class="text-center"){"Febrero"}
+                            th(colspan="5" class="text-center"){"Marzo"}
+                            th(colspan="5" class="text-center"){"Abril"}
+                            th(colspan="5" class="text-center"){"Mayo"}
+                            th(colspan="5" class="text-center"){"Junio"}
+                            th(colspan="5" class="text-center"){"Julio"}
+                            th(colspan="5" class="text-center"){"Agosto"}
+                            th(colspan="5" class="text-center"){"Septiembre"}
+                            th(colspan="5" class="text-center"){"Octubre"}
+                            th(colspan="5" class="text-center"){"Noviembre"}
+                            th(colspan="5" class="text-center"){"Diciembre"}
+                        }
+                        tr
+                        {
+                            #!
+                            for i = 0; i < 14
+                            {
+                                #$
+                                th{"Presupuestado"}
+                                th{"Comprometido"}
+                                th{"Ejercido"}
+                                th{"Disponible"}
+                                th{""}
+                            }
                         }
                     }
-                }
 
-                tbody
-                {$""
-                    #!
-                    
-                    for i = 0; i < @count(presupuestos)
-                    {
-                        ref partida=@item(presupuestos,i)
-                        do print_partida(partida)
+                    tbody
+                    {$""
+                        #!
+                        
+                        for i = 0; i < @count(presupuestos)
+                        {
+                            ref partida=@item(presupuestos,i)
+                            do print_partida(partida)
+                        }
+                        #$
                     }
-                    #$
                 }
             }
-            style
-            {
-                $'
-                tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}
-                '
-            }
-
         }
-        script(src="#<@JS_MAIN>"){$""}
-		script(src="#<@JS_PRESUPUESTOS>"){$""}
-		script(src="#<@JS_EDITOR>"){$""}
-        
-        script{$'
-			editor.services = #<to.json(@URL_SERVICES)>;
-			editor.currenty = #<current_year>;
-			editor.view_detail_preg="#<@VIEW_DETAIL_PREG>";
 
-		'}
+        section(id="bottom_area")
+        {
+            div(id="_custom_area")
+            {""
+                // script(src="#<@JS_MAIN>"){$""}
+                // script(src="#<@JS_PRESUPUESTOS>"){$""}
+                // script(src="#<@JS_EDITOR>"){$""}
+                // script(type="text/javascript")
+                // {$'
+                //     editor.services = #<to.json(@URL_SERVICES)>;
+                //     editor.currenty = #<current_year>;
+                //     editor.view_detail_preg="#<@VIEW_DETAIL_PREG>";  
+                // '}
+            }
+        }
     }
 }

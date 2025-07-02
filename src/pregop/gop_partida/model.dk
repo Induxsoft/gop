@@ -74,8 +74,11 @@ module ":gop.partida"
         if not(isset("@just_read_entity")) { @just_read_entity = @false }
         if @just_read_entity { return entity.read(db,params) }
 
+        sql_ppto = ftext("select pt.* from gop_partida pd inner join gop_presupuesto pt on pd.ref_presupuesto = pt.sys_pk where pd.#<@keyfield> = @_entity_id")
+        
         new data
         {
+            @"presupuesto*": dbr.rec(db,sql_ppto,params)
             @"entity*": entity.read(db,params)
         }
         do gop.partida.prepareView(db,params,data)
@@ -100,7 +103,7 @@ module ":gop.partida"
 
         ref presu = dbr.rec(db,"SELECT status, ref_unidad FROM gop_presupuesto WHERE sys_pk = @ref_presupuesto",data)
 
-        if @@(presu,"#status") == @stt_ppto_detenido || @@(presu,"#status") == @stt_ppto_cerrado
+        if @@(presu,"#status") == @stt_ppto_activo || @@(presu,"#status") == @stt_ppto_cerrado
         { do rise_error(500,"No es posible realizar afectaciones debido al estado en el que se encuentra actualmente el presupuesto.") }
 
         status = @@(data,"#status")

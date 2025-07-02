@@ -29,7 +29,7 @@
     transition: .3s ease-in;
     opacity: 1;
 }
-.hidde-control {
+.hidde-control, *[hidden] {
     /* opacity: 0 !important; */
     display: none !important;
     pointer-events: none !important;

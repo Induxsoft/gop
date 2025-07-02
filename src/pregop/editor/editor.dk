@@ -163,7 +163,7 @@ program
 							div(id="partidas_main_container" class='t-table d-none')
 							{
 								// Barra de controles
-								div(class="d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white py-1 px-2")
+								div(class="d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white py-1 px-2" id="partidas_control_bar")
 								{
 									div(class="d-flex align-items-center")
 									{
@@ -194,7 +194,7 @@ program
 
 										div(class="d-flex align-items-center justify-content-start gap-1" id="status_partidas_control")
 										{
-											button(class="#<btn_table_cls>" title="Transferir partida" onclick="editor.showTransferPartidaModal()"){$"#<@ICON_TRANSFER_ROW>"}
+											button(class="#<btn_table_cls>" title="Transferir partida" id="btn_tr_partida" onclick="editor.showTransferPartidaModal()"){$"#<@ICON_TRANSFER_ROW>"}
 
 											##
 											btn_status_cls = "btn btn-xs btn-main-action btn-status border-secondary rounded-0 no-shadow hidde-control"

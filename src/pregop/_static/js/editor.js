@@ -717,10 +717,21 @@ var editor =
     {
         if (!presupuesto) return;
         
-        const tables_section = document.getElementById("tables");
+        // const table_partidas_control = document.getElementById("table_partidas_control");
+        const btn_tr_partida = document.getElementById("btn_tr_partida");
+        const partidas_control = document.getElementById("partidas_control");
         
-        let disabled = (presupuesto.status == this.stt_ppto_detenido || presupuesto.status == this.stt_ppto_cerrado)
-        tables_section.classList.toggle("disabled-all",disabled);
+        let disabled = (presupuesto.status == this.stt_ppto_activo || presupuesto.status == this.stt_ppto_cerrado)
+        
+        this.togglePartidasControl(false);
+        
+        btn_tr_partida.disabled = disabled;
+        // table_partidas_control.classList.toggle("disabled-all",disabled);
+        partidas_control.classList.toggle("disabled-all",disabled);
+        
+        btn_tr_partida.hidden = disabled;
+        // table_partidas_control.classList.toggle("hidde-control",disabled);
+        partidas_control.classList.toggle("hidde-control",disabled);
     },
     printPresupuesto(presupuesto)
     {
@@ -1178,7 +1189,11 @@ var editor =
     {
         if (!this.presupuesto) {
             alert('No hay presupuesto para guardar');
-            return;
+            return
+        }
+        if (this.presupuesto.status != this.stt_ppto_borrador && this.presupuesto.status != this.stt_ppto_detenido) {
+            alert("No es posible modificar las partidas debido al estado del presupuesto.");
+            return
         }
 
         let data = {
@@ -1386,6 +1401,10 @@ var editor =
         }
         if (data.presupuesto == this.presupuesto.sys_pk) {
             alert("No se puede transferir la partida al mismo presupuesto.");
+            return
+        }
+        if (this.presupuesto.status != this.stt_ppto_borrador && this.presupuesto.status != this.stt_ppto_detenido) {
+            alert("No es posible transferir la partida debido al estado del presupuesto de origen.");
             return
         }
         if (!confirm("¿Está seguro que desea transferir la partida seleccionada?")) return;

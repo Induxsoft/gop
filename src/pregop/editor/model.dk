@@ -872,7 +872,7 @@ module "Presupuestos de Gastos de Operacion"
         if @@(presu,"#status") == @stt_ppto_cerrado { do rise_error(500,"No es posible realizar cambios debido al estado en el que se encuentra actualmente.") }
         if field.exist(data,"partidas")
         {
-            if @@(presu,"#status") == @stt_ppto_detenido { do rise_error(500,"No es posible realizar afectaciones debido al estado en el que se encuentra actualmente.") }
+            if @@(presu,"#status") == @stt_ppto_activo { do rise_error(500,"No es posible realizar afectaciones debido al estado en el que se encuentra actualmente.") }
 
             ref partidas = from.json(to.json(@@(data,"&partidas")))
             do field.remove(data,"partidas")

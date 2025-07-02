@@ -10,6 +10,8 @@ var partida =
     cfg_status:"",
     error_timeout:7,
     is_dad:false,
+    enable_editing:false,
+    enable_editing_amounts:false,
 
     init()
     {
@@ -75,8 +77,18 @@ var partida =
 
     toggleEdit(editMode)
     {
+        if (!this.enable_editing) return;
+
+        let controls = ["txt_id","txt_partida","txt_autorizado","txt_notas"];
+        let controlsP = ["txt_reserva","txt_p01","txt_p02","txt_p03","txt_p04","txt_p05","txt_p06","txt_p07","txt_p08","txt_p09","txt_p10","txt_p11","txt_p12"];
+
+        if (this.enable_editing_amounts) {
+            controls = [...controls, ...controlsP];
+        }
+
         this.disableControls(["status_control"],editMode);
-        this.disableControls(["txt_id","txt_partida","txt_autorizado","txt_reserva","txt_p01","txt_p02","txt_p03","txt_p04","txt_p05","txt_p06","txt_p07","txt_p08","txt_p09","txt_p10","txt_p11","txt_p12","txt_notas"],!editMode);
+        this.disableControls(controls,!editMode);
+        
         this.elems["btn_cancel"].hidden = !editMode;
         this.elems["btn_submit"].textContent = (editMode) ? "Guardar" : "Modificar";
         this.elems["btn_submit"].type = (editMode) ? "submit" : "button";

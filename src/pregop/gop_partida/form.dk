@@ -9,6 +9,7 @@ module "form.dk"
 
     do @context.begin(@crud_context)
 
+    ref presupuesto = ifnull(@("&./presupuesto"),record.create())
     ref entity = ifnull(@("&./entity"),record.create())
 
 	@_entities_type = @("$parameters/_entities_type")
@@ -17,6 +18,7 @@ module "form.dk"
 	is_new = (@_entity_id == "_new")
     is_dad = @@(entity,"#es_padre")
     enable_editing = (@@(entity,"#status")!=@stt_pda_autorizada || @@(entity,"#status")!=@stt_pda_cancelada)
+    enable_editing_amounts = (@@(presupuesto,"#status")==@stt_ppto_borrador || @@(presupuesto,"#status")==@stt_ppto_detenido)
 
     new nav_config
     {
@@ -302,6 +304,8 @@ module "form.dk"
             partida.cfg_status = "#<@cfg_pda_status>";
             partida.url_bitacora = "#<@URL_BITACORA_PARTIDA>";
             partida.is_dad = #<is_dad>;
+            partida.enable_editing = #<enable_editing>;
+            partida.enable_editing_amounts = #<enable_editing_amounts>;
         '}
     }
 }

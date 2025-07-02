@@ -14,14 +14,25 @@ module ""
 
     url_exit=replace(@VIEW_DETAIL_PREG,"{id}",@("parameters/_entity_id"))
 
-    @query_movs="SELECT DATE_FORMAT(gm.sys_dtcreated,'%Y-%m-%d')fecha,sy.title concepto,gm.referencia,
-    IFNULL(gm.comprometido,0)comprometido,IFNULL(gm.ejercido,0)ejercido,MONTH(gm.sys_dtcreated) mes,
-    YEAR(gm.sys_dtcreated)ano,sy.view_url url,gm.dte_id
+    @query_movs="
+    SELECT
+        DATE_FORMAT(gm.sys_dtcreated,'%Y-%m-%d')fecha,
+        sy.title concepto,
+        gm.referencia,
+        IFNULL(gm.comprometido,0)comprometido,
+        IFNULL(gm.ejercido,0)ejercido,
+        MONTH(gm.sys_dtcreated) mes,
+        YEAR(gm.sys_dtcreated)ano,
+        sy.view_url url,
+        gm.dte_id
     FROM gop_mov gm
-    INNER JOIN sys_app_item_type sy ON gm.dte=sy.id
-    INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
-    INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
-    WHERE p.sys_pk=@_entity_id AND gm.ref_partida=@partida AND ifnull(gm.periodo,0)=@month"
+        INNER JOIN sys_app_item_type sy ON gm.dte=sy.id
+        INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
+        INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
+    WHERE p.sys_pk=@_entity_id
+        AND gm.ref_partida=@partida
+        AND ifnull(gm.periodo,0)=@month
+    "
 
     @query_partida="select * from gop_partida gp where gp.sys_pk=@partida"
     
@@ -29,8 +40,9 @@ module ""
     ref params=@("&parameters")
     ref presupuesto=dbr.rec(db,"select * from gop_presupuesto where sys_pk=@_entity_id",params)
     ref partida=dbr.rec(db,ftext(@query_partida),params)
-    params<"ano">:@@(presupuesto,"#ejercicio")
-    params_month=@@(params,'#month')
+    
+    @params_year = @@(presupuesto,"#ejercicio")
+    @params_month = @@(params,'#month')
 
     @num_reserva = 13
     @num_anual = 0
@@ -39,6 +51,8 @@ module ""
     @comprometido = 0
     @ejercido = 0
     @disponible = 0
+
+    params<"ano"> : @params_year
 
     print_Total::&db,&params,&partida
     {
@@ -137,7 +151,8 @@ module ""
                             td(style="word-break: break-word;")
                             {
                                 $"#<@@(mp,'$concepto')>"
-                                #! if trim(url)!="" && @@(mp,"#dte_id")>0
+                                #!
+                                if trim(url)!="" && @@(mp,"#dte_id")>0
                                 {
                                     url=replace(url,"@_entity_id",@@(mp,"$dte_id"))
                                     #$
@@ -165,7 +180,7 @@ module ""
         
     }
     #!
-    if params_month==@num_anual
+    if @params_month==@num_anual
     {
         for i = 1; i < 14
         {
@@ -178,61 +193,107 @@ module ""
         do print_Total(db,params,partida)
     }
 
-    #$ div(class="container-fluid")
-	{
-        #$ link(rel="stylesheet" href="#<@CSS_MAIN>"){""}
-		link(rel="stylesheet" href="#<@CSS_EDITOR>"){""}
-        #!
-        do uie.printMainBar(@null,"Detalle partida",@false,url_exit)
+    new nav_config
+    {
+        @"title": "Detalles de la partida (Seguimiento)"
+        @"urlexit": url_exit
+        @"print_mode": 0 // 0-window.print() | 1-v12PrintHTML()
 
-        #$
-        h4{"#<@@(partida,'$partida')>"}
-        h5{"#<@@(presupuesto,'$titulo')>"}
-
-        table(class="table")
+        member "hidden"
         {
-            tbody
+            @"send": @true
+        }
+    }
+
+    #$
+    div(class="container-fluid" id="view")
+	{
+        link(rel="stylesheet" href="#<@CSS_MAIN>"){""}
+		link(rel="stylesheet" href="#<@CSS_EDITOR>"){""}
+
+        section(id="top_area")
+        {
+            #!
+            do uie.printV12FormBar(nav_config)
+            #$
+
+            h4{"#<@@(partida,'$partida')>"}
+            
+            form(action="." method="get" id="form-filter")
             {
-                tr
+                input(type="hidden" name="partida" value="#<@@(params,'#partida')>")
+                input(type="hidden" name="ano" value="#<@params_year>")
+
+                div(class="d-flex align-items-center gap-2")
                 {
-                    td{"Presupuesto"}
-                    td{"#<format(@presupuesto,@FORMAT_DET_PRES)>"}
-                    td{"Comprometido"}
-                    td{"#<format(@comprometido,@FORMAT_DET_PRES)>"}
-                    td{"Ejercido"}
-                    td{"#<format(@ejercido,@FORMAT_DET_PRES)>"}
-                    td{"Disponible"}
-                    td{"#<format(@disponible,@FORMAT_DET_PRES)>"}
+                    div{ h6{"#<@@(presupuesto,'$titulo')>"} }
+                    div(class="flex-grow-1")
+                    {
+                        select(class="form-select" name="month" onchange="this.form.submit()" title="filtrar por periodo")
+                        {
+                            option(value="#<@num_anual>" "#<ifstr(@params_month==@num_anual,'selected','')>"=""){"Todos los meses"}
+                            #!
+                            go foreach.fstr(key:num, value:name) with(@meses)
+                            {
+                                #$
+                                option(value="#<num>" "#<ifstr(val(num)==@params_month,'selected','')>"=""){"#<name>"}
+                            }
+                            #$
+                            option(value="#<@num_reserva>" "#<ifstr(@params_month==@num_reserva,'selected','')>"=""){"Reserva"}
+                        }
+                    }
+                }
+            }
+
+            table(class="table")
+            {
+                tbody
+                {
+                    tr
+                    {
+                        th{"Presupuesto"}
+                        td{"#<format(@presupuesto,@FORMAT_DET_PRES)>"}
+                        th{"Comprometido"}
+                        td{"#<format(@comprometido,@FORMAT_DET_PRES)>"}
+                        th{"Ejercido"}
+                        td{"#<format(@ejercido,@FORMAT_DET_PRES)>"}
+                        th{"Disponible"}
+                        td{"#<format(@disponible,@FORMAT_DET_PRES)>"}
+                    }
                 }
             }
         }
-        div(class="card_table_partida1 mt-4 #<ifstr(@@(params,'#month')!=@num_anual,'d-block','')> d-block-sm")
+
+        section(id="work_area")
         {
-            #!
-            if params_month==@num_anual
+            div(class="card_table_partida1 h-100 overflow-auto #<ifstr(@@(params,'#month')!=@num_anual,'d-block','')> d-block-sm")
             {
-                for i = 1; i < 14
+                #!
+                if @params_month==@num_anual
                 {
-                    params<"month">:i
-                    #$ div(class="card_table_partida_container ")
+                    for i = 1; i < 14
+                    {
+                        params<"month"> : i
+
+                        #$ div(class="card_table_partida_container")
+                        {
+                            #!
+                            do print_Table(db,params,partida)
+                        }
+                    }
+                }
+                else 
+                {
+                    #$ div(class="card_table_partida_container d-block")
                     {
                         #!
                         do print_Table(db,params,partida)
                     }
-                    
                 }
+                #$
             }
-            else 
-            {
-                #$ div(class="card_table_partida_container d-block")
-                {
-                    #! do print_Table(db,params,partida)    
-                }
-                
-            }
-            
         }
-        
-        
+
+        section(id="bottom_area"){""}
     }
 }

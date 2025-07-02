@@ -118,38 +118,57 @@ var ops=
     },
     validateTable()
     {
-        for (let i = 0; i < this.table_movs.DataArray.length; i++) 
+        let added_rows = this.table_movs.DataArray.length;
+        if (added_rows == 0) {
+            alert("Debe agregar al menos una fila a la tabla.");
+            return false;
+        }
+        let valid_rows = 0;
+        let ok = true;
+
+        for (let i = 0; i < added_rows; i++) 
         {
-            var itm = this.table_movs.DataArray[i];
-            var row=i+1;
+            let itm = this.table_movs.DataArray[i];
+            let row=i+1;
+
+            let comprometido = Number(itm.comprometido);
+            let ejercido = Number(itm.ejercido);
+
+            if (!itm.uorg && !itm.partida && (comprometido + ejercido) <= 0) {
+                continue;
+            }
+            valid_rows++;
+
             if((itm.pkuorg??0)<1 || ((itm.pkpartida??0)<1)) 
             {
                 alert(`Debe completar la fila ${row}`);
-                return false;
+                ok = false;
+                break;
             }
             if((itm.periodo??0)<1) 
             {
                 alert(`Fila ${row} le falta definir el periodo`);
-                return false;
+                ok = false;
+                break;
             }
-            if((itm.comprometido??0)<1 && (itm.ejercido??0)<1)
+            if((comprometido + ejercido) <= 0)
             {
                 alert(`Fila ${row} le falta definir la cantidad comprometido o ejercido`);
-                return false;
+                ok = false;
+                break;
             }
         }
 
-        return true;
+        if (valid_rows == 0) {
+            alert("Debe completar al menos una fila de la tabla.");
+            ok = false
+        }
+
+        return ok;
     },
     form_gop_mov()
     {
-        if(this.table_movs.DataArray.length<1)
-        {
-            alert("Debe llenar la tabla");
-            return false;
-        }
-
-        if(!ops.validateTable())return false;
+        if (!ops.validateTable()) return false;
 
         var ref_gasto=this.ref_gasto?.getValue()??null;
         if(!ref_gasto || Object.keys(ref_gasto).length<1)
@@ -159,8 +178,10 @@ var ops=
         }
         ref_gasto["dte"]=this.dte.value;
         ref_gasto["ejercicio"]=this.ejercicio.value;
+        
+        let movs = this.table_movs.DataArray.filter(row => (row.uorg && row.partida && (Number(row.comprometido)+Number(row.ejercido)) > 0));
 
-        if(this.txt_gop_mov)this.txt_gop_mov.value=JSON.stringify(this.table_movs.DataArray);
+        if(this.txt_gop_mov)this.txt_gop_mov.value=JSON.stringify(movs);
         if(this.txt_ref_gasto)this.txt_ref_gasto.value=JSON.stringify(ref_gasto);
         
         return true;

@@ -128,7 +128,7 @@ module ""
                             using gop_mov
                             {
                                 @"sys_pk":@@(partida,"#pkpartida")
-                                @"referencia":@@(ref_gasto,"$sys_guid")
+                                @"referencia":@@(ref_gasto,"$referencia")
                                 @"periodo":@@(partida,"#periodo")
                                 @"det":@@(ref_gasto,"$dte")
                                 @"det_id":@@(ref_gasto,"#sys_pk")
@@ -193,6 +193,7 @@ module ""
         do prepareView(db,params,entity)
         
         @list_query=GenListQuery(params,@@(entity,"&selects"),entity)
+        // do rise_error(0,replace(ftext(@list_query),"@filter_text",@@(params,'$filter_text')))
         
         if trim(@list_query)==""{return entity}
 
@@ -227,16 +228,16 @@ module ""
         for i = 0; i < @count(lkey)
         {
             key=list.str(lkey,i)
-            params<key>:@@(data,"$"+key)
+            params<tolower(key)>:@@(data,"$"+key)
 
-            if key=="referencia"{params<"filter_text">:@@(data,"$"+key)}
-            else if key=="sys_guid"
-            {
-                params<"filter_text">:@@(data,"$"+key)
+            if trim(@@(params,"$filter_text"))=="" && (tolower(key) == "referencia" || tolower(key) == "sys_guid") {
+                params<"filter_text"> : @@(data,"$"+key)
             }
+
             // if @@(data,"#iproveedor")>0{params<"dte_id">:@@(data,"#iproveedor")}
             // if @@(data,"#ref_empleado")>0{params<"dte_id">:@@(data,"#sys_pk")}
         }
+        // do rise_error(0,to.json(params))
     }
     read::&db,&params
     {
@@ -246,6 +247,7 @@ module ""
         }
         
         table=getTable(params)
+        params<"table"> : table
         
         ref data=dbr.rec(db,"select * from "+table+" where sys_pk=@_entity_id",params)
         
