@@ -171,7 +171,7 @@ module "Presupuestos de Gastos de Operacion"
 
         if new_status == @stt_pda_cancelada { do gop.presupuesto.updateAmounts(db,@@(entity,"#ref_presupuesto")) }
 
-        conditions = "p.sys_pk=@_entity_id AND p.ref_presupuesto=@presupuesto"
+        conditions = "AND p.sys_pk=@_entity_id AND p.ref_presupuesto=@presupuesto"
         ref entity:dbr.rec(db,ftext(@query_partida_presupuestal),params)
 
         nota = "Cambio de estado a " + @@(entity,"$cstatus")
@@ -1019,7 +1019,7 @@ module "Presupuestos de Gastos de Operacion"
                     if _notify
                     {
                         new params { @"ipartida": @@(entity,"#sys_pk") }
-                        conditions = "p.sys_pk=@ipartida"
+                        conditions = "AND p.sys_pk=@ipartida"
                         ref entity:dbr.rec(db,ftext(@query_partida_presupuestal),params)
 
                         do gop.partida.notify(db,entity,@false)

@@ -43,9 +43,11 @@ var editor =
         this.setAjustPanelUnidadEvent();
 
         this.ejercicio_select = document.querySelector('#ejercicio_select');
+        this.partidas_main_container = document.querySelector('#partidas_main_container');
+        this.subunids_main_container = document.querySelector('#subunids_main_container');
+
         const modal_presupuesto = document.querySelector('#modal_presupuesto');
         const modal_tr_partida = document.querySelector('#modal_tr_partida');
-        const partidas_main_container = document.querySelector('#partidas_main_container');
         const partidas_resumen = document.querySelector('#partidas_resumen');
         const btn_add_unidad = document.querySelector('#btn_add_unidad');
         const btn_edit_unidad = document.querySelector('#btn_edit_unidad');
@@ -78,9 +80,9 @@ var editor =
             }
         });
 
-        this.observeAttributes(partidas_main_container, (mutation) => {
+        this.observeAttributes(this.partidas_main_container, (mutation) => {
             if (mutation.attributeName === 'class' || mutation.attributeName === 'style') {
-                const style = getComputedStyle(partidas_main_container);
+                const style = getComputedStyle(this.partidas_main_container);
                 if (style.display != 'none') {
                     partidas_resumen.classList.remove('d-none');
                     partidas_resumen.classList.add('d-flex');
@@ -340,7 +342,10 @@ var editor =
         }
         main.request(endpoint, method, values,
             success => 
-            { 
+            {
+                if (['activar','detener','cerrar'].includes(values?.act)) {
+                    this.req_ppto_change_status = true;
+                }
                 this.presupuesto = success;
                 this.printPresupuesto(this.presupuesto);
                 this.getPartidas(this.presupuesto.sys_pk);
@@ -364,7 +369,7 @@ var editor =
             const controls = document.querySelector('#presupuesto_actions');
             showTable.classList.remove('d-none');
             
-            if (showTable.id === "unidades_main_container") {
+            if (showTable.id === "subunids_main_container") {
                 controls.classList.add("hidde-control");
                 this.printResumen();
             }
@@ -393,6 +398,19 @@ var editor =
         let contentHeight = containerHeight - (headerHeight + footerHeight);
 
         content.style.height = contentHeight + 'px';
+        this.adjustPartidasMainContainer();
+    },
+    adjustPartidasMainContainer()
+    {
+        const content = document.querySelector('#content');
+        const partidas_control_bar = document.querySelector('#partidas_control_bar');
+        const partidas_container = document.querySelector('#partidas_container');
+
+        let c = content.offsetHeight;
+        let pcb = partidas_control_bar.offsetHeight;
+        let pc = c - pcb;
+
+        partidas_container.style.height = pc + 'px';
     },
     observeAttributes(element, callback)
     {
@@ -498,12 +516,10 @@ var editor =
         const table_tabs = document.querySelector('#table_tabs');
         const btn_tab_subunidades = document.querySelector('#btn_tab_subunidades');
         const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
-        const unidades_main_container = document.querySelector('#unidades_main_container');
-        const partidas_main_container = document.querySelector('#partidas_main_container');
 
         table_tabs.classList.add('d-none');
-        unidades_main_container.classList.add('d-none');
-        partidas_main_container.classList.add('d-none');
+        this.partidas_main_container.classList.add('d-none');
+        this.subunids_main_container.classList.add('d-none');
         btn_tab_subunidades.style.backgroundColor = 'transparent';
         btn_tab_presupuesto.style.backgroundColor = '#FFF';
 
@@ -723,7 +739,10 @@ var editor =
         
         let disabled = (presupuesto.status == this.stt_ppto_activo || presupuesto.status == this.stt_ppto_cerrado)
         
-        this.togglePartidasControl(false);
+        if (this.req_ppto_change_status) {
+            this.togglePartidasControl(false);
+            this.req_ppto_change_status = false;
+        }
         
         btn_tr_partida.disabled = disabled;
         // table_partidas_control.classList.toggle("disabled-all",disabled);
@@ -1000,9 +1019,8 @@ var editor =
     },
     printPartidas()
     {
-        const partidas_main_container = document.querySelector('#partidas_main_container');
         const btn_tab_presupuesto = document.querySelector('#btn_tab_presupuesto');
-        partidas_main_container.style.opacity = 0;
+        this.partidas_main_container.style.opacity = 0;
 
         if (this.tablePartidas.DataArray && this.tablePartidas.DataArray.length > 0)
         {
@@ -1014,11 +1032,11 @@ var editor =
         setTimeout(()=>{
             this.tablePartidas._printTreeData();
             // this.tablePartidas._printRows();
-            partidas_main_container.style.opacity = 1;
+            this.partidas_main_container.style.opacity = 1;
             this.summarizeByMonths();
         },200);
 
-        partidas_main_container.classList.toggle('d-none', (this.presupuesto ? false : true));
+        this.partidas_main_container.classList.toggle('d-none', (this.presupuesto ? false : true));
         btn_tab_presupuesto.classList.toggle('d-none', (this.presupuesto ? false : true));
     },
     summarizeByMonths()

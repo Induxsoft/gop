@@ -107,7 +107,7 @@ program
 							{
 								div(style="background-color:var(--color-gray); padding: 4px;")
 								{
-									button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="unidades_main_container"){$"Resumen"}
+									button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_subunidades" table="subunids_main_container"){$"Resumen"}
 									button(class="btn btn-sm text-secondary no-shadow btn-tab py-0 induxsoft-corners" id="btn_tab_presupuesto" table="partidas_main_container"){$"Presupuesto"}
 								}
 							}
@@ -225,43 +225,40 @@ program
 									}
 								}
 								// Tabla de partidas
-								div(id="partidas_container")
+								div(id="partidas_container" style="padding-bottom:.25rem;")
 								{
-									div(style="max-height:80vh; display:flex;")
+									"edit-table"(id="treePartidas" style="width:100%;" readonly="" "show-tree"="true" parentkey="padre" key="sys_pk" "can-move-row"="true" "control-styles"="tr th{ font-size:.9rem; outline:none !important; font-weight:500 !important; } tr td{ font-size:.8rem; } table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
 									{
-										"edit-table"(id="treePartidas" style="width:100%;" readonly="" "show-tree"="true" parentkey="padre" key="sys_pk" "can-move-row"="true" "control-styles"="tr th{ font-size:.9rem; outline:none !important; font-weight:500 !important; } tr td{ font-size:.8rem; } table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; }tbody tr:hover{background-color:#EDEDED;}")
+										"edit-thead"
 										{
-											"edit-thead"
+											"edit-tr"
 											{
-												"edit-tr"
-												{
-													"edit-th"(type="Text" field="partida"){$"Partida"}
-													"edit-th"(type="Number" field="autorizado" allow="#<@('#./autedt')>" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
-													"edit-th"(type="NoEditable" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
-													"edit-th"(type="Number" field="reserva" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true" "textalign"="end"){$"Reserva"}
+												"edit-th"(type="Text" field="partida"){$"Partida"}
+												"edit-th"(type="Number" field="autorizado" allow="#<@('#./autedt')>" "default"="0" "textalign"="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Autorizado"}
+												"edit-th"(type="NoEditable" field="anual" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Anual"}
+												"edit-th"(type="Number" field="reserva" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true" "textalign"="end"){$"Reserva"}
 
-													"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
-													"edit-th"(type="Number" field="p02" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Febrero"}
-													"edit-th"(type="Number" field="p03" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Marzo"}
-													"edit-th"(type="Number" field="p04" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Abril"}
-													"edit-th"(type="Number" field="p05" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Mayo"}
-													"edit-th"(type="Number" field="p06" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Junio"}
-													"edit-th"(type="Number" field="p07" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Julio"}
-													"edit-th"(type="Number" field="p08" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Agosto"}
-													"edit-th"(type="Number" field="p09" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Septiembre"}
-													"edit-th"(type="Number" field="p10" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Octubre"}
-													"edit-th"(type="Number" field="p11" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Noviembre"}
-													"edit-th"(type="Number" field="p12" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Diciembre"}
+												"edit-th"(type="Number" field="p01" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Enero"}
+												"edit-th"(type="Number" field="p02" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Febrero"}
+												"edit-th"(type="Number" field="p03" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Marzo"}
+												"edit-th"(type="Number" field="p04" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Abril"}
+												"edit-th"(type="Number" field="p05" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Mayo"}
+												"edit-th"(type="Number" field="p06" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Junio"}
+												"edit-th"(type="Number" field="p07" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Julio"}
+												"edit-th"(type="Number" field="p08" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Agosto"}
+												"edit-th"(type="Number" field="p09" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Septiembre"}
+												"edit-th"(type="Number" field="p10" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Octubre"}
+												"edit-th"(type="Number" field="p11" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Noviembre"}
+												"edit-th"(type="Number" field="p12" "default"="0" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Diciembre"}
 
-													"edit-th"(type="Memo" field="notas"){$"Notas"}
-												}
+												"edit-th"(type="Memo" field="notas"){$"Notas"}
 											}
 										}
 									}
 								}
 							}
 							// Table sub unidades
-							div(id="unidades_main_container" class='t-table d-none')
+							div(id="subunids_main_container" class='t-table d-none')
 							{
 								// Barra de controles
 								div(class="p-2 d-flex flex-wrap align-items-center justify-content-between border-bottom bg-white")
@@ -269,26 +266,23 @@ program
 									small(class="fw-5"){$"Resumen"}
 								}
 								// Tabla de sub unidades
-								div
+								div(id="subunids_container" style="padding-bottom:.25rem;")
 								{
-									div(style="max-height: 80vh;display: flex;")
+									"edit-table"(id="tableSubUnids" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}")
 									{
-										"edit-table"(id="tableSubUnids" style="width: 100%;" "control-styles"="tr td{font-size:.8rem;} th{font-size:.9rem; outline: none !important;} table{ background-color:#FFF !important; } #__table_input{ font-size: unset !important; } tbody tr:hover{background-color:#EDEDED;}")
+										"edit-thead"
 										{
-											"edit-thead"
+											"edit-tr"
 											{
-												"edit-tr"
-												{
-													"edit-th"(type="NoEditable" field="unidad_desc"){$"Unidad"}
-													"edit-th"(type="NoEditable" field="pres_title"){$"Presupuesto"}
-													"edit-th"(type="NoEditable" field="ejercicio" textalign="center"){$"Ejercicio"}
-													"edit-th"(type="NoEditable" field="status" textalign="center"){$"Estado"}
-													"edit-th"(type="NoEditable" field="divisa" textalign="center"){$"Divisa"}
-													"edit-th"(type="Number" field="monto_autorizado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto autorizado"}
-													"edit-th"(type="Number" field="monto_planeado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto planeado"}
-													"edit-th"(type="Number" field="monto_comprometido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto comprometido"}
-													"edit-th"(type="Number" field="monto_ejercido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto ejercido"}
-												}
+												"edit-th"(type="NoEditable" field="unidad_desc"){$"Unidad"}
+												"edit-th"(type="NoEditable" field="pres_title"){$"Presupuesto"}
+												"edit-th"(type="NoEditable" field="ejercicio" textalign="center"){$"Ejercicio"}
+												"edit-th"(type="NoEditable" field="status" textalign="center"){$"Estado"}
+												"edit-th"(type="NoEditable" field="divisa" textalign="center"){$"Divisa"}
+												"edit-th"(type="Number" field="monto_autorizado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto autorizado"}
+												"edit-th"(type="Number" field="monto_planeado" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto planeado"}
+												"edit-th"(type="Number" field="monto_comprometido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto comprometido"}
+												"edit-th"(type="Number" field="monto_ejercido" textalign="end" format="true" decs="2" prefix="$" thousandssep="true"){$"Monto ejercido"}
 											}
 										}
 									}
