@@ -49,42 +49,111 @@ module ""
             @"ejercicios*":getEjercicio(db)
         }
     }
+    GetQuery::&params,&select,&entity
+    {
+        using entity{@"dte_selected*":select}
+
+        if trim(@@(select,"$data_filters"))!=""
+        {
+            ref data_filters=from.json(@@(select,"$data_filters"))
+            ref queries=@@(data_filters,"&queries")
+            sqlfilter=@@(queries,"$qry_"+trim(@@(params,"$selectfilter")))
+            
+            using entity
+            {
+                @"list_filter*":@@(data_filters,"&list_filter")
+                @"qry_links*":@@(data_filters,"&qry_links")
+            }
+            
+            if not(@@(params,"#filter")) && trim(sqlfilter)!=""
+            {
+                return ftext(sqlfilter)
+            }
+        }
+        if @@(params,"#filter"){return @@(select,"$qry_select")}
+
+        return @@(select,"$qry_pending")
+    }
     GenListQuery::&params,&select_src,&entity
     {
         if @@(params,"$dte")==""
         {
-            ref fisrt_src=@item(select_src,0)
-            using entity{@"dte_selected*":fisrt_src}
-
-            if @@(params,"#filter"){return @@(fisrt_src,"$qry_select")}
-
-            return @@(fisrt_src,"$qry_pending")
+            return GetQuery(params,@item(select_src,0),entity)
         }
         for i = 0; i < @count(select_src)
         {
             ref select=@item(select_src,i)
             if @@(select,"$dte")==@@(params,"$dte")
             {
-                using entity{@"dte_selected*":select}
-
-                if @@(params,"#filter"){return @@(select,"$qry_select")}
-
-                return @@(select,"$qry_pending")
+                return GetQuery(params,select,entity)
             }
         }
 
         return ""
     }
-    descartar::&db,&params,&data
-    {
-        // ref entity=dbr.rec(db,"select * from ")
-    }
+
     save::&db,&params,&data
     {
         ref entity=@null
 
         switch @@(data,"$act")
         {
+            case "back_for_affect"
+            {
+                name_table=getTable(params)
+
+                is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,-1) from #<name_table> where sys_pk=@_entity_id"),params)
+                
+                if is_presupestado
+                {
+                    ref partidas=dbr.list(db,ftext("SELECT 
+                                g.sys_pk,g.ref_partida,g.referencia,g.periodo,
+                                g.comprometido,g.ejercido,g.dte,g.dte_id,g.usuario,
+                                g.notas 
+                                FROM gop_mov g
+                                WHERE g.dte=@dte AND g.dte_id=@_entity_id"),params)
+                    
+                    if @count(partidas) < 1{do rise_error(500,"No se encontrarón partidas afectadas")} 
+
+                    do dbr.begin(db)
+                        for i = 0; i < @count(partidas)
+                        {
+                            ref partida=@item(partidas,i)
+
+                            new montos
+                            {
+                                @"comprometido": 0
+                                @"ejercido": 0
+                            }
+
+                            if @@(partida,"#comprometido") > 0{montos<"comprometido">:@@(partida,"#comprometido") * -1}
+                            if @@(partida,"#ejercido") > 0{montos<"ejercido">:@@(partida,"#ejercido") * -1}
+
+                            do pregop.partida.afectar(db,@@(partida,"#ref_partida"),@@(partida,"#periodo"), montos )
+                        }
+                        new table
+                        {
+                            @"presupuestado*":@null
+                            @"sys_pk":@@(data,"#sys_pk")
+                            @"sys_timestamp*":now()
+                        }
+                        do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
+                        
+                    do dbr.commit(db)
+                }
+                else 
+                {
+                    new table
+                    {
+                        @"presupuestado*":@null
+                        @"sys_pk":@@(data,"#sys_pk")
+                        @"sys_timestamp*":now()
+                    }
+                    do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
+                }
+                
+                return data
+            }
             case "descartar"
             {
                 new table
@@ -95,7 +164,6 @@ module ""
                 }
                 do dbr.update(db,getTable(params),table,"sys_pk=@sys_pk",table)
                 return data
-                break
             }
             case "gop_mov"
             {
@@ -166,9 +234,6 @@ module ""
             default
             {
                 do rise_error(500,"Operación no implementado")
-            //     if @@(params,"$_entity_id")!="_new"{ref entity= entity.update(db,params,data)} 
-            //     else{ref entity=entity.create(db,params,data)}
-                break
             }
         }
         

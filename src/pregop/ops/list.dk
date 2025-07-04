@@ -14,6 +14,8 @@ module ""
 
     ref selects=@("&./selects")
     ref first_select=@item(selects,0)
+    ref list_filter=@("&./list_filter")
+    ref @qry_links=@("&./qry_links")
 
     new select
     {
@@ -27,6 +29,20 @@ module ""
         @"value_field":"dte"
         @"text_field":"text"
         @"selected":@("$parameters/dte")
+    }
+
+    new select_filter
+    {
+        @"datatable*":list_filter
+        @"id":"selectfilter"
+        member "attributes"
+        {
+            @"class":"induxsoft-form-select"
+            @"name":"selectfilter"
+        }
+        @"value_field":"key"
+        @"text_field":"value"
+        @"selected":@("$parameters/selectfilter")
     }
 
     ref data=@("&./data")
@@ -59,12 +75,20 @@ module ""
                         }
                         
                     }
-                    
                 }
             }
             tbody
             {$""
                 #!
+                if @count(data) <1
+                {
+                    #$
+                    tr
+                    {
+                        td(class="text-center"){b{"NO HAY DATOS DISPONIBLES PARA MOSTRAR"}}
+                    }
+                    #!
+                }
                 for j = 0; j <@count(data)
                 {
                     ref dt=@item(data,j)
@@ -72,19 +96,36 @@ module ""
                    #$ tr
                    {
                         td
-                        {
-                            a(class="btn btn-sm induxsoft-corners" href="#<url>")
+                        {$""
+                            #!
+                            if @("#parameters/selectfilter")==2 || @("#parameters/selectfilter")==99
                             {
-                                $'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
-                                <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/>
-                                </svg>'
+                                #$
+                                button(class="btn btn-sm induxsoft-corners border" onclick="ops.Back(#<@@(dt,'#sys_pk')>)" title="Regresar a por afectar")
+                                {
+                                    $'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="20" fill="currentColor" class="bi bi-arrow-90deg-left" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M1.146 4.854a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H12.5A2.5 2.5 0 0 1 15 6.5v8a.5.5 0 0 1-1 0v-8A1.5 1.5 0 0 0 12.5 5H2.707l3.147 3.146a.5.5 0 1 1-.708.708z"/>
+                                        </svg>'
+                                }
+                                #!
                             }
-                            button(class="btn btn-sm induxsoft-corners" onclick="ops.descartar(#<@@(dt,'#sys_pk')>)")
+                            else 
                             {
-                                $'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-                                    <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+                                #$
+                                a(class="btn btn-sm induxsoft-corners border" href="#<url>" title="Ir a movimientos")
+                                {
+                                    $'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-lg" viewBox="0 0 16 16">
+                                    <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/>
                                     </svg>'
+                                }
+                                button(class="btn btn-sm induxsoft-corners border ms-1" onclick="ops.descartar(#<@@(dt,'#sys_pk')>)" title="Descartar")
+                                {
+                                    $'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+                                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/>
+                                        </svg>'
+                                }
                             }
+                            
                         }
                         #! 
                         for i = 0; i <@count(columns)
@@ -101,7 +142,24 @@ module ""
                                     field=format(parse.num(field),@FORMAT_DET_PRES)
                                 }
                                 #$ 
-                                td(class="#<class>"){"#<field>"}
+                                td(class="#<class>")
+                                {
+                                    #!
+                                    link=@@(@qry_links,"$"+column+"/link")
+                                    if trim(link)!=""
+                                    {
+                                        link=replace(link,"{","#<@@(dt,'$")
+                                        link=replace(link,"}","')>")
+                                        #$
+                                        a(href="#<ftext(link)>"){"#<field>"}
+                                        #!
+                                    }
+                                    else 
+                                    {
+                                        #$
+                                        span{"#<field>"}
+                                    }
+                                }
                             }
                             
                         }
@@ -114,23 +172,49 @@ module ""
         
         #!
     }
+    
     #$
     div(class="container-fluid")
     {
         script(src="#<@JS_OPS>"){""}
         #!
         do uie.printMainBar(@null,"Operaciones",@false,"")
-
         #$ 
         form(method="GET" action="." id="form_search")
         {
-            div(class="row")
+            div(class="row gy-1 gx-1")
             {
-                div(class="col-md-6")
-                {
+                div(class="col-md-2 col-lg-3") //operacion filter
+                {$""
                     #!
                     do uie.dbSelect(select)
                     #$
+                }
+                div(class="col-md-2 col-lg-3") //status filter
+                {$""
+                    #!
+                    if @count(list_filter) > 0
+                    {
+                        #!
+                        do uie.dbSelect(select_filter)
+                        #$
+                    }
+                }
+                div(class="col-md-8 col-lg-6") //date filter
+                {
+                    "date-range"("hidden-input-name-start"="startdate" "hidden-input-name-end"="enddate" id="datefilter" start="#<@('$parameters/startdate')>" end="#<@('$parameters/enddate')>"){""}
+                }
+                div(class="col-md-12") //text filter
+                {
+                    "filter-text"(
+                            "id"="text"
+                            "text-field"="text"
+                            "placeholder"="Buscar ..."
+                            "form"="#form_search"
+                            "value"="#<@('$parameters/text')>"
+                            "auto-submit"="true"
+                            "class"="w-100"
+                        ){$""}
                 }
             }
         }
@@ -142,9 +226,24 @@ module ""
         script
         {
             $'
+            
             var dte=document.getElementById("dte");
+            var selectfilter=document.getElementById("selectfilter");
             var form=document.getElementById("form_search");
             if(dte)dte.addEventListener("change",(e)=>{if(form)form.submit();});
+            if(selectfilter)selectfilter.addEventListener("change",()=>{if(form)form.submit();});
+            
+
+            document.addEventListener("DOMContentLoaded",(e)=>
+            {
+                var datefilter=document.getElementById("datefilter");
+                console.log(datefilter._btnDone)
+                if(datefilter._btnDone)datefilter._btnDone.addEventListener("click",()=>
+                {
+                    setTimeout(()=>{if(form)form.submit();},300)
+                });
+            });
+            
 
             ops.url_descartar="#<@OPS_EDIT>";
             '

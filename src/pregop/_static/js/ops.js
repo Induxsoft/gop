@@ -217,6 +217,15 @@ var ops=
 
         this.service(url,data,"descartar");
     },
+    Back(id,actback="back_for_affect",params="")
+    {
+        var data={sys_pk:id}
+        var url=ops.url_descartar.replace("{id}",id);
+        if(params.trim()!="")url=url.includes("?")?"&":"?"+params;
+        url=url + "?dte="+this.dte.value;
+
+        this.service(url,data,actback);
+    },
     service(url,data,act,callback_success=null,callback_failed=null)
     {
         if(!data)data={};
