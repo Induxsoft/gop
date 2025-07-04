@@ -209,7 +209,7 @@ module ""
                     {
                         "date-range"("hidden-input-name-start"="startdate" "hidden-input-name-end"="enddate" id="datefilter" start="#<@('$parameters/startdate')>" end="#<@('$parameters/enddate')>"){""}
                     }
-                    div(class="col-md-12") //text filter
+                    div(class="col-md-12 mb-2") //text filter
                     {
                         "filter-text"(
                                 "id"="text"
