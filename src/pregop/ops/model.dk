@@ -91,14 +91,26 @@ module ""
 
         return ""
     }
-
+    ValidateMargen::margen,importe_gt,importe_prd,_text
+    {
+        importe_min=importe_gt - margen
+        importe_max=importe_gt + margen
+        
+        if importe_prd < importe_min{do rise_error(500,"El importe esta debajo del margen mínimo aceptable"+_text)}
+        else if importe_prd > importe_max{do rise_error(500,"El importe total esta arriba del margen aceptable"+_text)}
+    }
     save::&db,&params,&data
     {
         ref entity=@null
         name_table=getTable(params)
-
+        
         switch @@(data,"$act")
         {
+            case "delete_partida"
+            {
+                do dbr.execute(db,"delete from gop_mov where sys_pk=@sys_pk",data)
+                return data
+            }
             case "back_for_affect"
             {
                 is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,-1) from #<name_table> where sys_pk=@_entity_id"),params)
@@ -133,7 +145,7 @@ module ""
                                 if ejercido > 0{montos<"ejercido">:ejercido * -1}
                                 do pregop.partida.afectar(db,@@(partida,"#ref_partida"),@@(partida,"#periodo"), montos )
                             }
-                            
+                            do dbr.execute(db,"update gop_mov set sys_deleted=1 where sys_pk=@sys_pk",partida)
                         }
                         new table
                         {
@@ -182,33 +194,46 @@ module ""
             }
             case "gop_mov"
             {
+                do dbr.apps.action.pre("GP23")
+
                 if trim(@@(data,"$txt_gop_mov"))==""{do rise_error(500,"No hay datos para insertar")}
                 if trim(@@(data,"$txt_ref_gasto"))==""{do rise_error(500,"No hay datos de ref gasto")}
 
                 ref partidas=from.json(@@(data,"$txt_gop_mov"))
                 ref ref_gasto=from.json(@@(data,"$txt_ref_gasto"))
+                
                 params<"dte">:@@(ref_gasto,"$dte")
                 params<"ejercicio">:@@(ref_gasto,"$ejercicio")
-                if trim(name_table)==""{name_table=getTable(params)}
-                is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,0) from #<name_table> where sys_pk=@_entity_id"),params)
 
-                do dbr.apps.action.pre("GP23")
+                if trim(name_table)==""{name_table=getTable(params)}
+                
+                ref data_tble=dbr.rec(db,ftext("select ifnull(presupuestado,0)presupuestado,total from #<name_table> where sys_pk=@_entity_id"),params)
+                is_presupestado=@@(data_tble,"#presupuestado")
+                
+                
                 do dbr.begin(db)
+                    comprometido_total= 0
+                    ejercido_total= 0
+
                     for i = 0; i < @count(partidas)
                     {
                         ref partida=@item(partidas,i)
+                        comprometido=@@(partida,"#comprometido")
+                        ejercido=@@(partida,"#ejercido")
+                        
+                        comprometido_total= comprometido_total + comprometido
+                        ejercido_total= ejercido_total + ejercido
 
                         if @@(partida,"#sys_pk") > 0
                         {
                             params<"pkmgop">:@@(partida,"#sys_pk")
 
-                            comprometido=@@(partida,"#comprometido")
-                            ejercido=@@(partida,"#ejercido")
-
                             new mp
                             {
                                 @"comprometido":comprometido
                                 @"ejercido":ejercido
+                                @"periodo":@@(partida,"#periodo")
+                                @"sys_deleted*":@null
                             }
                             
                             if not(is_presupestado)
@@ -235,20 +260,25 @@ module ""
                                 @"ejercicio":@@(ref_gasto,"$ejercicio")
                             }
                             
-                            if @@(partida,"#comprometido")>0
+                            if comprometido> 0
                             {
-                                gop_mov<"comprometido">:@@(partida,"#comprometido")
+                                gop_mov<"comprometido">:comprometido
                                 res=pregop.partida.movimiento(db,gop_mov)
                             }
 
-                            if @@(partida,"#ejercido")>0
+                            if ejercido > 0
                             {
                                 do field.remove(gop_mov,"comprometido")
-                                gop_mov<"ejercido">:@@(partida,"#ejercido")
+                                gop_mov<"ejercido">:ejercido
                                 res=pregop.partida.movimiento(db,gop_mov)
                             }
                         }
                     }
+                    
+                    margen_minmax=parse.num(dbr.vars.get(db,"pregop_ops_margen_min_max"))
+                    if comprometido_total > 0{do ValidateMargen(margen_minmax,@@(data_tble,"#total"),comprometido_total,", columna: comprometido")}
+                    if ejercido_total > 0{do ValidateMargen(margen_minmax,@@(data_tble,"#total"),ejercido_total,", columna: ejercido")}
+                    
                     new table
                     {
                         @"presupuestado":1

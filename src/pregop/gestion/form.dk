@@ -29,7 +29,8 @@ module ""
         INNER JOIN sys_app_item_type sy ON gm.dte=sy.id
         INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
         INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
-    WHERE p.sys_pk=@_entity_id
+    WHERE ifnull(gm.sys_deleted,0)=0
+        AND p.sys_pk=@_entity_id
         AND gm.ref_partida=@partida
         AND ifnull(gm.periodo,0)=@month
     "

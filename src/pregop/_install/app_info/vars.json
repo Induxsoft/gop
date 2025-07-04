@@ -183,6 +183,18 @@
                         "keyfield":"val"
                     }
                 }
+            },
+            {
+                "varname": "pregop_ops_margen_min_max",
+                "vardefault": "0.1",
+                "varvalue": "0.1",
+                "varcaption": "Margen mínimo/máximo OPS",
+                "varhelp": "Margen mínimo o máximo permitido a los montos ejercidos y comprometidos.",
+                "vartype": "decimal",
+                "varinput": 
+                {
+                    "control": "number"
+                }
             }
         ]
     }

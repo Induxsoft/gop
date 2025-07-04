@@ -200,10 +200,21 @@ var ops=
         var row=this.table_movs.DataArray[index];
         if((row?.sys_pk??0)>0)
         {
-            alert("No se puede eliminar la fila seleccionada");
+            if(!confirm("¿Esta seguro de eliminar la fila?"))return;
+            
+            let id=row.sys_pk;
+            var data={sys_pk:id}
+            var url=".";
+            
+            var success=(data)=>
+            {
+                this.table_movs.DeleteCurrentRow();
+            }
+            this.service(url,data,"delete_partida",success);
             return;
         }
-        this.table_movs.DeleteCurrentRow();
+        else
+            this.table_movs.DeleteCurrentRow();
     },
     descartar(id,params="")
     {
