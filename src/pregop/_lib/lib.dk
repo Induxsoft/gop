@@ -36,4 +36,19 @@ module ""
         }
         return @false
     }
+    current_url::hst
+	{
+        if not(isset("@http_context")) && isset("@crud_context")
+        {
+            ref @http_context=@("&http")
+        }
+        
+		host=@@(@http_context,"request/headers/HTTP_HOST")
+		protocol=ifstr(parse.bool(@@(@http_context,"request/headers/HTTPS")),"https","http")
+		path=replace(field.dstr(@http_context,"request/headers/request_uri","/"),"\\","/")
+		
+		if hst{path=list.str(split(path,"?"),0)} 
+
+		return protocol+"://"+path.concat(host,path)
+	}
 }

@@ -51,6 +51,8 @@ module ""
     @dte=@@(first_select,"$dte")
     if @("$parameters/dte")!=""{@dte=@("$parameters/dte")}
 
+    @url_current=current_url(@false)
+    @url_current_encode=url_encode(@url_current)
     print_table::
     {
         ref columns=list.create_from_fields(ifnull(@first_row,record.create()))
@@ -60,7 +62,7 @@ module ""
         #$
         table(class="table")
         {
-            thead
+            thead(class="bg-white")
             {
                 tr
                 {
@@ -71,9 +73,8 @@ module ""
                         column=list.str(columns,i)
                         if not(contains(column,"sys")) || (column==@@(dte_selected,"$max_field") || column==@@(dte_selected,"$ref_field")|| column==@@(dte_selected,"$key_show")|| column==@@(dte_selected,"$show_text")|| column==@@(dte_selected,"$info_text") )
                         {
-                            #$ th{"#<column>"}
+                            #$ th(class="capitalize"){"#<column>"}
                         }
-                        
                     }
                 }
             }
@@ -150,6 +151,10 @@ module ""
                                     {
                                         link=replace(link,"{","#<@@(dt,'$")
                                         link=replace(link,"}","')>")
+                                        
+                                        if contains(link,"?"){link=link+"&_from_url_e="+@url_current_encode}
+                                        else{link=link +"?_from_url_e="+@url_current_encode }
+
                                         #$
                                         a(href="#<ftext(link)>"){"#<field>"}
                                         #!
@@ -165,8 +170,6 @@ module ""
                         }
                    } 
                 }
-                
-
             }
         }
         
@@ -174,55 +177,63 @@ module ""
     }
     
     #$
-    div(class="container-fluid")
+    div(class="container-fluid v12-list-view" id="view")
     {
         script(src="#<@JS_OPS>"){""}
-        #!
-        do uie.printMainBar(@null,"Operaciones",@false,"")
-        #$ 
-        form(method="GET" action="." id="form_search")
+        section(id="top_area")
         {
-            div(class="row gy-1 gx-1")
+            #!
+            do uie.printMainBar(@null,"Operaciones",@false,"")
+            #$ 
+            form(method="GET" action="." id="form_search")
             {
-                div(class="col-md-2 col-lg-3") //operacion filter
-                {$""
-                    #!
-                    do uie.dbSelect(select)
-                    #$
-                }
-                div(class="col-md-2 col-lg-3") //status filter
-                {$""
-                    #!
-                    if @count(list_filter) > 0
-                    {
+                div(class="row gy-1 gx-1")
+                {
+                    div(class="col-md-2 col-lg-3") //operacion filter
+                    {$""
                         #!
-                        do uie.dbSelect(select_filter)
+                        do uie.dbSelect(select)
                         #$
                     }
-                }
-                div(class="col-md-8 col-lg-6") //date filter
-                {
-                    "date-range"("hidden-input-name-start"="startdate" "hidden-input-name-end"="enddate" id="datefilter" start="#<@('$parameters/startdate')>" end="#<@('$parameters/enddate')>"){""}
-                }
-                div(class="col-md-12") //text filter
-                {
-                    "filter-text"(
-                            "id"="text"
-                            "text-field"="text"
-                            "placeholder"="Buscar ..."
-                            "form"="#form_search"
-                            "value"="#<@('$parameters/text')>"
-                            "auto-submit"="true"
-                            "class"="w-100"
-                        ){$""}
+                    div(class="col-md-2 col-lg-3") //status filter
+                    {$""
+                        #!
+                        if @count(list_filter) > 0
+                        {
+                            #!
+                            do uie.dbSelect(select_filter)
+                            #$
+                        }
+                    }
+                    div(class="col-md-8 col-lg-6") //date filter
+                    {
+                        "date-range"("hidden-input-name-start"="startdate" "hidden-input-name-end"="enddate" id="datefilter" start="#<@('$parameters/startdate')>" end="#<@('$parameters/enddate')>"){""}
+                    }
+                    div(class="col-md-12") //text filter
+                    {
+                        "filter-text"(
+                                "id"="text"
+                                "text-field"="text"
+                                "placeholder"="Buscar ..."
+                                "form"="#form_search"
+                                "value"="#<@('$parameters/text')>"
+                                "auto-submit"="true"
+                                "class"="w-100"
+                            ){$""}
+                    }
                 }
             }
         }
+        section(id="work_area")
+        {
+            div(class="table-responsive h-100")
+            {
+                #!
+                do print_table()
+                #$
+            }
+        }
         
-        #!
-        do print_table()
-        #$
-
         script
         {
             $'
@@ -237,7 +248,6 @@ module ""
             document.addEventListener("DOMContentLoaded",(e)=>
             {
                 var datefilter=document.getElementById("datefilter");
-                console.log(datefilter._btnDone)
                 if(datefilter._btnDone)datefilter._btnDone.addEventListener("click",()=>
                 {
                     setTimeout(()=>{if(form)form.submit();},300)
@@ -246,6 +256,21 @@ module ""
             
 
             ops.url_descartar="#<@OPS_EDIT>";
+            '
+        }
+        style
+        {
+            $'
+                .capitalize
+                {
+                    text-transform: capitalize;
+                }
+                thead 
+                {
+                    position: sticky;
+                    top: 0;
+                    z-index: 15;
+                }
             '
         }
     }

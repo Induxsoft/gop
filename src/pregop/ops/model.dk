@@ -95,13 +95,12 @@ module ""
     save::&db,&params,&data
     {
         ref entity=@null
+        name_table=getTable(params)
 
         switch @@(data,"$act")
         {
             case "back_for_affect"
             {
-                name_table=getTable(params)
-
                 is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,-1) from #<name_table> where sys_pk=@_entity_id"),params)
                 
                 if is_presupestado
@@ -120,16 +119,18 @@ module ""
                         {
                             ref partida=@item(partidas,i)
 
-                            new montos
+                            comprometido=@@(partida,"#comprometido")
+                            ejercido=@@(partida,"#ejercido")
+
+                            if comprometido > 0 || ejercido > 0
                             {
-                                @"comprometido": 0
-                                @"ejercido": 0
+                                new montos{}
+
+                                if comprometido > 0{montos<"comprometido">:comprometido * -1}
+                                if ejercido > 0{montos<"ejercido">:ejercido * -1}
+                                do pregop.partida.afectar(db,@@(partida,"#ref_partida"),@@(partida,"#periodo"), montos )
                             }
-
-                            if @@(partida,"#comprometido") > 0{montos<"comprometido">:@@(partida,"#comprometido") * -1}
-                            if @@(partida,"#ejercido") > 0{montos<"ejercido">:@@(partida,"#ejercido") * -1}
-
-                            do pregop.partida.afectar(db,@@(partida,"#ref_partida"),@@(partida,"#periodo"), montos )
+                            
                         }
                         new table
                         {
@@ -138,7 +139,7 @@ module ""
                             @"sys_timestamp*":now()
                         }
                         do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
-                        
+
                     do dbr.commit(db)
                 }
                 else 
@@ -162,7 +163,7 @@ module ""
                     @"sys_pk":@@(data,"#sys_pk")
                     @"sys_timestamp*":now()
                 }
-                do dbr.update(db,getTable(params),table,"sys_pk=@sys_pk",table)
+                do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
                 return data
             }
             case "gop_mov"
@@ -174,21 +175,35 @@ module ""
                 ref ref_gasto=from.json(@@(data,"$txt_ref_gasto"))
                 params<"dte">:@@(ref_gasto,"$dte")
                 params<"ejercicio">:@@(ref_gasto,"$ejercicio")
+                if trim(name_table)==""{name_table=getTable(params)}
+                is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,0) from #<name_table> where sys_pk=@_entity_id"),params)
 
                 do dbr.begin(db)
                     for i = 0; i < @count(partidas)
                     {
                         ref partida=@item(partidas,i)
 
-                        if @@(partida,"#sys_pk")>0
+                        if @@(partida,"#sys_pk") > 0
                         {
                             params<"pkmgop">:@@(partida,"#sys_pk")
 
+                            comprometido=@@(partida,"#comprometido")
+                            ejercido=@@(partida,"#ejercido")
+
                             new mp
                             {
-                                @"comprometido":@@(partida,"#comprometido")
-                                @"ejercido":@@(partida,"#ejercido")
+                                @"comprometido":comprometido
+                                @"ejercido":ejercido
                             }
+                            
+                            if not(is_presupestado)
+                            {
+                                if comprometido > 0 || ejercido > 0
+                                {
+                                    do pregop.partida.afectar(db,@@(partida,"#pkpartida"),@@(partida,"#periodo"), mp )
+                                }
+                            }
+                            
                             do dbr.update(db,"gop_mov",mp,"sys_pk=@pkmgop",params)
                         }
                         else 
@@ -225,7 +240,7 @@ module ""
                         @"sys_pk":@@(ref_gasto,"#sys_pk")
                         @"sys_timestamp*":now()
                     }
-                    do dbr.update(db,getTable(params),table,"sys_pk=@sys_pk",table)
+                    do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
 
                 do dbr.commit(db)
 
@@ -295,14 +310,11 @@ module ""
             key=list.str(lkey,i)
             params<tolower(key)>:@@(data,"$"+key)
 
-            if trim(@@(params,"$filter_text"))=="" && (tolower(key) == "referencia" || tolower(key) == "sys_guid") {
+            if trim(@@(params,"$filter_text"))=="" && (tolower(key) == "referencia" || tolower(key) == "sys_guid") 
+            {
                 params<"filter_text"> : @@(data,"$"+key)
             }
-
-            // if @@(data,"#iproveedor")>0{params<"dte_id">:@@(data,"#iproveedor")}
-            // if @@(data,"#ref_empleado")>0{params<"dte_id">:@@(data,"#sys_pk")}
         }
-        // do rise_error(0,to.json(params))
     }
     read::&db,&params
     {
