@@ -22,3 +22,6 @@ GP33,Visualizar detalles de las partidas,pregop.partida
 GP34,Transferir partida presupuestal,pregop.partida
 pregop.ops,Operaciones presupuestadas,pregop
 GP20,Operaciones por presupuestar y afectación por operación,pregop.ops
+GP21,Descartar operaciones por presupuestar,pregop.ops
+GP22,Regresar por afectar ops,pregop.ops
+GP23,Confirmar ops,pregop.ops

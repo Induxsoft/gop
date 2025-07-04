@@ -103,8 +103,12 @@ module ""
             {
                 is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,-1) from #<name_table> where sys_pk=@_entity_id"),params)
                 
+                do dbr.apps.action.pre("GP22")
+                do dbr.begin(db)
+                
                 if is_presupestado
                 {
+                    do dbr.apps.action.pre("GP23")
                     ref partidas=dbr.list(db,ftext("SELECT 
                                 g.sys_pk,g.ref_partida,g.referencia,g.periodo,
                                 g.comprometido,g.ejercido,g.dte,g.dte_id,g.usuario,
@@ -114,7 +118,6 @@ module ""
                     
                     if @count(partidas) < 1{do rise_error(500,"No se encontrarón partidas afectadas")} 
 
-                    do dbr.begin(db)
                         for i = 0; i < @count(partidas)
                         {
                             ref partida=@item(partidas,i)
@@ -139,8 +142,6 @@ module ""
                             @"sys_timestamp*":now()
                         }
                         do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
-
-                    do dbr.commit(db)
                 }
                 else 
                 {
@@ -153,17 +154,30 @@ module ""
                     do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
                 }
                 
+                do dbr.apps.action.pos(data)
+                do dbr.commit(db)
+                do dbr.apps.action.ext(data)
+                
                 return data
             }
             case "descartar"
             {
-                new table
-                {
-                    @"presupuestado":0
-                    @"sys_pk":@@(data,"#sys_pk")
-                    @"sys_timestamp*":now()
-                }
-                do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
+                do dbr.apps.action.pre("GP21")
+                do dbr.begin(db)
+                
+                    new table
+                    {
+                        @"presupuestado":0
+                        @"sys_pk":@@(data,"#sys_pk")
+                        @"sys_timestamp*":now()
+                    }
+
+                    do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
+                
+                do dbr.apps.action.pos(table)
+                do dbr.commit(db)
+                do dbr.apps.action.ext(table)
+                        
                 return data
             }
             case "gop_mov"
@@ -178,6 +192,7 @@ module ""
                 if trim(name_table)==""{name_table=getTable(params)}
                 is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,0) from #<name_table> where sys_pk=@_entity_id"),params)
 
+                do dbr.apps.action.pre("GP23")
                 do dbr.begin(db)
                     for i = 0; i < @count(partidas)
                     {
@@ -241,8 +256,10 @@ module ""
                         @"sys_timestamp*":now()
                     }
                     do dbr.update(db,name_table,table,"sys_pk=@sys_pk",table)
-
+                
+                do dbr.apps.action.pos(table)
                 do dbr.commit(db)
+                do dbr.apps.action.ext(table)
 
                 @url_redir=@OPS_OPER + "?dte="+@@(params,"$dte")
             }
@@ -252,13 +269,13 @@ module ""
             }
         }
         
-    
         return entity
 
         exception
         {
             error=last_error()
             if dbr.in_transaction(db){do dbr.rollback(db)}
+            do dbr.apps.action.log()
             do prepareView(db,params,data)
             do GenListQuery(params,@@(data,"&selects"),data)
             do rise_error(500,error)
@@ -318,6 +335,8 @@ module ""
     }
     read::&db,&params
     {
+        do dbr.apps.action.grant("GP20")
+
         using params
         {
             @"filter":@true
