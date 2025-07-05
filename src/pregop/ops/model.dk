@@ -96,8 +96,8 @@ module ""
         importe_min=importe_gt - margen
         importe_max=importe_gt + margen
         
-        if importe_prd < importe_min{do rise_error(500,"El importe esta debajo del margen mínimo aceptable"+_text)}
-        else if importe_prd > importe_max{do rise_error(500,"El importe total esta arriba del margen aceptable"+_text)}
+        if importe_prd < importe_min{do rise_error(500,"El importe está debajo del margen mínimo aceptable"+_text)}
+        else if importe_prd > importe_max{do rise_error(500,"El importe total está arriba del margen aceptable"+_text)}
     }
     save::&db,&params,&data
     {
@@ -240,7 +240,7 @@ module ""
                             {
                                 if comprometido > 0 || ejercido > 0
                                 {
-                                    do pregop.partida.afectar(db,@@(partida,"#pkpartida"),@@(partida,"#periodo"), mp )
+                                    do pregop.partida.afectar(db,@@(partida,"#pkpartida"),@@(partida,"#periodo"), record.copy(mp,"*") )
                                 }
                             }
                             
