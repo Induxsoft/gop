@@ -100,6 +100,7 @@ var ops=
         {
             row["partida"]=data.partida??"";
             row["pkpartida"]=data.sys_pk??0;
+            row["divisa"]=(data.divisa??"") + " (TC: $ "+(data.tcambio??1)+")" ;
         }
         else
         {

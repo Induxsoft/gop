@@ -76,10 +76,8 @@ module ""
     }
     GenListQuery::&params,&select_src,&entity
     {
-        if @@(params,"$dte")==""
-        {
-            return GetQuery(params,@item(select_src,0),entity)
-        }
+        if @@(params,"$dte")==""{return GetQuery(params,@item(select_src,0),entity)}
+
         for i = 0; i < @count(select_src)
         {
             ref select=@item(select_src,i)
@@ -224,6 +222,8 @@ module ""
                         comprometido_total= comprometido_total + comprometido
                         ejercido_total= ejercido_total + ejercido
 
+                        //convertir comprometido y ejercido a la divisa del presupueso
+                        
                         if @@(partida,"#sys_pk") > 0
                         {
                             params<"pkmgop">:@@(partida,"#sys_pk")
@@ -311,7 +311,24 @@ module ""
             do rise_error(500,error)
         }
     }
-    
+    ConvertImporte::&db,partida,ejercido,comprometido
+    {
+        partida >> p
+        ref presupueso=dbr.rec(db,"SELECT g.sys_pk,g.divisa,d.tcambio FROM gop_presupuesto g 
+                            INNER JOIN divisa d ON g.divisa=d.sys_pk
+                            INNER JOIN gop_partida p ON g.sys_pk=p.ref_presupuesto
+                            WHERE p.sys_pk=@partida;",p)
+        if isnull(presupueso){do rise_error(500,"No se encontró el presupuesto de la partida")}
+
+        using p
+        {
+            @"ejercido":ejercido * @@(presupueso,"#tcambio")
+            @"comprometido":comprometido * @@(presupueso,"#tcambio")
+        }
+        // do rise_error(0,to.json(p))
+        return p   
+    }
+
     list::&db,&params
     {
         do dbr.apps.action.grant("GP20")
@@ -320,7 +337,6 @@ module ""
         do prepareView(db,params,entity)
         
         @list_query=GenListQuery(params,@@(entity,"&selects"),entity)
-        // do rise_error(0,replace(ftext(@list_query),"@filter_text",@@(params,'$filter_text')))
         
         if trim(@list_query)==""{return entity}
 

@@ -13,14 +13,14 @@ module ""
 
     ref selects=@("&./selects")
     ref first_select=@item(selects,0)
-
+    
     ref data=@("&./data")
     ref ref_de_gasto=@item(data,0)
     
     if isnull(ref_de_gasto) && @("$./txt_ref_gasto")!=""{ref ref_de_gasto=from.json(@("$./txt_ref_gasto"))}
     
     ref dte_selected=@("&./dte_selected")
-    // do rise_error(0,to.json)
+    
     ref gop_movs=@("&./gop_movs")
     if isnull(gop_movs) && @("$./txt_gop_mov")!=""{ref gop_movs=from.json(@("$./txt_gop_mov"))}
 
@@ -120,7 +120,7 @@ module ""
             h5{"#<@@(ref_de_gasto,'$'+@@(dte_selected,'$info_text'))>"}
             span(class="flex-grow-1"){""}
             h5(class="me-4"){"Valor del acto: "}
-            h5(class="text-end"){"#<format(@@(ref_de_gasto,'#'+@@(dte_selected,'$max_field')),@FORMAT_DET_PRES)>"}
+            h5(class="text-end"){"#<format(@@(ref_de_gasto,'#'+@@(dte_selected,'$max_field')),@FORMAT_DET_PRES)> #<@@(ref_de_gasto,'$divisa')> (TC: #<format(@@(ref_de_gasto,'#dvs_tcambio'),'$ #.00')> MXN)"}
         }
         #$ div(class="d-flex align-items-center gap-1")
         {
@@ -145,6 +145,7 @@ module ""
                 {
                     "edit-th"(type="Text" field="uorg" style="width:8%;height:0!important" button="true"){"U. organizacional"}
                     "edit-th"(type="Text" field="partida" style="width:8%;height:0!important" button="true"){"Partida"}
+                    "edit-th"(type="NoEditable" field="divisa" style="width:8%;height:0!important"){"Divisa"}
                     "edit-th"(type="Select" options="#<to.json(@meses)>" keyfield="periodo" "default"="Seleccione un periodo" field="fperiodo" style="width:8%;height:0 !important"){"Periodo"}
                     "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" "default"="0" field="comprometido" style="width:8%;height:0!important"){"Comprometido"}
                     "edit-th"(type="Number" "textalign"="end" "format"="true" "decs"="2" "prefix"="$ " "thousandssep"="true" "default"="0" field="ejercido" style="width:8%;height:0 !important"){"Ejercido"}
