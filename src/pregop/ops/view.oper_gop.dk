@@ -64,7 +64,7 @@ module ""
     point buttons to buttons
 
     source=replace(@OPS_OPER_GOP,"{id}",@("$parameters/_entity_id"))+"?dte="+@("$parameters/dte")+"&rgasto=1&ref_gasto=@search"
-
+    
     @meses<"13">:"Extraordinario"
     #$
     div(class="container-fluid")

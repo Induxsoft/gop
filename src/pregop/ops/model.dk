@@ -5,10 +5,16 @@ module ""
     #include "pregop/pregop.dkh"
 
     @list_query_gop_mov="SELECT gm.sys_pk,gp.sys_pk pkpartida,u.descripcion uorg, u.sys_pk pkuorg,
-    gp.partida,gm.periodo,gm.comprometido,gm.ejercido,gm.referencia,p.ejercicio,gm.dte,gm.dte_id
+    gp.partida,gm.periodo,
+    gm.comprometido,
+    gm.ejercido,
+    gm.referencia,p.ejercicio,gm.dte,gm.dte_id,
+    concat(dvs.codigo ,' (TC: $',round(dvs.tcambio,2),')') as divisa,
+    dvs.tcambio
     FROM gop_mov gm
     INNER JOIN gop_partida gp ON gm.ref_partida=gp.sys_pk
     INNER JOIN gop_presupuesto p ON gp.ref_presupuesto=p.sys_pk
+    INNER JOIN divisa dvs on p.divisa=dvs.sys_pk
     INNER JOIN rh_unidad_org u ON p.ref_unidad=u.sys_pk
     WHERE gm.dte=@dte AND gm.dte_id=@dte_id and p.ejercicio=@ejercicio"
 
@@ -111,7 +117,11 @@ module ""
             }
             case "back_for_affect"
             {
-                is_presupestado=dbr.num(db,ftext("select ifnull(presupuestado,-1) from #<name_table> where sys_pk=@_entity_id"),params)
+                ref data_tble=dbr.rec(db,ftext("select ifnull(presupuestado,0)presupuestado,total,d.codigo divisa,d.tcambio 
+                from #<name_table> g
+                INNER JOIN divisa d on g.idivisa=d.sys_pk
+                where g.sys_pk=@_entity_id"),params)
+                is_presupestado=@@(data_tble,"#presupuestado")
                 
                 do dbr.apps.action.pre("GP22")
                 do dbr.begin(db)
@@ -119,6 +129,7 @@ module ""
                 if is_presupestado
                 {
                     do dbr.apps.action.pre("GP23")
+                    //se obtiene las partidas de los movimiento ya convertidos a la divisa del presupuesta segun la partida
                     ref partidas=dbr.list(db,ftext("SELECT 
                                 g.sys_pk,g.ref_partida,g.referencia,g.periodo,
                                 g.comprometido,g.ejercido,g.dte,g.dte_id,g.usuario,
@@ -205,9 +216,11 @@ module ""
 
                 if trim(name_table)==""{name_table=getTable(params)}
                 
-                ref data_tble=dbr.rec(db,ftext("select ifnull(presupuestado,0)presupuestado,total from #<name_table> where sys_pk=@_entity_id"),params)
+                ref data_tble=dbr.rec(db,ftext("select ifnull(presupuestado,0)presupuestado,total,d.codigo divisa,d.tcambio 
+                from #<name_table> g
+                INNER JOIN divisa d on g.idivisa=d.sys_pk
+                where g.sys_pk=@_entity_id"),params)
                 is_presupestado=@@(data_tble,"#presupuestado")
-                
                 
                 do dbr.begin(db)
                     comprometido_total= 0
@@ -223,7 +236,10 @@ module ""
                         ejercido_total= ejercido_total + ejercido
 
                         //convertir comprometido y ejercido a la divisa del presupueso
-                        
+                        ref cvrimporte=ConvertImporte(db,@@(data_tble,"#tcambio"),@@(partida,"#pkpartida"),ejercido,comprometido)
+                        ejercido=@@(cvrimporte,"#ejercido")
+                        comprometido=@@(cvrimporte,"#comprometido")
+
                         if @@(partida,"#sys_pk") > 0
                         {
                             params<"pkmgop">:@@(partida,"#sys_pk")
@@ -311,7 +327,7 @@ module ""
             do rise_error(500,error)
         }
     }
-    ConvertImporte::&db,partida,ejercido,comprometido
+    ConvertImporte::&db,tcambio,partida,ejercido,comprometido
     {
         partida >> p
         ref presupueso=dbr.rec(db,"SELECT g.sys_pk,g.divisa,d.tcambio FROM gop_presupuesto g 
@@ -320,12 +336,13 @@ module ""
                             WHERE p.sys_pk=@partida;",p)
         if isnull(presupueso){do rise_error(500,"No se encontró el presupuesto de la partida")}
 
+        factor=(tcambio / @@(presupueso,"#tcambio"))
         using p
         {
-            @"ejercido":ejercido * @@(presupueso,"#tcambio")
-            @"comprometido":comprometido * @@(presupueso,"#tcambio")
+            @"ejercido":ejercido * factor
+            @"comprometido":comprometido * factor
         }
-        // do rise_error(0,to.json(p))
+        
         return p   
     }
 
@@ -407,16 +424,34 @@ module ""
         
 
         ref gop_movs=dbr.list(db,ftext(@list_query_gop_mov),params)
-        do periodo(gop_movs)
+        do periodo(db,gop_movs,params)
 
         using entity{@"gop_movs*":gop_movs}
         return entity
     }
-    periodo::&l
+    periodo::&db,&l,&params
     {
+        ref divisa=@null
+        if @@(params,"$table")=="ut_gasto" 
+        {
+            ref itm=@item(l,0)
+            ref divisa=dbr.rec(db,"SELECT d.codigo,d.tcambio FROM  ut_gasto g INNER JOIN divisa d ON g.idivisa=d.sys_pk
+                        WHERE g.sys_pk=@dte_id",itm)
+        }
         for i = 0; i < @count(l)
         {
-            ref itm=@item(l,i)  
+            ref itm=@item(l,i) 
+            
+            if not(isnull(divisa))
+            {
+                factor=(@@(divisa,"#tcambio") / @@(itm,"#tcambio"))
+
+                using itm
+                {
+                    @"ejercido":(@@(itm,"#ejercido") / factor)
+                    @"comprometido":(@@(itm,"#compromentido") / factor)
+                }
+            }
             itm<"fperiodo">:getMes(@@(itm,"#periodo"))
         }
     }
