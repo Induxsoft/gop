@@ -1013,6 +1013,8 @@ module "Presupuestos de Gastos de Operacion"
                     if trim(@@(partida,"$sys_info"))=="" { do field.remove(partida,"sys_info") }
                     if field.exist(partida,"istatus") { do field.remove(partida,"istatus") }
                     if field.exist(partida,"cstatus") { do field.remove(partida,"cstatus") }
+                    if field.exist(partida,"divisa") { do field.remove(partida,"divisa") }
+                    if field.exist(partida,"tcambio") { do field.remove(partida,"tcambio") }
                     if field.exist(partida,"presupuesto") { do field.remove(partida,"presupuesto") }
                     if field.exist(partida,"unidad") { do field.remove(partida,"unidad") }
                     if field.exist(partida,"__items") { do field.remove(partida,"__items") }
